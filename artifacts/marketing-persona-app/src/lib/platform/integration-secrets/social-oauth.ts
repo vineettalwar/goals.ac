@@ -19,11 +19,13 @@ import {
   invalidatePlatformBlueskyCredentialsCache,
   isBlueskyManagedByEnv,
 } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
+import { isBingManagedByEnv } from "@/lib/platform/bing-webmaster-credentials";
 import type {
   SaveBlueskyCredentialsInput,
   SaveLinkedInCredentialsInput,
   SaveMetaCredentialsInput,
   SaveTwitterCredentialsInput,
+  SaveBingWebmasterCredentialsInput,
 } from "./types";
 
 export type {
@@ -192,4 +194,39 @@ export async function clearStoredBlueskyCredentials(updatedBy: number): Promise<
     throw new Error("Bluesky credentials are managed via server environment variables");
   }
   await saveBlueskyCredentials({ clientName: null, privateKeyJwk: "", updatedBy });
+}
+
+export async function saveBingWebmasterCredentials(
+  input: SaveBingWebmasterCredentialsInput,
+): Promise<void> {
+  if (isBingManagedByEnv()) {
+    throw new Error("Bing Webmaster credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientId !== undefined) {
+    patch.bingWebmasterClientId = input.clientId?.trim() || null;
+  }
+  if (input.clientSecret !== undefined) {
+    patch.encryptedBingWebmasterClientSecret = input.clientSecret
+      ? encryptSecret(input.clientSecret.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+}
+
+export async function clearStoredBingWebmasterCredentials(updatedBy: number): Promise<void> {
+  if (isBingManagedByEnv()) {
+    throw new Error("Bing Webmaster credentials are managed via server environment variables");
+  }
+  await saveBingWebmasterCredentials({ clientId: null, clientSecret: "", updatedBy });
 }

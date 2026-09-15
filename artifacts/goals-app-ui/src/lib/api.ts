@@ -1,4 +1,5 @@
 import { setBaseUrl } from "@workspace/api-client-react";
+import { publishBlockedErrorFromBody } from "@workspace/app-shell/content-piece";
 
 type DeployStage = "production" | "staging" | "development";
 
@@ -86,6 +87,8 @@ export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T>
     });
     if (!response.ok) {
       const body = await response.json().catch(() => null);
+      const blocked = publishBlockedErrorFromBody(body);
+      if (blocked) throw blocked;
       const message =
         (body &&
           typeof body === "object" &&

@@ -91,7 +91,7 @@ export function MfaSettingsPanel() {
 
   if (loading) {
     return (
-      <div className="paper-card p-6 flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading two-factor settings…
       </div>
@@ -99,7 +99,7 @@ export function MfaSettingsPanel() {
   }
 
   return (
-    <div className="paper-card p-6 space-y-4">
+    <div className="p-6 space-y-4">
       <div className="flex items-start gap-3">
         <ShieldCheck className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <div className="space-y-1">

@@ -39,7 +39,7 @@ export function GoalsPanelBriefsSection({
 }) {
   return (
     <>
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Target className="h-4 w-4" /> Goals
         </h2>
@@ -90,7 +90,7 @@ export function GoalsPanelBriefsSection({
         </ul>
       </div>
 
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold">Content briefs</h2>
         <Input
           placeholder="Working title"

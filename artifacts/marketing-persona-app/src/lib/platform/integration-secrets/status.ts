@@ -8,12 +8,16 @@ import { isLinkedInManagedByEnv } from "@workspace/content-engine/support/social
 import { isTwitterManagedByEnv } from "@workspace/content-engine/support/social/twitter-platform-credentials";
 import { isMetaManagedByEnv } from "@workspace/content-engine/support/social/meta-platform-credentials";
 import { isBlueskyManagedByEnv } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
+import { isBingManagedByEnv } from "@/lib/platform/bing-webmaster-credentials";
+import { isDataForSeoManagedByEnv } from "@/lib/platform/dataforseo-credentials";
 import { eq } from "drizzle-orm";
 import { getPlatformBedrockStatus } from "@/lib/platform/platform-bedrock-admin";
 import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-types";
 import {
   activeEnvVars,
   BLUESKY_ENV_VARS,
+  BING_WEBMASTER_ENV_VARS,
+  DATAFORSEO_ENV_VARS,
   fieldStatus,
   isPexelsManagedByEnv,
   isResendManagedByEnv,
@@ -55,6 +59,11 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         blueskyClientName: platformSettingsTable.blueskyClientName,
         encryptedBlueskyOauthPrivateKeyJwk:
           platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
+        bingWebmasterClientId: platformSettingsTable.bingWebmasterClientId,
+        encryptedBingWebmasterClientSecret:
+          platformSettingsTable.encryptedBingWebmasterClientSecret,
+        encryptedDataforseoLogin: platformSettingsTable.encryptedDataforseoLogin,
+        encryptedDataforseoPassword: platformSettingsTable.encryptedDataforseoPassword,
       })
       .from(platformSettingsTable)
       .where(eq(platformSettingsTable.id, 1))
@@ -127,6 +136,21 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         row?.encryptedBlueskyOauthPrivateKeyJwk,
         "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
       ),
+    },
+    bing: {
+      managedByEnv: isBingManagedByEnv(),
+      envVars: activeEnvVars(BING_WEBMASTER_ENV_VARS),
+      clientId: plainFieldStatus(row?.bingWebmasterClientId, "BING_WEBMASTER_CLIENT_ID"),
+      clientSecret: fieldStatus(
+        row?.encryptedBingWebmasterClientSecret,
+        "BING_WEBMASTER_CLIENT_SECRET",
+      ),
+    },
+    dataforseo: {
+      managedByEnv: isDataForSeoManagedByEnv(),
+      envVars: activeEnvVars(DATAFORSEO_ENV_VARS),
+      login: fieldStatus(row?.encryptedDataforseoLogin, "DATAFORSEO_LOGIN"),
+      password: fieldStatus(row?.encryptedDataforseoPassword, "DATAFORSEO_PASSWORD"),
     },
     bedrock,
   };

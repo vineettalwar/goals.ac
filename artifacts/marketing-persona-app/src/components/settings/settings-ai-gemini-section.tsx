@@ -83,7 +83,7 @@ export function SettingsAiGeminiSection({
 
   return (
     <>
-      <div className="paper-card p-6 space-y-4">
+      <div className="p-6 space-y-4">
         <h2 className="font-semibold">Google Gemini (BYOK)</h2>
         <p className="text-sm text-muted-foreground">
           Bring your own API key to route AI generation for your entire organization through your Gemini account.

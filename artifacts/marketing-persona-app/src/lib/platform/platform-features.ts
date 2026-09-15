@@ -12,9 +12,10 @@ export type IntegrationEnvStatus = {
   stripe: boolean;
   unsplash: boolean;
   pexels: boolean;
+  dataforseo: boolean;
 };
 
-export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social" | "ai";
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social" | "ai" | "search";
 
 export type PlatformIntegrationId =
   | "stripe"
@@ -26,12 +27,18 @@ export type PlatformIntegrationId =
   | "meta"
   | "bluesky"
   | "mastodon"
-  | "bedrock";
+  | "bedrock"
+  | "gemini"
+  | "bing"
+  | "dataforseo"
+  | "google";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
   | "emailEnabled"
-  | "socialPublishingEnabled";
+  | "socialPublishingEnabled"
+  | "bingWebmasterEnabled"
+  | "googleIntegrationsEnabled";
 
 export type PlatformIntegrationKind = "credentials" | "env" | "info";
 
@@ -70,7 +77,7 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
   {
     id: "media",
     label: "Stock Images",
-    description: "Free platform-wide API keys for keyword-matched article featured images.",
+    description: "Unsplash and Pexels keys for featured images.",
   },
   {
     id: "social",
@@ -80,7 +87,12 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
   {
     id: "ai",
     label: "AI providers",
-    description: "Platform AI credentials shared with selected organizations.",
+    description: "Platform Gemini key and Bedrock credentials for organizations without BYOK.",
+  },
+  {
+    id: "search",
+    label: "Search",
+    description: "Google OAuth, Bing Webmaster, and DataForSEO LLM Mentions.",
   },
 ];
 
@@ -97,6 +109,10 @@ export function hasBingCredentials(): boolean {
     process.env.BING_WEBMASTER_CLIENT_ID?.trim() &&
       process.env.BING_WEBMASTER_CLIENT_SECRET?.trim(),
   );
+}
+
+export function hasDataForSeoCredentials(): boolean {
+  return Boolean(process.env.DATAFORSEO_LOGIN?.trim() && process.env.DATAFORSEO_PASSWORD?.trim());
 }
 
 export function hasUnsplashCredentials(): boolean {
@@ -182,7 +198,7 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
       category: "media",
       kind: "credentials",
       label: "Unsplash",
-      description: "Free stock photos for article featured images.",
+      description: "Unsplash API key for featured images.",
       docsUrl: "https://unsplash.com/developers",
       envVars: [
         {
@@ -197,7 +213,7 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
       category: "media",
       kind: "credentials",
       label: "Pexels",
-      description: "Free stock photos for article featured images.",
+      description: "Pexels API key for featured images.",
       docsUrl: "https://www.pexels.com/api/",
       envVars: [
         { name: "PEXELS_API_KEY", configured: envConfigured("PEXELS_API_KEY"), required: true },
@@ -297,6 +313,86 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
       settingsKey: "socialPublishingEnabled",
       docsUrl: "https://docs.joinmastodon.org/client/token/",
       envVars: [],
+    },
+    {
+      id: "google",
+      category: "search",
+      kind: "env",
+      label: "Google",
+      description: "Env OAuth client for Google login and Search Console.",
+      settingsKey: "googleIntegrationsEnabled",
+      docsUrl: "https://console.cloud.google.com/apis/credentials",
+      envVars: [
+        { name: "GOOGLE_CLIENT_ID", configured: envConfigured("GOOGLE_CLIENT_ID"), required: true },
+        {
+          name: "GOOGLE_CLIENT_SECRET",
+          configured: envConfigured("GOOGLE_CLIENT_SECRET"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "bing",
+      category: "search",
+      kind: "credentials",
+      label: "Bing Webmaster Tools",
+      description: "OAuth client so projects can connect Bing Webmaster for Copilot citation reports.",
+      settingsKey: "bingWebmasterEnabled",
+      docsUrl: "https://learn.microsoft.com/en-us/bingwebmaster/oauth2",
+      envVars: [
+        {
+          name: "BING_WEBMASTER_CLIENT_ID",
+          configured: envConfigured("BING_WEBMASTER_CLIENT_ID"),
+          required: true,
+        },
+        {
+          name: "BING_WEBMASTER_CLIENT_SECRET",
+          configured: envConfigured("BING_WEBMASTER_CLIENT_SECRET"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "dataforseo",
+      category: "search",
+      kind: "credentials",
+      label: "DataForSEO",
+      description:
+        "LLM Mentions API for live ChatGPT and Google AI Overview citation checks on Search → Visibility.",
+      docsUrl: "https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/overview/",
+      envVars: [
+        {
+          name: "DATAFORSEO_LOGIN",
+          configured: envConfigured("DATAFORSEO_LOGIN"),
+          required: true,
+        },
+        {
+          name: "DATAFORSEO_PASSWORD",
+          configured: envConfigured("DATAFORSEO_PASSWORD"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "gemini",
+      category: "ai",
+      kind: "env",
+      label: "Google Gemini",
+      description:
+        "Platform Gemini key used when organizations do not bring their own. Set GEMINI_API_KEY as a Worker secret.",
+      docsUrl: "https://aistudio.google.com/apikey",
+      envVars: [
+        {
+          name: "GEMINI_API_KEY",
+          configured: envConfigured("GEMINI_API_KEY"),
+          required: true,
+        },
+        {
+          name: "AI_INTEGRATIONS_GEMINI_API_KEY",
+          configured: envConfigured("AI_INTEGRATIONS_GEMINI_API_KEY"),
+          required: false,
+        },
+      ],
     },
     {
       id: "bedrock",

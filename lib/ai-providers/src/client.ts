@@ -1,5 +1,6 @@
 import type { GoogleGenAI } from "@google/genai";
 import {
+  assertOllamaReachableHere,
   buildAiProviderCacheKey,
   resolveProviderId,
   resolveOllamaBaseUrl,
@@ -160,24 +161,13 @@ async function buildClient(
 /**
  * Get or create an AI provider client.
  * Resolution order: in-app options → AI_PROVIDER env → auto-detect.
- * Loopback Ollama (localhost) falls back to Gemini on remote Workers.
+ * Loopback Ollama stays Ollama on local Node; Cloudflare Workers refuse it
+ * instead of silently switching to Gemini (that hid Ollama test failures).
  */
 export async function getAiProviderClient(options?: AiProviderOptions): Promise<AiProviderClient> {
-  let id = resolveProviderId(options);
+  const id = resolveProviderId(options);
   if (id === "ollama") {
-    const base = resolveOllamaBaseUrl(options);
-    try {
-      const host = new URL(base).hostname.toLowerCase();
-      const loopback =
-        host === "localhost" ||
-        host === "127.0.0.1" ||
-        host === "::1" ||
-        host === "0.0.0.0" ||
-        host.endsWith(".local");
-      if (loopback) id = "gemini";
-    } catch {
-      id = "gemini";
-    }
+    assertOllamaReachableHere(resolveOllamaBaseUrl(options));
   }
   const resolvedOllama = id === "ollama" ? await resolveOllamaConfigAsync(options) : undefined;
   const cacheKey =

@@ -44,7 +44,7 @@ export function HelpView({
 
   return (
     <div className="space-y-6">
-      <div className="paper-card p-6">
+      <div className="p-6">
         <div className="mb-4 flex items-center gap-2">
           <BookOpen className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Help center</h2>
@@ -69,7 +69,7 @@ export function HelpView({
         </div>
       </div>
 
-      <div className="paper-card p-6">
+      <div className="p-6">
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="text-sm font-semibold">Setup checklist</h2>
           <span className="text-xs text-muted-foreground">
@@ -101,7 +101,7 @@ export function HelpView({
       </div>
 
       {showAdvancedAppLink ? (
-        <div className="paper-card p-6 text-sm text-muted-foreground">
+        <div className="p-6 text-sm text-muted-foreground">
           <p>
             Advanced workflows — CMS publishing, AI provider keys, admin tools, and social scheduling — are
             available in the product app.

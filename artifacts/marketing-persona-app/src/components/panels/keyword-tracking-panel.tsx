@@ -1,21 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Search,
-  TrendingUp,
-  BarChart3,
-  Lightbulb,
-  Plus,
-  Trash2,
-  AlertTriangle,
-  Upload,
-} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -184,7 +174,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
         projectLoading ? (
           <PageSkeleton />
         ) : (
-          <div className="paper-card p-6 rounded-xl text-sm text-muted-foreground">
+          <div className="p-6 rounded-xl text-sm text-muted-foreground">
             Choose a project in the sidebar to research keywords.
           </div>
         )
@@ -199,21 +189,17 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="ideas">
-                <Lightbulb className="h-4 w-4 mr-1" />
+            <TabsList className="h-auto justify-start gap-1 bg-transparent p-0">
+              <TabsTrigger value="ideas" className="shadow-none">
                 Article ideas
               </TabsTrigger>
-              <TabsTrigger value="import">
-                <Upload className="h-4 w-4 mr-1" />
+              <TabsTrigger value="import" className="shadow-none">
                 Import
               </TabsTrigger>
-              <TabsTrigger value="tracking">
-                <TrendingUp className="h-4 w-4 mr-1" />
+              <TabsTrigger value="tracking" className="shadow-none">
                 Rank tracking
               </TabsTrigger>
-              <TabsTrigger value="analyzer">
-                <Search className="h-4 w-4 mr-1" />
+              <TabsTrigger value="analyzer" className="shadow-none">
                 AI analyzer
               </TabsTrigger>
             </TabsList>
@@ -226,7 +212,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
               />
 
               {alerts.length > 0 && (
-                <div className="paper-card p-6 rounded-xl space-y-3">
+                <div className="p-6 rounded-xl space-y-3">
                   <h2 className="font-semibold flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-500" /> Rank alerts
                   </h2>
@@ -283,7 +269,21 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
         <Link href="/search/visibility" className="text-primary hover:underline">
           Visibility
         </Link>{" "}
-        for LLM citation tracking and Search Console connection.
+        for LLM citation tracking
+        {projectId ? (
+          <>
+            . Connect{" "}
+            <Link
+              href={`/projects/${projectId}/integrations/search`}
+              className="text-primary hover:underline"
+            >
+              Search Console
+            </Link>
+            .
+          </>
+        ) : (
+          "."
+        )}
       </p>
     </div>
   );

@@ -24,8 +24,10 @@ interface ScrapeStatusHeaderProps {
   onRescan?: () => void;
   lastUpdated?: string | null;
   discoverySummary?: string | null;
+  errorMessage?: string | null;
   title: string;
   description: string;
+  failedDescription?: string;
 }
 
 export function ScrapeStatusHeader({
@@ -35,8 +37,10 @@ export function ScrapeStatusHeader({
   onRescan,
   lastUpdated,
   discoverySummary,
+  errorMessage,
   title,
   description,
+  failedDescription,
 }: ScrapeStatusHeaderProps) {
   return (
     <>
@@ -94,7 +98,10 @@ export function ScrapeStatusHeader({
           <div>
             <p className="text-sm font-medium text-red-500 dark:text-red-400">Website scan failed</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              We couldn&apos;t read your website. Fill in the fields manually, or try re-scanning.
+              {errorMessage?.trim()
+                ? errorMessage
+                : (failedDescription ??
+                  "We couldn't read your website. Fill in the fields manually, or try re-scanning.")}
             </p>
           </div>
         </div>

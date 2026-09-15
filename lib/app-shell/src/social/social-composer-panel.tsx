@@ -148,7 +148,7 @@ export function SocialComposerPanel({
 
   return (
     <div className="space-y-4">
-      <div className="paper-card p-4 space-y-3">
+      <div className="p-4 space-y-3">
         <div>
           <h3 className="text-sm font-semibold">1. Source content</h3>
           <p className="text-sm text-muted-foreground">
@@ -192,7 +192,7 @@ export function SocialComposerPanel({
         )}
       </div>
 
-      <div className="paper-card p-4 space-y-3">
+      <div className="p-4 space-y-3">
         <div>
           <h3 className="text-sm font-semibold">2. Platforms</h3>
           <p className="text-sm text-muted-foreground">
@@ -332,7 +332,7 @@ export function SocialComposerPanel({
       </button>
 
       {composed && composed.length > 0 ? (
-        <div className="paper-card p-4 space-y-4">
+        <div className="p-4 space-y-4">
           <div>
             <h3 className="text-sm font-semibold">3. Preview</h3>
             <p className="text-sm text-muted-foreground">

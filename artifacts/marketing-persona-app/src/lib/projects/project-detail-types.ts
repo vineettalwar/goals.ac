@@ -6,6 +6,7 @@ export type ScrapeConfidence = BrandExtract["confidence"];
 
 export type ScrapeData = Partial<Omit<BrandExtract, "confidence">> & {
   confidence?: ScrapeConfidence;
+  error?: string;
 };
 
 export interface ProjectImageSettings {

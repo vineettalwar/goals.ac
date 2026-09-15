@@ -45,3 +45,9 @@ export type SaveBlueskyCredentialsInput = {
   privateKeyJwk?: string;
   updatedBy: number;
 };
+
+export type SaveBingWebmasterCredentialsInput = {
+  clientId?: string | null;
+  clientSecret?: string;
+  updatedBy: number;
+};

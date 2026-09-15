@@ -55,7 +55,7 @@ type PieceRow = {
 /** Brand scan is scrapeStatus; crawlStatus alone can stay pending if sitemap fails. */
 function brandScanSettled(data: FastLaneStatus): boolean {
   const scrape = data.scrapeStatus;
-  if (scrape === "done" || scrape === "failed") return true;
+  if (scrape === "done" || scrape === "failed" || scrape === "skipped") return true;
   if (!scrape) {
     return data.crawlStatus === "done" || data.crawlStatus === "failed";
   }

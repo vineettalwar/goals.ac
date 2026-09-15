@@ -58,7 +58,6 @@ const nextConfig: NextConfig = {
       "framer-motion",
       "@radix-ui/react-icons",
       "@workspace/app-shell",
-      "@workspace/content-engine",
     ],
   },
   turbopack: {

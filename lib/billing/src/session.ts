@@ -17,7 +17,12 @@ import {
 import { isStripeBillingActive } from "./platform-gates";
 import { estimateAiCallCredits, type AiTier } from "./pricing";
 import { checkCountQuota, type QuotaKind } from "./quotas";
-import { recordUsageEvent, type RecordUsageEventInput } from "./usage-events";
+import {
+  recordUsageEvent,
+  resolveUsageCompanyId,
+  resolveUsageCompanyIdFromOrg,
+  type RecordUsageEventInput,
+} from "./usage-events";
 import { getOrCreateWorkspaceForOrganization } from "./workspaces";
 
 export interface AiBillingContext {
@@ -192,18 +197,27 @@ export async function completeAiBillingSession(
   ctx: AiBillingContext,
   usage: RecordUsageEventInput,
 ): Promise<number> {
-  const usageEventId = await recordUsageEvent({
-    ...usage,
-    usedByok: ctx.usedByok,
-    tier: usage.tier ?? ctx.tier,
-  });
+  let usageEventId = 0;
+  try {
+    const companyId =
+      (await resolveUsageCompanyIdFromOrg(ctx.organizationId)) ??
+      (await resolveUsageCompanyId(usage.companyId));
+    usageEventId = await recordUsageEvent({
+      ...usage,
+      companyId,
+      usedByok: ctx.usedByok,
+      tier: usage.tier ?? ctx.tier,
+    });
+  } catch {
+    // ponytail: usage row is telemetry; do not fail a finished generation
+  }
 
   if (ctx.reservedCredits) {
     await settleAiCall({
       runId: ctx.runId,
       tier: ctx.tier,
       usedByok: ctx.usedByok,
-      usageEventId,
+      usageEventId: usageEventId || undefined,
     });
   }
 

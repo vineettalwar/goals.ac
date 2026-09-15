@@ -73,5 +73,17 @@ export type PlatformIntegrationStatus = {
     clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
     privateKeyJwk: IntegrationFieldStatus;
   };
+  bing: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
+  dataforseo: {
+    managedByEnv: boolean;
+    envVars: string[];
+    login: IntegrationFieldStatus;
+    password: IntegrationFieldStatus;
+  };
   bedrock: PlatformBedrockStatus;
 };

@@ -135,7 +135,13 @@ export default auth(async (req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoggedIn && orgRole === "editor" && (pathname.startsWith("/projects") || pathname.startsWith("/partner"))) {
+  if (
+    isLoggedIn &&
+    orgRole === "editor" &&
+    (pathname.startsWith("/projects") ||
+      pathname.startsWith("/partner") ||
+      pathname.startsWith("/clients"))
+  ) {
     if (!isSuperAdmin(userRole)) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }

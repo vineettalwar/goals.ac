@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 
 type PlatformSettings = {
   platformEnabled: boolean;
@@ -70,7 +71,7 @@ export function AdminPlatformPage() {
   if (!settings) return <p className="p-8 text-destructive">{error ?? "Unavailable"}</p>;
 
   return (
-    <div className="max-w-5xl space-y-6 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-6`}>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Platform operations</h1>
         <p className="mt-1 text-sm text-muted-foreground">Global toggles and maintenance messaging.</p>

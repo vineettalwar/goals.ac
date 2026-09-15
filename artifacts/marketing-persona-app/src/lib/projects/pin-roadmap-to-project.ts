@@ -2,10 +2,27 @@ import { db } from "@workspace/db";
 import {
   projectRoadmapsTable,
   roadmapsTable,
-  websiteProjectsTable,
 } from "@workspace/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getAccessibleProject } from "@/lib/org/org-access";
+
+export const ROADMAP_SUMMARY_COLUMNS = {
+  id: roadmapsTable.id,
+  slug: roadmapsTable.slug,
+  industry: roadmapsTable.industry,
+  location: roadmapsTable.location,
+  stage: roadmapsTable.stage,
+  viewCount: roadmapsTable.viewCount,
+} as const;
+
+export async function listPinnedRoadmapSummaries(projectId: number) {
+  return db
+    .select(ROADMAP_SUMMARY_COLUMNS)
+    .from(projectRoadmapsTable)
+    .innerJoin(roadmapsTable, eq(projectRoadmapsTable.roadmapId, roadmapsTable.id))
+    .where(eq(projectRoadmapsTable.projectId, projectId))
+    .orderBy(desc(roadmapsTable.createdAt));
+}
 
 export async function verifyProjectOwnership(projectId: number, userId: number) {
   const project = await getAccessibleProject(projectId, userId);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, websiteProjectsTable } from "@workspace/db";
+import { applyDataForSeoPlatformEnv } from "@workspace/content-engine/support/integrations/dataforseo-credentials";
 import {
   isBacklinksConfigured,
   fetchBacklinksOverview,
@@ -25,6 +26,7 @@ export async function POST(
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
+  await applyDataForSeoPlatformEnv();
   if (!isBacklinksConfigured()) {
     return NextResponse.json(
       { error: "Backlinks provider not configured — add DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD", configured: false },

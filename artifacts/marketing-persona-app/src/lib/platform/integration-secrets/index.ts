@@ -27,7 +27,15 @@ export type {
   SaveStripeCredentialsInput,
   SaveTwitterCredentialsInput,
   SaveUnsplashCredentialsInput,
+  SaveBingWebmasterCredentialsInput,
 } from "./types";
+
+export type { SaveDataForSeoCredentialsInput } from "@/lib/platform/dataforseo-credentials";
+
+export {
+  saveDataForSeoCredentials,
+  clearStoredDataForSeoCredentials,
+} from "@/lib/platform/dataforseo-credentials";
 
 export {
   clearStoredStripeCredentials,
@@ -58,4 +66,6 @@ export {
   saveLinkedInCredentials,
   saveMetaCredentials,
   saveTwitterCredentials,
+  saveBingWebmasterCredentials,
+  clearStoredBingWebmasterCredentials,
 } from "./social-oauth";

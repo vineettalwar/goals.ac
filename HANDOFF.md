@@ -1,6 +1,85 @@
 # Session Handoff
 
-## Latest (2026-09-11) — Content Studio awesome (marketing → product)
+## Latest (2026-09-15) — Content Studio "too short" after ~2 min
+
+Agent team is on by default. Later agents returned a truncated JSON `body_markdown` that overwrote Hummingbird's draft; the 700-word gate then threw `Generated SEO article too short` / `body_markdown too short` after the full pipeline.
+
+Fix: keep the longer body on merge; later agents omit body unless the rewrite is ≥80% as long; writer thinking budget 0 (thinking tokens starved JSON output); one markdown expand pass instead of failing the job.
+
+**Verify:** `npx vitest run lib/content-engine/src/agents/agent-orchestrator.test.ts` · generate a blog post on `/projects/7/content-studio`
+
+## Prior (2026-09-15) — Edge Mesh production parity
+
+**MFA:** Session JWT now carries `mfaVerified`. Login/Google set it from TOTP state. Confirm/verify re-issue the cookie. Read/write `requireWorkerSession` applies org suspend, IP allowlist, and MFA (skip `/api/auth/mfa/*` and `GET /api/auth/me`). SPA `MfaComplianceGate` in `goals-app-ui`.
+
+**Daily Five:** Write worker `POST /api/website-projects/:id/content-pieces/daily-five` creates drafts and enqueues `contentGenerate`. SPA page at `/projects/:id/daily-five`. Validation lives in `@workspace/app-shell/studio`.
+
+**Public v1:** `POST /api/v1/content-pieces/:id/publish` readiness-gates then queues `contentPublish` (202). `POST /api/v1/content-pieces/generate-with-agents` queues `contentGenerate` with `useAgentTeam` (SSE `stream: true` is 501).
+
+**Auth:** Invite-only Google + R2 avatar PATCH; login responses include `avatarUrl`.
+
+**Verify:** `npx vitest run lib/cf-edge lib/app-shell/src/studio/daily-five-validation.test.ts artifacts/cf-read-worker/src/jobs-route.test.ts` · `node artifacts/cf-public-worker/scripts/google-signin-selfcheck.mjs` · `node artifacts/marketing-persona-app/scripts/avatar-selfcheck.mjs` · write/read/public worker `typecheck` (clean; old 622/362 counts are stale)
+
+## Prior (2026-09-15) — Roadmap generation: one plan, no crawl
+
+`/strategy/roadmaps` was slow and incoherent: 4 parallel LLM calls that claimed to “build on phase 1” without sharing output, plus sitemap recrawl, CMS site-graph, and brand-voice embeddings before the model ran.
+
+Now: one JSON call for a sequential 12-month plan; context is brand facts + GSC + goals from the DB only. Form accepts the project’s industry even when it is not in the catalog.
+
+**Verify:** `npx vitest run lib/content-engine/src/strategy/roadmap-generator.test.ts lib/content-engine/src/support/content/roadmap-project-context.test.ts` · generate on `/strategy/roadmaps`
+
+## Prior (2026-09-15) — Website scan fetch on Workers
+
+Brand scrape still showed **Website scan failed** / *We couldn't read your website* after the job was wired: `assertPublicUrl` DNS lookup rejects every URL on workerd, and `fetchPage` used a bot User-Agent WAFs drop. Guard skips DNS on Cloudflare Workers (`global_fetch_strictly_public` still blocks private IPs). Page fetch uses a browser UA, `Accept: text/html`, and re-checks each redirect hop.
+
+**Verify:** Deploy **jobs** worker, then Re-scan. `npx vitest run lib/security/src/ssrf-guard.test.ts lib/content-engine/src/brand/brand-scraper-page-cache-wiring.test.ts`
+
+## Prior (2026-09-15) — Brand scan actually runs on CF
+
+Production create/re-scan enqueued `brand-voice-index` instead of scraping the site. Sitemap crawl could succeed while Brand showed **Scan failed**. New `brand-scrape` job calls `runBrandScrapeWithDiscovery`. Deep voice extract no longer fails the whole scan; `scrape_data` drops page bodies and stores `{ error }` on failure.
+
+**Verify:** Deploy write + jobs workers, then Re-scan on the Brand tab. `npx vitest run lib/jobs/src/handlers/brandScrape.test.ts lib/content-engine/src/support/brand/brand-scrape-orchestrator.test.ts`
+
+## Prior (2026-09-15) — Platform Gemini on workers
+
+Workers copied social/DataForSEO secrets onto `process.env` but not `GEMINI_API_KEY`, so generation 503'd with **AI is not configured** even when the Worker secret existed. `copyCfWorkerProcessEnv` now includes Gemini keys. Jobs worker copies the same list without setting `CF_EDGE_HTTP`. Admin Integrations → AI lists Google Gemini as an env tile (`GEMINI_API_KEY`).
+
+**Verify:** `npx vitest run lib/cf-edge/src/wire.test.ts`  
+**Ops:** `wrangler secret put GEMINI_API_KEY` on **write**, **jobs**, and **read** workers (tile status is from read).
+
+## Prior (2026-09-15) — Real brand marks, Google env card, Vite Mastodon
+
+Tiles use Simple Icons paths in `lib/app-shell/src/integrations/brand-logos.tsx`. Letter badges and invented glyphs are gone. Pexels no longer uses the Unsplash icon.
+
+**Search:** Google is an env-managed tile (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, same client as login + Search Console). Bing Webmaster stays its own OAuth client. Next admin groups tiles from the **server** catalog so env `configured` flags are real (client-side `process.env` was always empty).
+
+**Social:** Mastodon is on both admin UIs as instance OAuth (no platform app). It is not shown as “connected.”
+
+Beehiiv has no Simple Icons mark; yellow square + `b`.
+
+**Verify:** `npx vitest run lib/app-shell/src/integrations/brand-logos.test.ts` · `/admin/integrations` Search + Social + Stock Images
+
+## Prior (2026-09-15) — Bing Webmaster OAuth connect
+
+**Shipped:** Project Integrations no longer needs env-only Bing secrets. Admin can save Bing Webmaster OAuth client ID/secret (encrypted, same pattern as LinkedIn). Connect uses env **or** DB. Refresh token URL is the documented `/webmasters/oauth/token`. GetUserSites prefers GET and drops unverified sites.
+
+**Admin:** Platform integrations → **Search** → Bing Webmaster Tools. Redirect URI: `https://api.goals.ac/api/auth/bing-webmaster/callback` (local Next: `http://localhost:3001/api/auth/bing-webmaster/callback`). Register the OAuth client in Bing Webmaster → Settings → API Access → OAuth Client ([Microsoft OAuth docs](https://learn.microsoft.com/en-us/bingwebmaster/oauth2)).
+
+**Migrate:** `lib/db/migrations/0079_platform_bing_webmaster_credentials.sql` and D1 `0014_platform_bing_webmaster_credentials.sql`. Apply D1 before expecting Connect to light up from DB credentials.
+
+**Verify:** `node lib/cf-edge/scripts/bing-webmaster-selfcheck.mjs`  
+**Not in this slice:** ingesting Copilot/Bing AI citation counts (still open the Bing AI Performance report).
+
+## Prior (2026-09-12) — Codebase docs + auth/avatar WIP
+
+**Docs shipped:** [`docs/CODEBASE.md`](docs/CODEBASE.md) (start-here map), [`docs/auth.md`](docs/auth.md) (dual-runtime auth + avatars), short `README.md` on every `artifacts/*` and `lib/*` package, README/`PROJECT.md` map refresh.
+
+**Auth WIP (uncommitted at doc time):** production Google OAuth on `cf-public-worker` (`auth-google.ts`, invite-only, session cookie); avatar resolve/upload on `cf-write-worker` `auth-me.ts` + Next `lib/auth/avatar.ts` + app-shell settings/Gravatar; `goals-app-ui` Login/Settings; self-checks `google-signin-selfcheck.mjs` / `avatar-selfcheck.mjs`.
+
+**Verify:** `node artifacts/cf-public-worker/scripts/google-signin-selfcheck.mjs`  
+**Next for auth:** finish/commit WIP, smoke Google login on `app.goals.ac` / CF preview, confirm R2 avatar PATCH on write worker.
+
+## Prior (2026-09-11) — Content Studio awesome (marketing → product)
 
 **Shipped:** Marketing honesty (Content Studio naming, numbered pipeline on `/` + `/content-engine`, Autopilot = cadence + review). Studio Express create (`format → keyword → review → generate`). This week’s queue CTA. MOFU formats `comparison` / `listicle` / `case_study` in schema + SEO pipeline + picker. PRD: `docs/prd/content-engine-awesome.md`.
 

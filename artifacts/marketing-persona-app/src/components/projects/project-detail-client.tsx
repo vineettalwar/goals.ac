@@ -269,6 +269,7 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
             isScraping={isScraping}
             wasAutoFilled={wasAutoFilled}
             scrapeFailed={scrapeFailed}
+            scrapeError={project.scrapeData?.error}
             onRescan={handleRescrape}
           />
         </TabsContent>

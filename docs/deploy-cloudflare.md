@@ -90,7 +90,11 @@ Last measured (Jul 2026):
 
 Shards implement routes the Vite app calls: auth (login/OAuth/password reset), projects CRUD, settings/BYOK, billing, content studio (queue + job poll), integrations, social, admin reads/writes, org members.
 
-Still **Next-only** (local dev / OpenNext preview): MFA setup, SSE streaming routes, public API v1, cron HTTP endpoints, analytics vitals.
+Still **Next-only** (local dev): SSE generate/stream (edge returns 202 job poll or 501), HTTP cron routes (prod uses Workers cron), Daily Five UI on Next besides the SPA page.
+
+**On Edge Mesh:** MFA TOTP setup/confirm/verify + session `mfaVerified` cookie claim; `GET /api/analytics/vitals`; public API v1 generate/render/image plus queued `POST /api/v1/content-pieces/:id/publish` and queued `POST /api/v1/content-pieces/generate-with-agents`.
+
+Worker typecheck (`cf-public` / `cf-read` / `cf-write`) is clean under `@cloudflare/workers-types` plus `nodejs_compat` (`lib/cf-edge/worker-node-compat.d.ts` for Buffer encodings). The old 622/362 D1-dialect error counts are stale.
 
 ## Legacy monolith (local preview only — not deployed)
 
@@ -225,7 +229,7 @@ Attach custom domains in the Pages dashboard: `goals.ac`, `app.goals.ac`. Point 
 | `GEMINI_API_KEY` | Recommended |
 | `NEXT_PUBLIC_APP_URL` | Build var (Workers Builds) |
 | `NEXT_PUBLIC_SITE_URL` | Build var |
-| `STRIPE_*`, `GOOGLE_CLIENT_*`, `RESEND_API_KEY` | Feature-gated |
+| `STRIPE_*`, `GOOGLE_CLIENT_*`, `BING_WEBMASTER_*`, `RESEND_API_KEY` | Feature-gated |
 
 `REDIS_URL` is **not needed** on the Cloudflare path — KV handles cache and rate limits.
 

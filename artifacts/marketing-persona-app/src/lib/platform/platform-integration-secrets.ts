@@ -10,6 +10,8 @@ export {
   clearStoredStripeCredentials,
   clearStoredTwitterCredentials,
   clearStoredUnsplashCredentials,
+  clearStoredBingWebmasterCredentials,
+  clearStoredDataForSeoCredentials,
   disconnectStripeConnect,
   getPlatformBedrockStatus,
   getPlatformIntegrationStatus,
@@ -26,6 +28,8 @@ export {
   saveStripeCredentials,
   saveTwitterCredentials,
   saveUnsplashCredentials,
+  saveBingWebmasterCredentials,
+  saveDataForSeoCredentials,
   setPlatformBedrockOrgGrants,
   type IntegrationFieldStatus,
   type PlatformBedrockStatus,
@@ -39,4 +43,5 @@ export {
   type SaveStripeCredentialsInput,
   type SaveTwitterCredentialsInput,
   type SaveUnsplashCredentialsInput,
+  type SaveDataForSeoCredentialsInput,
 } from "./integration-secrets";

@@ -3,6 +3,7 @@ import { db, trackedKeywordsTable, keywordRankSnapshotsTable } from "@workspace/
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
+import { applyDataForSeoPlatformEnv } from "@workspace/content-engine/support/integrations/dataforseo-credentials";
 import { isSerpConfigured } from "@workspace/serp-provider";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { z } from "zod";
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
+  await applyDataForSeoPlatformEnv();
   if (!isSerpConfigured()) {
     return NextResponse.json(
       { error: "Rank tracking is not configured. Set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD." },

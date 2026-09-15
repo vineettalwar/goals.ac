@@ -150,7 +150,7 @@ export function SettingsAiBedrockSection({
 
   return (
     <>
-      <div className="paper-card p-6 space-y-4">
+      <div className="p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Cloud className="w-4 h-4 text-amber-500" />
           AWS Bedrock (BYOK)

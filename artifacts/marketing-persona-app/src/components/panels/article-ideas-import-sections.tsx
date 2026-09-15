@@ -72,7 +72,7 @@ export function ArticleIdeasCsvImportSection({
   onConfirmImport: () => void;
 }) {
   return (
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Upload className="h-4 w-4" /> Import CSV
         </h2>
@@ -155,7 +155,7 @@ export function ArticleIdeasManualSection({
   onManualAdd: () => void;
 }) {
   return (
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Plus className="h-4 w-4" /> Add manually
         </h2>
@@ -209,7 +209,7 @@ export function ArticleIdeasSheetsSection({
 }) {
   return (
     <>
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <FileSpreadsheet className="h-4 w-4" /> Google Sheets
         </h2>
@@ -285,7 +285,7 @@ export function ArticleIdeasSheetsSection({
       </div>
 
       {history.length > 0 && (
-        <div className="paper-card p-6 rounded-xl space-y-3">
+        <div className="p-6 rounded-xl space-y-3">
           <h2 className="font-semibold text-sm">Import history</h2>
           {history.map((item) => (
             <div key={item.id} className="text-sm text-muted-foreground flex justify-between">

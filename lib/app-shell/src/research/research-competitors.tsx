@@ -151,7 +151,7 @@ export function ResearchCompetitorsView({
       </section>
 
       {showForm ? (
-        <div className="paper-card space-y-4 p-5">
+        <div className="space-y-4 p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Search className="h-4 w-4 text-primary" />
             Run analysis
@@ -233,7 +233,7 @@ function CompetitorReport({
 
   return (
     <div className="space-y-5">
-      <div className="paper-card space-y-3 p-5">
+      <div className="space-y-3 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-xl font-semibold tracking-tight">{result.competitorName}</h3>

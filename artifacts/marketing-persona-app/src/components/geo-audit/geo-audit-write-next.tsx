@@ -21,7 +21,7 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
   const topPick = recommendations[0];
 
   return (
-    <div className="paper-card rounded-2xl p-6 space-y-5">
+    <div className="space-y-5 border-t border-border pt-6">
       <div>
         <h2 className="font-semibold">Write next</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
@@ -30,14 +30,14 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
       </div>
 
       {topPick && (
-        <div className="rounded-xl border border-border bg-background p-4 space-y-3">
+        <div className="rounded-md border border-border p-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               Start here
             </span>
             <FormatBadge type={topPick.formatType} />
             {topPick.priority === "high" && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
+              <span className="text-xs font-medium text-red-600">
                 Closes a fail
               </span>
             )}
@@ -67,13 +67,13 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
 
       {recommendations.length > 1 && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Also worth writing
           </p>
           {recommendations.slice(1).map((rec) => (
             <div
               key={rec.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border bg-background p-4"
+              className="flex flex-col justify-between gap-3 border-t border-border py-4 sm:flex-row sm:items-center"
             >
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">

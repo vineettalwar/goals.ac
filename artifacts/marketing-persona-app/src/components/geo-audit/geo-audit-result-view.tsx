@@ -17,9 +17,6 @@ const STATUS_ICONS = {
   warn: <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />,
 };
 
-const SCORE_COLOR = (score: number) =>
-  score >= 80 ? "text-green-700" : score >= 60 ? "text-amber-600" : "text-red-600";
-
 type GeoAuditResultViewProps = {
   url: string;
   geoScore: number;
@@ -57,26 +54,16 @@ export function GeoAuditResultView({
         </Link>
       </Button>
 
-      <div className="paper-card rounded-2xl p-6 sm:p-8 space-y-4">
+      <div className="space-y-4 border-b border-border pb-6">
         <div>
           <p className="text-sm text-muted-foreground">Audited URL</p>
-          <p className="font-medium truncate">{url.replace(/^https?:\/\//, "")}</p>
+          <p className="truncate font-medium">{url.replace(/^https?:\/\//, "")}</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="text-center">
-            <p className={`text-5xl font-bold ${SCORE_COLOR(geoScore)}`}>{geoScore}</p>
-            <p className="text-sm text-muted-foreground mt-1">GEO score / 100</p>
-          </div>
-          <div className="flex-1 grid grid-cols-2 gap-4 w-full">
-            <div className="text-center paper-card rounded-xl p-4">
-              <p className="text-2xl font-bold text-green-700">{passCount}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Passed</p>
-            </div>
-            <div className="text-center paper-card rounded-xl p-4">
-              <p className="text-2xl font-bold text-red-600">{failCount}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Issues</p>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+          <p className="text-3xl font-semibold tabular-nums tracking-tight">{geoScore}</p>
+          <p className="text-sm text-muted-foreground">
+            {passCount} passed · {failCount} issues
+          </p>
         </div>
       </div>
 
@@ -84,7 +71,7 @@ export function GeoAuditResultView({
 
       <div className="space-y-3">
         {issues.map((issue) => (
-          <div key={issue.check} className="paper-card paper-card-hover rounded-xl p-5 space-y-2">
+          <div key={issue.check} className="space-y-2 border-b border-border py-4 last:border-0">
             <div className="flex items-center gap-2">
               {STATUS_ICONS[issue.status]}
               <h3 className="font-medium text-sm">{issue.check}</h3>

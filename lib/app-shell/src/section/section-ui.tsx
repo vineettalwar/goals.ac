@@ -14,25 +14,40 @@ export function SectionTabNav({
   tabs,
   projectId: _projectId,
   renderLink,
+  currentPath,
 }: {
   tabs: SectionTab[];
   projectId?: string;
   renderLink: (props: SectionLinkProps) => ReactNode;
+  currentPath?: string;
 }) {
   if (tabs.length === 0) return null;
 
   return (
-    <nav className="mb-6 flex flex-wrap gap-2">
-      {tabs.map((tab) => (
-        <SectionLink
-          key={tab.to}
-          renderLink={renderLink}
-          href={tab.to}
-          className="rounded-full border border-border px-3 py-1 text-xs font-medium transition-colors hover:border-primary hover:text-primary"
-        >
-          {tab.label}
-        </SectionLink>
-      ))}
+    <nav className="mb-6 flex flex-wrap gap-1" aria-label="Section">
+      {tabs.map((tab) => {
+        const keywordsHub = tab.to === "/search/keywords" && currentPath === "/search";
+        const active = currentPath
+          ? tab.exact
+            ? currentPath === tab.to
+            : keywordsHub || currentPath === tab.to || currentPath.startsWith(`${tab.to}/`)
+          : false;
+        return (
+          <SectionLink
+            key={tab.to}
+            renderLink={renderLink}
+            href={tab.to}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+            )}
+          >
+            {tab.label}
+          </SectionLink>
+        );
+      })}
     </nav>
   );
 }
@@ -52,7 +67,7 @@ export function HubCard({
     <SectionLink
       renderLink={renderLink}
       href={href}
-      className="paper-card block p-4 transition-colors hover:bg-secondary/20"
+      className="block p-4 transition-colors hover:bg-secondary/20"
     >
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
@@ -75,7 +90,7 @@ export function DataPanel({
     <section className="mb-6">
       <h2 className="mb-3 text-sm font-semibold">{title}</h2>
       {error ? <p className="mb-2 text-sm text-red-700">{error}</p> : null}
-      <div className="paper-card divide-y overflow-hidden">
+      <div className="divide-y divide-border overflow-hidden">
         {children}
         {empty ? <p className="p-4 text-sm text-muted-foreground">{empty}</p> : null}
       </div>
@@ -128,9 +143,10 @@ export function SectionShell({
   projectsLoading,
   projectsError,
   formatProjectLabel,
+  currentPath,
 }: {
   title: string;
-  description: string;
+  description?: string;
   tabs?: SectionTab[];
   children: ReactNode;
   requireProject?: boolean;
@@ -143,6 +159,7 @@ export function SectionShell({
   projectsLoading?: boolean;
   projectsError?: string | null;
   formatProjectLabel?: (project: SectionProject) => string;
+  currentPath?: string;
 }) {
   const projectList = projects ?? [];
   const showBuiltInSwitcher =
@@ -150,8 +167,8 @@ export function SectionShell({
 
   return (
     <div className={APP_SHELL_PAGE}>
-      <h1 className="mb-2 text-2xl font-bold">{title}</h1>
-      <p className="mb-6 text-sm text-muted-foreground">{description}</p>
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">{title}</h1>
+      {description ? <p className="mb-6 text-sm text-muted-foreground">{description}</p> : <div className="mb-6" />}
 
       {projectsError ? <p className="mb-4 text-sm text-red-700">{projectsError}</p> : null}
 
@@ -175,7 +192,12 @@ export function SectionShell({
       ) : null}
 
       {tabs && tabs.length > 0 ? (
-        <SectionTabNav tabs={tabs} projectId={projectId} renderLink={renderLink} />
+        <SectionTabNav
+          tabs={tabs}
+          projectId={projectId}
+          renderLink={renderLink}
+          currentPath={currentPath}
+        />
       ) : null}
 
       {projectsLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : null}

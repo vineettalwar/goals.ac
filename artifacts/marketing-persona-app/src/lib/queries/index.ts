@@ -23,6 +23,7 @@ import {
   fetchOrgSecuritySettings,
   fetchPlatformSettings,
   fetchProjectContent,
+  fetchProjectRoadmaps,
   fetchRoadmapsCatalog,
   fetchRoadmapFormOptions,
   fetchSemrushStatus,
@@ -131,6 +132,15 @@ export function useRoadmapsCatalog(enabled = true) {
     queryFn: fetchRoadmapsCatalog,
     staleTime: 60_000,
     enabled,
+  });
+}
+
+export function useProjectRoadmaps(projectId: string | number | null) {
+  const id = projectId != null ? String(projectId) : "";
+  return useQuery({
+    queryKey: queryKeys.projectRoadmaps(id),
+    queryFn: () => fetchProjectRoadmaps(id),
+    enabled: Boolean(id),
   });
 }
 

@@ -32,6 +32,7 @@ import {
 import { logger } from "@/lib/utils/logger";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { edgeStreamingBlocked } from "@/lib/cf-edge-http";
+import { resolveProviderId } from "@workspace/ai-providers/config";
 
 const sseHeaders = {
   "Content-Type": "text/event-stream",
@@ -312,7 +313,8 @@ export async function POST(
             eventType: "content_generation",
             usedByok: billingPrep.usedByok,
             tier: billingTier,
-            companyId: projectId,
+            provider: resolveProviderId(aiProviderOptions),
+            model: aiProviderOptions.ollamaModel ?? aiProviderOptions.bedrock?.model ?? undefined,
             promptTokens: result.generationUsage?.promptTokens,
             outputTokens: result.generationUsage?.outputTokens,
             totalTokens: result.generationUsage?.totalTokens,

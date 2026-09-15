@@ -29,6 +29,7 @@ import {
   GA4_ANALYTICS_SYNC_CRON,
   registerArticleIdeaSourceSyncHandler,
   ARTICLE_IDEA_SOURCE_SYNC_CRON,
+  registerBrandScrapeHandler,
   registerBrandVoiceIndexHandler,
   registerBrandVoiceSkillRegenHandler,
   registerBrandVoiceResyncHandler,
@@ -81,6 +82,7 @@ async function main(): Promise<void> {
   await registerGscSearchAnalyticsSyncHandler(boss);
   await registerGa4AnalyticsSyncHandler(boss);
   await registerArticleIdeaSourceSyncHandler(boss);
+  await registerBrandScrapeHandler(boss);
   await registerBrandVoiceIndexHandler(boss);
   await registerBrandVoiceSkillRegenHandler(boss);
   await registerBrandVoiceResyncHandler(boss);

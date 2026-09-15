@@ -2,7 +2,7 @@ import { setD1Binding } from "@workspace/db";
 import { wireCfEdgeEnv } from "@workspace/cf-edge/wire";
 import { corsPreflight, withCors } from "@workspace/cf-edge/cors";
 import { kvGetJson } from "@workspace/cf-edge/kv-cache";
-import { verifySessionClaims, type SessionClaims } from "@workspace/cf-edge/jwt";
+import { requireWorkerSession, workerSessionErrorBody } from "@workspace/cf-edge/session";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
 import { handleAuthenticatedRead } from "./api-routes";
 import { handleAdminRead } from "./admin-routes";
@@ -26,6 +26,8 @@ export interface Env extends CfEdgeBindings {
   CF_EDGE_HTTP: string;
   AUTH_SECRET: string;
   GEMINI_KEY_ENCRYPTION_SECRET: string;
+  GEMINI_API_KEY?: string;
+  AI_INTEGRATIONS_GEMINI_API_KEY?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BING_WEBMASTER_CLIENT_ID?: string;
@@ -34,12 +36,6 @@ export interface Env extends CfEdgeBindings {
   NEXT_PUBLIC_APP_URL?: string;
   UNSPLASH_ACCESS_KEY?: string;
   PEXELS_API_KEY?: string;
-}
-
-async function requireAuth(request: Request, env: Env) {
-  const secret = env.AUTH_SECRET;
-  if (!secret) return null;
-  return verifySessionClaims(request, secret);
 }
 
 export default {
@@ -56,11 +52,12 @@ export default {
       return withCors(request, Response.json({ status: "ok", worker: "goals-ac-read" }));
     }
 
-    const session = await requireAuth(request, env);
-    if (!session?.id) {
-      return withCors(request, Response.json({ error: "Unauthorized" }, { status: 401 }));
+    const auth = await requireWorkerSession(request, env.AUTH_SECRET, { path, method: request.method });
+    if (!auth.ok) {
+      return withCors(request, Response.json(workerSessionErrorBody(auth), { status: auth.status }));
     }
-    const userId = Number.parseInt(session.id, 10);
+    const session = auth.session;
+    const userId = auth.userId;
 
     try {
       if (path.match(/^\/api\/jobs\/[^/]+$/) && request.method === "GET") {
@@ -83,7 +80,7 @@ export default {
       const billingCreditsHandled = await handleBillingCreditsGet(request, path, userId);
       if (billingCreditsHandled) return billingCreditsHandled;
 
-      const orgSecurityHandled = await handleOrgSecurityRead(request, path, userId);
+      const orgSecurityHandled = await handleOrgSecurityRead(request, path, userId, session);
       if (orgSecurityHandled) return orgSecurityHandled;
 
       const partnerHandled = await handlePartnerRead(request, path, userId, session);

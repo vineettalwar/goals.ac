@@ -47,7 +47,7 @@ export function ResearchSignalsView({
 }) {
   if (!projectId) {
     return (
-      <div className="paper-card max-w-3xl space-y-4 p-6">
+      <div className="max-w-3xl space-y-4 p-6">
         <h2 className="text-lg font-semibold">Reddit signals</h2>
         <p className="text-sm text-muted-foreground">
           Select a project to search Reddit for discussions that match your brand keywords.
@@ -99,7 +99,7 @@ export function ResearchSignalsView({
       {loading && threadList.length === 0 ? <PanelLoading label="Loading threads…" /> : null}
 
       {threadList.length === 0 && !discovering && !loading ? (
-        <div className="paper-card space-y-2 p-8 text-center">
+        <div className="space-y-2 p-8 text-center">
           <p className="text-sm font-medium">No threads yet</p>
           <p className="text-sm text-muted-foreground">
             Click &quot;Find threads&quot; to search Reddit for discussions matching your brand
@@ -114,7 +114,7 @@ export function ResearchSignalsView({
 
       <ul className="space-y-3">
         {threadList.map((thread) => (
-          <li key={thread.url} className="paper-card p-5">
+          <li key={thread.url} className="p-5">
             <div className="mb-2 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs font-medium text-primary">{thread.subreddit}</p>

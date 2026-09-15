@@ -25,7 +25,7 @@ export function SocialSettingsPanel({
   if (!settings) return null;
 
   return (
-    <div className="paper-card space-y-4 p-4">
+    <div className="space-y-4 p-4">
       <div>
         <h3 className="text-sm font-semibold">Posting schedule</h3>
         <p className="text-sm text-muted-foreground">

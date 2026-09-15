@@ -15,10 +15,19 @@ export {
   DEFAULT_PRODUCT_SURFACE,
   FOOTER_ITEMS,
   NAV_SECTIONS,
+  RESEARCH_TABS,
+  SEARCH_TABS,
+  STRATEGY_TABS,
+  type NavChildDef,
   type NavItemDef,
   type ProductSurface,
 } from "./nav-config";
-export { isNavItemActive, projectIdFromPathname, resolveNavHref } from "./nav-routing";
+export {
+  isNavChildActive,
+  isNavItemActive,
+  projectIdFromPathname,
+  resolveNavHref,
+} from "./nav-routing";
 export { isSiteAdmin, isSuperAdmin, showPartnerNav } from "./nav-roles";
 export * from "./dashboard";
 export * from "./projects";
@@ -40,6 +49,9 @@ export {
   type ContentBriefSummary,
   ContentPiecePublishDialog,
   type RenderPreviewResult,
+  PublishBlockedError,
+  isPublishBlockedError,
+  publishBlockedErrorFromBody,
   ShopifyThemeSnippetPreflight,
   shopifyOutputModeNeedsThemeSnippet,
   readShopifyThemeSnippetRequiredFor,

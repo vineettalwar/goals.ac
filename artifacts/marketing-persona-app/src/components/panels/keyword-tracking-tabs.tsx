@@ -72,7 +72,7 @@ export function KeywordRankTrackingTab({
   snapshots: RankSnapshot[];
 }) {
   return (
-    <div className="paper-card p-6 rounded-xl space-y-4">
+    <div className="p-6 rounded-xl space-y-4">
       <h2 className="font-semibold flex items-center gap-2">
         <TrendingUp className="h-4 w-4" /> Rank tracking
       </h2>
@@ -182,7 +182,7 @@ export function KeywordAnalyzerTab({
 
   return (
     <>
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Search className="h-4 w-4" /> Keyword analysis
         </h2>
@@ -234,7 +234,7 @@ export function KeywordAnalyzerTab({
       </div>
 
       {clusters ? (
-        <div className="paper-card p-6 rounded-xl space-y-4">
+        <div className="p-6 rounded-xl space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="font-semibold flex items-center gap-2">
               <Map className="h-4 w-4" /> Topical clusters
@@ -286,7 +286,7 @@ export function KeywordAnalyzerTab({
 
       {analysis && (
         <div className="space-y-4">
-          <div className="paper-card rounded-xl p-5">
+          <div className="rounded-xl p-5">
             <h2 className="font-semibold flex items-center gap-2 mb-2">
               <Lightbulb className="h-4 w-4 text-primary" /> Top opportunity
             </h2>
@@ -294,7 +294,7 @@ export function KeywordAnalyzerTab({
             <p className="text-sm mt-2">{analysis.summary}</p>
           </div>
           {analysis.keywords.map((kw, i) => (
-            <div key={i} className="paper-card rounded-xl p-5 space-y-3">
+            <div key={i} className="rounded-xl p-5 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="font-semibold">{kw.keyword}</h3>
                 <Badge variant={DIFFICULTY_COLORS[kw.difficulty]}>{kw.difficulty}</Badge>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { BarChart2, Globe, Link2, ScanSearch } from "lucide-react";
+import { Link2 } from "lucide-react";
 import type { SectionLinkProps } from "../section/types";
-import { StatCard, StatusPill } from "./shared";
+import { MetricRow, StatusPill } from "./shared";
 
 export type PartnerProjectRow = {
   id: number;
@@ -74,21 +74,14 @@ export function PartnerWorkspaceView({
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Client projects" value={projects.length} icon={<Globe className="h-5 w-5" />} />
-        <StatCard
-          label="Articles published"
-          value={totals.published}
-          hint={`${totals.drafts} drafts in queue`}
-          icon={<BarChart2 className="h-5 w-5" />}
-        />
-        <StatCard
-          label="Avg. AI visibility"
-          value={`${Math.round(totals.avgVisibility)}%`}
-          tone="emerald"
-          icon={<ScanSearch className="h-5 w-5" />}
-        />
-      </div>
+      <MetricRow
+        items={[
+          { label: "client projects", value: projects.length },
+          { label: "published", value: totals.published },
+          { label: "drafts", value: totals.drafts },
+          { label: "avg AI visibility", value: `${Math.round(totals.avgVisibility)}%` },
+        ]}
+      />
 
       {projects.length === 0 ? (
         <div className="py-12">
@@ -112,7 +105,7 @@ export function PartnerWorkspaceView({
                 key={project.id}
                 renderLink={renderLink}
                 href={`/projects/${project.id}`}
-                className="paper-card block p-5 transition-colors hover:bg-secondary/20"
+                className="block p-5 transition-colors hover:bg-secondary/20"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>

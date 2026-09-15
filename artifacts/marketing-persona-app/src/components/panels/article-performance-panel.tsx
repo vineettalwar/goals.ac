@@ -332,7 +332,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
       {loading && !data ? (
         <PageSkeleton />
       ) : publishedArticles.length === 0 ? (
-        <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
+        <div className="rounded-xl flex flex-col items-center justify-center p-16 text-center">
           <BarChart3 className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="font-medium">No published articles yet</p>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
@@ -344,7 +344,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
           </Button>
         </div>
       ) : (
-        <div className="paper-card rounded-xl overflow-hidden">
+        <div className="rounded-xl overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">

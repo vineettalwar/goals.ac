@@ -174,14 +174,14 @@ export function SocialQueuePanel({
       </div>
 
       {queueError ? (
-        <div className="paper-card px-4 py-8 text-sm text-destructive">{queueError}</div>
+        <div className="px-4 py-8 text-sm text-destructive">{queueError}</div>
       ) : loadingQueue && items.length === 0 ? (
         <div className="flex items-center gap-2 px-1 py-10 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading queue…
         </div>
       ) : items.length === 0 ? (
-        <div className="paper-card space-y-2 px-4 py-10 text-center">
+        <div className="space-y-2 px-4 py-10 text-center">
           <p className="text-sm font-medium text-foreground">Nothing queued yet</p>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
             Create LinkedIn, X, or Instagram posts in Content Studio, then come back here to schedule

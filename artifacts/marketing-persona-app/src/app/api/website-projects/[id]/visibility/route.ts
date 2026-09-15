@@ -85,8 +85,8 @@ export async function GET(
     }
   }
 
+  const dataMode = await getVisibilityDataMode();
   const llmMentionsConfigured = isLlmMentionsConfigured();
-  const dataMode = getVisibilityDataMode();
   const engineKeys =
     dataMode === "live"
       ? (["chatgpt", "gemini"] as const)

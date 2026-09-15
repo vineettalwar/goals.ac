@@ -115,6 +115,9 @@ function isReadPath(path: string, method: string): boolean {
     if (/^\/api\/website-projects\/\d+\/search-properties\/gsc\/sync-status$/.test(path)) {
       return true;
     }
+    if (/^\/api\/website-projects\/\d+\/analytics-properties\/ga4\/sync$/.test(path)) {
+      return true;
+    }
     if (path === "/api/partner/projects") return true;
     if (path.startsWith("/api/admin/")) return true;
     if (path.startsWith("/api/jobs/")) return true;
@@ -310,6 +313,12 @@ function isWritePath(path: string, method: string): boolean {
   ) {
     return true;
   }
+  if (
+    /^\/api\/website-projects\/\d+\/analytics-properties$/.test(path) &&
+    (method === "PATCH" || method === "DELETE")
+  ) {
+    return true;
+  }
   if (/^\/api\/content-pieces\/\d+$/.test(path) && (method === "PATCH" || method === "DELETE")) {
     return true;
   }
@@ -320,6 +329,7 @@ function isWritePath(path: string, method: string): boolean {
   if (/^\/api\/content-pieces\/\d+\/images\/regenerate$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/images\/attach$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/humanize$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/humanize\/revert$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/approve$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/reject$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/submit-review$/.test(path) && method === "POST") return true;

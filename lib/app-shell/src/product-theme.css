@@ -23,6 +23,75 @@
   --chart-grid: #e8e5e0;
 }
 
+@keyframes agentWorkIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes agentCaret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes agentBarLive {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes agentPortraitLive {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.agent-work-in {
+  animation: agentWorkIn 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.agent-caret {
+  animation: agentCaret 900ms steps(1) infinite;
+}
+
+.agent-bar-live {
+  animation: agentBarLive 1.4s ease-in-out infinite;
+}
+
+.agent-portrait-live {
+  animation: agentPortraitLive 2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-work-in,
+  .agent-caret,
+  .agent-bar-live,
+  .agent-portrait-live {
+    animation: none;
+  }
+}
+
 .dark {
   --background: #121412;
   --foreground: #f4f1ea;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Lock, Mic2, RefreshCw, Save } from "lucide-react";
+import { Lock, PenLine, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface Props {
   projectId: string;
+  onDrafted?: () => void;
 }
 
 interface SkillState {
@@ -27,15 +28,15 @@ interface SourceStats {
   hasSkill: boolean;
 }
 
-export function BrandVoiceSkillEditor({ projectId }: Props) {
+export function BrandVoiceSkillEditor({ projectId, onDrafted }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [form, setForm] = useState<SkillState>({ skill: "", skillLocked: false, skillVersion: 0 });
   const [stats, setStats] = useState<SourceStats | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [skillRes, sourcesRes] = await Promise.all([
         fetch(`/api/website-projects/${projectId}/brand-voice/skill`),
@@ -79,6 +80,8 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
     }
   }
 
+  const skillEmpty = !form.skill.trim();
+
   async function handleRegenerate() {
     setRegenerating(true);
     try {
@@ -88,10 +91,18 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
       if (!res.ok) throw new Error("Regenerate failed");
       const data = (await res.json()) as SkillState & { regenerated: boolean };
       setForm(data);
-      toast.success(data.regenerated ? "Skill regenerated from your content" : "Skill is locked — unlock to regenerate");
-      void load();
+      if (!data.regenerated) {
+        toast.success("Skill is locked — unlock to regenerate");
+      } else if (skillEmpty) {
+        toast.success("Starting voice drafted. Review it, then save.");
+        onDrafted?.();
+      } else {
+        toast.success("Skill regenerated from your content");
+        onDrafted?.();
+      }
+      void load(true);
     } catch {
-      toast.error("Failed to regenerate skill");
+      toast.error("Failed to draft brand voice");
     } finally {
       setRegenerating(false);
     }
@@ -111,11 +122,17 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-medium flex items-center gap-2">
-            <Mic2 className="h-4 w-4 text-primary" />
+            <img
+              src="/agents/chameleon.webp"
+              alt=""
+              width={24}
+              height={24}
+              className="h-6 w-6 rounded-md object-cover"
+            />
             Brand Voice Skill
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Voice guide from your indexed content. Edit to tune how drafts are written.
+            Voice guide for drafts. Empty is fine — The Chameleon can draft a starting version.
           </p>
         </div>
         {stats && (
@@ -137,12 +154,45 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
         )}
       </div>
 
+      {skillEmpty && (
+        <div className="flex items-start gap-4 rounded-lg border border-border bg-secondary/60 px-4 py-4">
+          <img
+            src="/agents/chameleon.webp"
+            alt="The Chameleon, brand voice coach"
+            width={64}
+            height={64}
+            className="h-16 w-16 shrink-0 rounded-lg object-cover"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Don&apos;t know what to write?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              The Chameleon (brand voice coach) drafts this from your project name, site, and any
+              samples. You can edit every line before saving.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              className="mt-3"
+              onClick={handleRegenerate}
+              disabled={regenerating || form.skillLocked}
+            >
+              {regenerating ? (
+                <Spinner className="h-4 w-4 mr-1.5" />
+              ) : (
+                <PenLine className="h-4 w-4 mr-1.5" />
+              )}
+              Draft starting voice
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Textarea
         value={form.skill}
         onChange={(e) => setForm((p) => ({ ...p, skill: e.target.value }))}
-        rows={16}
+        rows={skillEmpty ? 8 : 16}
         className="font-mono text-xs leading-relaxed"
-        placeholder="Run a brand scan or upload samples to generate your personalized brand voice skill…"
+        placeholder="Or paste your own voice guide here…"
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -158,16 +208,18 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
           </Label>
         </div>
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRegenerate}
-            disabled={regenerating || form.skillLocked}
-          >
-            {regenerating ? <Spinner className="h-4 w-4 mr-1.5" /> : <RefreshCw className="h-4 w-4 mr-1.5" />}
-            Regenerate
-          </Button>
+          {!skillEmpty && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={regenerating || form.skillLocked}
+            >
+              {regenerating ? <Spinner className="h-4 w-4 mr-1.5" /> : <RefreshCw className="h-4 w-4 mr-1.5" />}
+              Regenerate
+            </Button>
+          )}
           <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
             {saving ? <Spinner className="h-4 w-4 mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
             Save skill

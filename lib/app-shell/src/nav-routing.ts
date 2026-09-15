@@ -1,3 +1,5 @@
+import { orgIntegrationsPath, projectIntegrationsPath } from "./project-detail/project-paths";
+
 export function projectIdFromPathname(pathname: string): number | null {
   const match = pathname.match(/^\/projects\/(\d+)(?:\/|$)/);
   if (!match) return null;
@@ -19,6 +21,9 @@ export function resolveNavHref(
   }
   if (href === "__autopilot__") {
     return projectId ? `/projects/${projectId}?tab=automation` : "/projects";
+  }
+  if (href === "__integrations__") {
+    return projectId ? projectIntegrationsPath(projectId) : orgIntegrationsPath("ai");
   }
   return href;
 }
@@ -58,17 +63,29 @@ export function isNavItemActive(
     }
     return pathname === item.matchPrefix || pathname.startsWith(`${item.matchPrefix}/`);
   }
-  if (item.label === "Partner") {
-    return pathname === "/partner" || pathname.startsWith("/partner/");
-  }
   if (item.label === "Integrations") {
-    return pathname === "/integrations" || pathname.startsWith("/integrations/");
+    return (
+      /\/projects\/\d+\/integrations(?:\/|$)/.test(pathname) ||
+      pathname === "/integrations/ai" ||
+      pathname.startsWith("/integrations/ai/") ||
+      pathname === "/integrations/tools" ||
+      pathname.startsWith("/integrations/tools/")
+    );
   }
   if (item.label === "Projects") {
-    return pathname === resolvedHref || pathname.startsWith("/projects/");
+    return pathname === "/projects" || /^\/projects\/\d+$/.test(pathname);
   }
   if (item.label === "Admin") {
     return pathname === "/admin" || pathname.startsWith("/admin/");
   }
   return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
+}
+
+export function isNavChildActive(
+  pathname: string,
+  child: { href: string; exact?: boolean },
+): boolean {
+  if (child.exact) return pathname === child.href;
+  if (child.href === "/search/keywords" && pathname === "/search") return true;
+  return pathname === child.href || pathname.startsWith(`${child.href}/`);
 }

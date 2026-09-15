@@ -15,6 +15,7 @@ import { ProjectDetailPage } from "@/pages/ProjectDetailPage";
 import { ProjectsPage } from "@/pages/ProjectsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { StudioPage } from "@/pages/StudioPage";
+import { DailyFivePage } from "@/pages/DailyFivePage";
 import {
   AuditDetailPage,
   AuditListPage,
@@ -157,6 +158,7 @@ export default function App() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/projects/:id/content-studio" element={<StudioPage />} />
+        <Route path="/projects/:id/daily-five" element={<DailyFivePage />} />
         <Route path="/projects/:id/social" element={<SocialHubPage />} />
         <Route
           path="/projects/:id/integrations"
@@ -189,7 +191,8 @@ export default function App() {
         <Route path="/research/reddit" element={<ResearchRedditPage />} />
         <Route path="/competitor-analysis" element={<Navigate to="/research/competitors" replace />} />
         <Route path="/autopilot" element={<AutopilotPage />} />
-        <Route path="/partner" element={<PartnerPage />} />
+        <Route path="/clients" element={<PartnerPage />} />
+        <Route path="/partner" element={<Navigate to="/clients" replace />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/growth-roadmaps/:slug" element={<GrowthRoadmapRoute />} />

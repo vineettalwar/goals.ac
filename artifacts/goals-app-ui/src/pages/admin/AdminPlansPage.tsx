@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PLAN_IDS, PLAN_LABELS, type PlanId } from "@/lib/billing/plans";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 
 type PlanQuotaLimits = {
   articles: number | null;
@@ -55,7 +56,7 @@ export function AdminPlansPage() {
   if (!limits) return null;
 
   return (
-    <div className="max-w-5xl space-y-6 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-6`}>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Plans & quotas</h1>
         <p className="mt-1 text-sm text-muted-foreground">Platform article and roadmap limits per plan tier.</p>

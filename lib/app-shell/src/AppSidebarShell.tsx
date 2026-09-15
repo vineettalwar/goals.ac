@@ -1,15 +1,11 @@
+"use client";
+
 import { memo, useCallback, useEffect, useState, type ReactNode } from "react";
-import { ArrowRight, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { GoalsBrandMark } from "./brand-mark";
 import { cn } from "./cn";
 import { buildNavModel, type NavItemDef } from "./nav-config";
-import { isNavItemActive, resolveNavHref } from "./nav-routing";
-
-export {
-  APP_SHELL_MAIN_OFFSET,
-  APP_SHELL_PAGE,
-  APP_SHELL_PAGE_WIDE,
-} from "./shell-constants";
+import { isNavChildActive, isNavItemActive, resolveNavHref } from "./nav-routing";
 
 export type AppShellLinkProps = {
   href: string;
@@ -45,6 +41,7 @@ const NavItemRow = memo(function NavItemRow({
   renderLink,
   onNavIntent,
   onNavigate,
+  children,
 }: {
   item: NavItemDef;
   resolvedHref: string;
@@ -52,6 +49,7 @@ const NavItemRow = memo(function NavItemRow({
   renderLink: (props: AppShellLinkProps) => ReactNode;
   onNavIntent?: (href: string) => void;
   onNavigate?: () => void;
+  children?: ReactNode;
 }) {
   const Icon = item.icon;
   return (
@@ -62,7 +60,7 @@ const NavItemRow = memo(function NavItemRow({
         onMouseEnter: onNavIntent ? () => onNavIntent(resolvedHref) : undefined,
         onFocus: onNavIntent ? () => onNavIntent(resolvedHref) : undefined,
         className: cn(
-          "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150",
+          "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors duration-150",
           active
             ? "bg-primary/10 font-medium text-primary"
             : "text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -74,6 +72,7 @@ const NavItemRow = memo(function NavItemRow({
           </>
         ),
       })}
+      {children}
     </li>
   );
 });
@@ -97,22 +96,56 @@ function NavSection({
 }) {
   return (
     <div className="mb-5 last:mb-0">
-      <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        {title}
-      </p>
+      <p className="px-3 pb-1.5 text-xs text-muted-foreground">{title}</p>
       <ul className="space-y-1">
         {items.map((item) => {
           const resolvedHref = resolveNavHref(pathname, activeProjectId, item.href);
+          const active = isNavItemActive(pathname, item, resolvedHref);
+          const kids = item.children;
           return (
             <NavItemRow
               key={item.label}
               item={item}
               resolvedHref={resolvedHref}
-              active={isNavItemActive(pathname, item, resolvedHref)}
+              active={active}
               renderLink={renderLink}
               onNavIntent={onNavIntent}
               onNavigate={onNavigate}
-            />
+            >
+              {active && kids?.length ? (
+                <ul className="mt-1 space-y-0.5">
+                  {kids.map((child) => {
+                    const childActive = isNavChildActive(pathname, child);
+                    return (
+                      <li key={child.href}>
+                        {renderLink({
+                          href: child.href,
+                          onClick: onNavigate,
+                          onMouseEnter: onNavIntent ? () => onNavIntent(child.href) : undefined,
+                          onFocus: onNavIntent ? () => onNavIntent(child.href) : undefined,
+                          className: cn(
+                            "flex w-full items-center gap-1.5 rounded-lg py-1.5 pr-3 pl-9 text-[13px] transition-colors",
+                            childActive
+                              ? "font-medium text-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          ),
+                          children: (
+                            <>
+                              <span className="min-w-0 truncate">{child.label}</span>
+                              {child.badge ? (
+                                <span className="ml-auto rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  {child.badge}
+                                </span>
+                              ) : null}
+                            </>
+                          ),
+                        })}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </NavItemRow>
           );
         })}
       </ul>
@@ -196,26 +229,6 @@ function SidebarPanel({
             );
           })}
         </ul>
-
-        {renderLink({
-          href: "/settings",
-          onClick: onNavigate,
-          onMouseEnter: onNavIntent ? () => onNavIntent("/settings") : undefined,
-          onFocus: onNavIntent ? () => onNavIntent("/settings") : undefined,
-          className:
-            "mt-3 flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-3 text-left transition-colors hover:bg-secondary",
-          children: (
-            <>
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold text-foreground">Workspace</span>
-                <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                  Plan, billing, and team
-                </span>
-              </span>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            </>
-          ),
-        })}
       </div>
 
       <div className="border-t border-border p-3">

@@ -241,7 +241,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
       ) : null}
 
       {!projectId ? (
-        <div className="paper-card p-6 rounded-xl text-sm text-muted-foreground">
+        <div className="p-6 rounded-xl text-sm text-muted-foreground">
           Choose a project in the sidebar to manage goals and briefs.
         </div>
       ) : loading && goals.length === 0 && briefs.length === 0 ? (
@@ -257,7 +257,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="paper-card p-6 rounded-xl space-y-3">
+            <div className="p-6 rounded-xl space-y-3">
               <h2 className="font-semibold flex items-center gap-2 text-sm">
                 <MapIcon className="h-4 w-4" /> Cluster map
               </h2>
@@ -287,7 +287,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
               </Button>
             </div>
 
-            <div className="paper-card p-6 rounded-xl space-y-3">
+            <div className="p-6 rounded-xl space-y-3">
               <h2 className="font-semibold flex items-center gap-2 text-sm">
                 <TrendingUp className="h-4 w-4" /> GSC progress
               </h2>

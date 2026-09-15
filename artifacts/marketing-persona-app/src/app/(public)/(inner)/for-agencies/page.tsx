@@ -14,8 +14,8 @@ export default function Page() {
       middleContent={
         <p className="text-sm text-muted-foreground text-center max-w-xl mx-auto -mt-4 mb-8">
           Already onboarded?{" "}
-          <Link href="/partner" className="text-(--accent-warm) hover:underline font-medium">
-            Open partner workspace
+          <Link href="/clients" className="text-(--accent-warm) hover:underline font-medium">
+            Open Clients
           </Link>{" "}
           (site admin sign-in required).
         </p>

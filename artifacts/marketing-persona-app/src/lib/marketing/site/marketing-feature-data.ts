@@ -337,8 +337,8 @@ export const LANDER_CONFIG = {
       { icon: Zap, title: "Autopilot per client", description: "Separate queues and CMS connections." },
     ],
     faq: [
-      { question: "Is white-label available?", answer: "Full white-label reseller is on the roadmap. Partner workspace is available today for site admins managing multiple client projects." },
-      { question: "How do I access the partner dashboard?", answer: "Sign up as a site admin or owner. Partner appears in the sidebar once your org is configured." },
+      { question: "Is white-label available?", answer: "Full white-label reseller is on the roadmap. Owners and site admins can already roll up client metrics on Clients." },
+      { question: "How do I see all client projects?", answer: "Owners and site admins get Clients in the sidebar. It rolls up visibility and publish status across projects." },
     ],
     waitlistKey: "agency-reseller",
     waitlistTitle: "Agency white-label program",

@@ -102,6 +102,13 @@ export async function fetchRoadmapsCatalog() {
   return data.roadmaps ?? [];
 }
 
+export async function fetchProjectRoadmaps(projectId: string) {
+  const data = await fetchJson<{ roadmaps?: unknown[] }>(
+    `/api/website-projects/${projectId}/roadmaps`,
+  );
+  return data.roadmaps ?? [];
+}
+
 export async function fetchWebsiteProject(projectId: string) {
   return fetchJson<Record<string, unknown>>(`/api/website-projects/${projectId}`);
 }
@@ -148,7 +155,7 @@ export async function fetchArticlePerformance(
 }
 
 export async function fetchGscSyncStatus(projectId: string) {
-  const res = await fetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`);
+  const res = await fetch(`/api/website-projects/${projectId}/search-properties/gsc/sync-status`);
   if (!res.ok) return null;
   return res.json();
 }

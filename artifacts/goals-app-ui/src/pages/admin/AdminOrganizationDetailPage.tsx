@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { PLAN_LABELS, normalizePlanId } from "@/lib/billing/plans";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 
 interface OrganizationDetailResponse {
   organization: {
@@ -167,7 +168,7 @@ export function AdminOrganizationDetailPage({ organizationId }: { organizationId
 
   if (!detail) {
     return (
-      <div className="max-w-6xl space-y-4 px-8 py-8">
+      <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-4`}>
         <Link to="/admin/organizations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back to organizations
         </Link>
@@ -179,7 +180,7 @@ export function AdminOrganizationDetailPage({ organizationId }: { organizationId
   const { organization: org } = detail;
 
   return (
-    <div className="max-w-6xl space-y-6 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-6`}>
       <Link to="/admin/organizations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Back to organizations
       </Link>

@@ -3,6 +3,7 @@ import {
   hostFromUrl,
   normalizeCompetitorUrl,
   normalizeCompetitorUrlList,
+  replaceCompetitorUrl,
 } from "./competitor-url";
 
 describe("competitor-url", () => {
@@ -32,5 +33,15 @@ describe("competitor-url", () => {
 
   it("extracts hostnames consistently", () => {
     expect(hostFromUrl("www.Example.COM/page")).toBe("example.com");
+  });
+
+  it("replaces a listed URL and rejects invalid or duplicate hosts", () => {
+    const listed = ["https://syde%20gmbh/", "https://rival.com/"];
+    expect(replaceCompetitorUrl(listed, listed[0]!, "https://syde.gmbh")).toEqual({
+      ok: true,
+      urls: ["https://syde.gmbh/", "https://rival.com/"],
+    });
+    expect(replaceCompetitorUrl(listed, listed[0]!, "not a url").ok).toBe(false);
+    expect(replaceCompetitorUrl(listed, listed[0]!, "https://rival.com").reason).toBe("duplicate");
   });
 });

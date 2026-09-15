@@ -21,12 +21,14 @@ export function ProjectVoiceTab({
   isScraping,
   wasAutoFilled,
   scrapeFailed,
+  scrapeError,
   onRescan,
 }: {
   projectId: string;
   isScraping: boolean;
   wasAutoFilled: boolean;
   scrapeFailed: boolean;
+  scrapeError?: string | null;
   onRescan: () => void;
 }) {
   const [form, setForm] = useState<VoiceForm>({
@@ -196,7 +198,7 @@ export function ProjectVoiceTab({
   }
 
   return (
-    <div className="paper-card space-y-4 rounded-xl p-6">
+    <div className="space-y-4 rounded-xl p-6">
       <ScrapeStatusHeader
         title="Brand Voice"
         description="Tune voice and style so drafts match how you write."
@@ -204,6 +206,8 @@ export function ProjectVoiceTab({
         wasAutoFilled={wasAutoFilled}
         scrapeFailed={scrapeFailed}
         onRescan={onRescan}
+        errorMessage={scrapeError}
+        failedDescription="We couldn't read your website. Draft a starting voice below, paste a sample, or try re-scanning."
       />
 
       {isScraping ? (
@@ -225,6 +229,7 @@ export function ProjectVoiceTab({
             onSave={saveVoice}
             appendWritingExample={appendWritingExample}
             removeWritingExample={removeWritingExample}
+            onSkillDrafted={() => void loadVoice()}
           />
         </div>
       )}

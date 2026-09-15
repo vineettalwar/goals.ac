@@ -133,10 +133,10 @@ export async function assertGoogleIntegrationsEnabled(): Promise<void> {
 
 export async function assertBingWebmasterEnabled(): Promise<void> {
   const [{ bingWebmasterAvailable }, settings] = await Promise.all([
-    import("./platform-features"),
+    import("./platform-features.server"),
     getPlatformSettings(),
   ]);
-  if (!bingWebmasterAvailable(settings)) {
+  if (!(await bingWebmasterAvailable(settings))) {
     throw new Error("Bing Webmaster integration is disabled on this platform.");
   }
 }

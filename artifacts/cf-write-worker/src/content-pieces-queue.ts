@@ -141,6 +141,53 @@ export async function handleContentPiecesQueueWrite(
       }
     }
 
+    const readinessOptions = await buildPublishReadinessOptions(
+      { id: piece.id, websiteProjectId: piece.websiteProjectId, targetKeyword: piece.targetKeyword },
+      { unattended: false },
+    );
+    const readiness = assessPublishReadiness(
+      {
+        title: piece.title,
+        bodyMarkdown: piece.bodyMarkdown ?? "",
+        pieceMetadata: piece.pieceMetadata,
+      },
+      readinessOptions,
+    );
+
+    if (!readiness.ok && !parsed.data.overrideReason) {
+      return withCors(
+        request,
+        Response.json(
+          {
+            error: "Content not ready to publish",
+            blockers: readiness.blockers,
+            warnings: readiness.warnings,
+            qualityScore: readiness.qualityScore,
+          },
+          { status: 422 },
+        ),
+      );
+    }
+
+    if (!readiness.ok && parsed.data.overrideReason) {
+      await db
+        .update(contentPiecesTable)
+        .set({
+          pieceMetadata: {
+            ...(typeof piece.pieceMetadata === "object" && piece.pieceMetadata
+              ? piece.pieceMetadata
+              : {}),
+            publishOverride: {
+              reason: parsed.data.overrideReason,
+              blockers: readiness.blockers,
+              userId,
+              overriddenAt: new Date().toISOString(),
+            },
+          },
+        })
+        .where(eq(contentPiecesTable.id, piece.id));
+    }
+
     const jobId = await sendToCfQueue(QUEUES.contentPublish, {
       contentPieceId: parsed.data.contentPieceId,
       userId,

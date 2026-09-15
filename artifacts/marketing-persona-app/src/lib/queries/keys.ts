@@ -16,6 +16,7 @@ export const queryKeys = {
   visibilitySummary: (projectId: string | number) => ["visibility-summary", String(projectId)] as const,
   searchProperties: (projectId: string | number) => ["search-properties", String(projectId)] as const,
   roadmapsCatalog: ["roadmaps-catalog"] as const,
+  projectRoadmaps: (projectId: string | number) => ["project-roadmaps", String(projectId)] as const,
   websiteProject: (projectId: string | number) => ["website-project", String(projectId)] as const,
   internalLinks: (projectId: string | number) => ["internal-links", String(projectId)] as const,
   orgSecurity: ["org-security"] as const,

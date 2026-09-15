@@ -6,6 +6,7 @@ interface OllamaGenerateRequest {
   prompt: string;
   system?: string;
   stream: boolean;
+  format?: "json";
   options?: {
     temperature?: number;
     num_predict?: number;
@@ -47,6 +48,9 @@ export class OllamaClient implements AiProviderClient {
     };
     if (params.systemInstruction) {
       body.system = params.systemInstruction;
+    }
+    if (params.responseMimeType === "application/json") {
+      body.format = "json";
     }
     if (params.temperature !== undefined || params.maxOutputTokens !== undefined) {
       body.options = {};

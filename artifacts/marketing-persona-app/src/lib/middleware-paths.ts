@@ -30,6 +30,7 @@ export function isAppShellPath(pathname: string) {
   return (
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/partner") ||
+    pathname.startsWith("/clients") ||
     pathname.startsWith("/projects") ||
     pathname.startsWith("/strategy") ||
     pathname.startsWith("/search") ||

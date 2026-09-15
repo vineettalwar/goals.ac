@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -96,13 +97,29 @@ export function TrackingSettings({
 }
 
 export function SourcesDisclosure({ projectId }: { projectId: string }) {
-  const [mounted, setMounted] = useState(false);
+  const searchParams = useSearchParams();
+  const oauthReturn = Boolean(searchParams.get("gsc") || searchParams.get("bing"));
+  const [open, setOpen] = useState(oauthReturn);
+  const [mounted, setMounted] = useState(true);
+
+  useEffect(() => {
+    if (!oauthReturn) return;
+    setOpen(true);
+    setMounted(true);
+    document
+      .getElementById("search-console-sources")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [oauthReturn]);
 
   return (
     <details
+      id="search-console-sources"
       className="group rounded-xl border border-border/80 bg-card"
+      open={open}
       onToggle={(event) => {
-        if ((event.currentTarget as HTMLDetailsElement).open) setMounted(true);
+        const next = (event.currentTarget as HTMLDetailsElement).open;
+        setOpen(next);
+        if (next) setMounted(true);
       }}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">

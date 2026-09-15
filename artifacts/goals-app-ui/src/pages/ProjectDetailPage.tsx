@@ -6,6 +6,7 @@ import {
   isProjectDetailTab,
   type ProjectDetailTab,
 } from "@workspace/app-shell";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useIntegrationsData } from "@/hooks/use-integrations-data";
@@ -83,7 +84,7 @@ export function ProjectDetailPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className={APP_SHELL_PAGE}>
         <p className="mb-4 text-sm text-red-700">{error}</p>
         <Link to="/projects" className="text-sm font-medium text-primary hover:underline">
           ← Back to projects

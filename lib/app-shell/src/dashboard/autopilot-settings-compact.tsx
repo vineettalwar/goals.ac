@@ -17,7 +17,7 @@ function draftFromSettings(settings: DashboardAutopilotSettings | null): Dashboa
   return {
     enabled: settings?.enabled ?? false,
     cadence: settings?.cadence === "weekly" ? "weekly" : "daily",
-    autoQueueOpportunities: settings?.autoQueueOpportunities ?? false,
+    autoQueueOpportunities: settings?.autoQueueOpportunities ?? true,
   };
 }
 
@@ -140,6 +140,9 @@ export function AutopilotSettingsCompact({
         </div>
       </div>
       {saveError ? <p className="text-xs text-red-700">{saveError}</p> : null}
+      <p className="text-xs text-muted-foreground">
+        Daily Autopilot writes the next due calendar topic, or queues one keyword for today when the calendar is empty.
+      </p>
     </div>
   );
 }

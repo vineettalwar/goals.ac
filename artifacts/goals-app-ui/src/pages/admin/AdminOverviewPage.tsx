@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@workspace/app-shell";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queries/keys";
 
@@ -128,7 +129,7 @@ export function AdminOverviewPage() {
         : null;
 
   return (
-    <div className="max-w-5xl space-y-8 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-8`}>
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">

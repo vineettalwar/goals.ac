@@ -105,7 +105,7 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div className={embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`}>
-      <div className="paper-card rounded-xl p-6 space-y-5">
+      <div className="rounded-xl p-6 space-y-5">
         <div>
           <h2 className="text-lg font-semibold">Run GEO audit</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -149,7 +149,7 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {geoAudits.length > 0 && (
-        <div className="paper-card rounded-xl p-6">
+        <div className="rounded-xl p-6">
           <h3 className="font-semibold mb-4">Recent audits</h3>
           <div className="divide-y divide-border">
             {geoAudits.map((audit) => (

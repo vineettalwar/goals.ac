@@ -194,27 +194,20 @@ function FeaturesCapabilitiesSection() {
                 <h3 className="text-xl font-bold tracking-tight mb-6 text-white">{pillar.title}</h3>
                 <ul className="space-y-6">
                   {pillar.features.map((feature) => {
-                    const { icon: Icon, title, desc } = feature;
+                    const { title, desc } = feature;
                     const href = "href" in feature ? feature.href : undefined;
                     return (
                     <li key={title} className="feature-row">
-                      <div className="flex gap-4">
-                        <div className="shrink-0 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-lg font-semibold text-white mb-1.5">{title}</h4>
-                          <p className="text-base text-white/65 leading-relaxed">{desc}</p>
-                          {href && (
-                            <Link
-                              href={href}
-                              className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-(--accent-warm) hover:underline"
-                            >
-                              Learn more <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
-                          )}
-                        </div>
-                      </div>
+                      <h4 className="mb-1.5 font-semibold text-white">{title}</h4>
+                      <p className="text-sm leading-relaxed text-white/65">{desc}</p>
+                      {href ? (
+                        <Link
+                          href={href}
+                          className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-(--accent-warm) hover:underline"
+                        >
+                          Learn more <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                      ) : null}
                     </li>
                     );
                   })}
@@ -247,17 +240,10 @@ function BetaComingSoonSection() {
             <span className="text-base font-medium text-white">Live with limits</span>
           </div>
           <ul className="space-y-6">
-            {BETA_FEATURES.map(({ icon: Icon, title, desc }) => (
+            {BETA_FEATURES.map(({ title, desc }) => (
               <li key={title}>
-                <div className="flex gap-4">
-                  <div className="shrink-0 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-1.5">{title}</h3>
-                    <p className="text-base text-white/65 leading-relaxed">{desc}</p>
-                  </div>
-                </div>
+                <h3 className="mb-1.5 font-semibold text-white">{title}</h3>
+                <p className="text-sm leading-relaxed text-white/65">{desc}</p>
               </li>
             ))}
           </ul>
@@ -294,15 +280,14 @@ function WorkflowStepsSection() {
       className="py-24"
       animate={false}
     >
-      <div ref={gridRef} className="grid md:grid-cols-3 gap-6">
+      <ol ref={gridRef} className="max-w-2xl space-y-8">
         {WORKFLOW_STEPS.map((item) => (
-          <div key={item.step} className={`scroll-reveal ${glassCard} p-6 h-full`}>
-            <div className="text-3xl font-bold text-(--accent-warm) mb-3">{item.step}</div>
-            <h3 className="text-lg font-bold mb-2 text-white">{item.title}</h3>
-            <p className="text-base text-white/65 leading-relaxed">{item.desc}</p>
-          </div>
+          <li key={item.title} className="scroll-reveal">
+            <h3 className="font-semibold text-white">{item.title}</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-white/65">{item.desc}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </MarketingSection>
   );
 }

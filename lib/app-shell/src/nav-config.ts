@@ -1,6 +1,5 @@
 import {
   BarChart2,
-  BookOpen,
   Briefcase,
   FolderOpen,
   Layers,
@@ -17,11 +16,19 @@ import {
 } from "lucide-react";
 import { isSuperAdmin, showPartnerNav } from "./nav-roles";
 
+export type NavChildDef = {
+  label: string;
+  href: string;
+  badge?: string;
+  exact?: boolean;
+};
+
 export type NavItemDef = {
   label: string;
   href: string;
   icon: LucideIcon;
   matchPrefix?: string;
+  children?: NavChildDef[];
 };
 
 /**
@@ -38,6 +45,26 @@ export const DEFAULT_PRODUCT_SURFACE: ProductSurface = "blog_wordpress";
 
 /** Nav labels withheld from the blog surface. */
 const NON_BLOG_NAV_LABELS = new Set(["Social Hub", "GEO Audit", "Research"]);
+
+export const STRATEGY_TABS = [
+  { label: "Roadmaps", to: "/strategy/roadmaps" },
+  { label: "Calendar", to: "/strategy/calendar" },
+  { label: "Topical map", to: "/strategy/topical-map" },
+  { label: "Goals", to: "/strategy/goals" },
+] as const;
+
+export const SEARCH_TABS = [
+  { label: "Keywords", to: "/search/keywords" },
+  { label: "Performance", to: "/search/performance" },
+  { label: "AI visibility", to: "/search/visibility" },
+  { label: "Site links", to: "/search/site" },
+] as const;
+
+export const RESEARCH_TABS = [
+  { label: "Overview", to: "/research", exact: true as const },
+  { label: "Competitors", to: "/research/competitors" },
+  { label: "Signals", to: "/research/reddit" },
+] as const;
 
 export const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
   {
@@ -57,24 +84,42 @@ export const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
   },
   {
     label: "Plan",
-    items: [{ label: "Strategy", href: "/strategy", icon: Map, matchPrefix: "/strategy" }],
+    items: [
+      {
+        label: "Strategy",
+        href: "/strategy/roadmaps",
+        icon: Map,
+        matchPrefix: "/strategy",
+      },
+    ],
   },
   {
     label: "Measure",
     items: [
-      { label: "Search", href: "/search", icon: BarChart2, matchPrefix: "/search" },
+      {
+        label: "Search",
+        href: "/search/keywords",
+        icon: BarChart2,
+        matchPrefix: "/search",
+      },
       { label: "GEO Audit", href: "/audit", icon: ScanSearch, matchPrefix: "/audit" },
     ],
   },
   {
     label: "Research",
-    items: [{ label: "Research", href: "/research", icon: Users, matchPrefix: "/research" }],
+    items: [
+      {
+        label: "Research",
+        href: "/research",
+        icon: Users,
+        matchPrefix: "/research",
+      },
+    ],
   },
 ];
 
 export const FOOTER_ITEMS: NavItemDef[] = [
-  { label: "Integrations", href: "/integrations", icon: Plug },
-  { label: "Help", href: "/help", icon: BookOpen },
+  { label: "Integrations", href: "__integrations__", icon: Plug },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -91,7 +136,7 @@ export function buildNavModel(options: {
   const overviewItems: NavItemDef[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Projects", href: "/projects", icon: FolderOpen },
-    ...(partner ? [{ label: "Partner", href: "/partner", icon: Briefcase }] : []),
+    ...(partner ? [{ label: "Clients", href: "/clients", icon: Briefcase }] : []),
   ];
 
   const navSections: Array<{ label: string; items: NavItemDef[] }> = [

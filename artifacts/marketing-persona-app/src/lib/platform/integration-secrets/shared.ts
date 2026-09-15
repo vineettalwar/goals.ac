@@ -1,6 +1,6 @@
 import "server-only";
 
-import { decryptSecret } from "@workspace/security/encryption";
+import { decryptSecret, decryptStoredSecret } from "@workspace/security/encryption";
 import { lastFour } from "@workspace/billing";
 import type { IntegrationFieldStatus } from "@/lib/platform/platform-integration-types";
 
@@ -18,6 +18,11 @@ export const LINKEDIN_ENV_VARS = ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"
 export const TWITTER_ENV_VARS = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET"] as const;
 export const META_ENV_VARS = ["META_APP_ID", "META_APP_SECRET"] as const;
 export const BLUESKY_ENV_VARS = ["BLUESKY_OAUTH_PRIVATE_KEY_JWK", "BLUESKY_CLIENT_NAME"] as const;
+export const BING_WEBMASTER_ENV_VARS = [
+  "BING_WEBMASTER_CLIENT_ID",
+  "BING_WEBMASTER_CLIENT_SECRET",
+] as const;
+export const DATAFORSEO_ENV_VARS = ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"] as const;
 
 export function isUnsplashManagedByEnv(): boolean {
   return Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim());
@@ -65,7 +70,7 @@ export function fieldStatus(
   if (fromEnv) {
     return { configured: true, source: "env", lastFour: lastFour(fromEnv) };
   }
-  const fromDb = safeDecrypt(dbEncrypted);
+  const fromDb = decryptStoredSecret(dbEncrypted);
   if (fromDb) {
     return { configured: true, source: "db", lastFour: lastFour(fromDb) };
   }

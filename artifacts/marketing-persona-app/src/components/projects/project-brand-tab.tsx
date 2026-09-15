@@ -146,7 +146,7 @@ export function ProjectBrandTab({
   );
 
   return (
-    <div className="paper-card space-y-4 rounded-xl p-6">
+    <div className="space-y-4 rounded-xl p-6">
       <ScrapeStatusHeader
         title="Brand Profile"
         description="Used to personalize drafts and articles for this website."
@@ -156,6 +156,7 @@ export function ProjectBrandTab({
         onRescan={onRescan}
         lastUpdated={lastUpdated}
         discoverySummary={discoverySummary}
+        errorMessage={project.scrapeData?.error}
       />
 
       {isScraping ? (

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { Calendar, FileText, Map, Pin, Plus, Target, TrendingUp } from "lucide-react";
+import { Map, Pin, Plus, Target, TrendingUp } from "lucide-react";
 import { cn } from "../cn";
 import type { SectionLinkProps } from "../section/types";
-import { btnOutline, btnPrimary, inputClass, PanelLoading, StatusPill, StatCard } from "./shared";
+import { btnOutline, btnPrimary, inputClass, MetricRow, PanelLoading, StatusPill } from "./shared";
 
 export type StrategyGoal = {
   id: number;
@@ -89,7 +89,7 @@ export function StrategyGoalsView({
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="paper-card space-y-3 p-5">
+        <div className="space-y-3 p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Map className="h-4 w-4 text-violet-600" /> Cluster map
           </h2>
@@ -112,7 +112,7 @@ export function StrategyGoalsView({
           )}
         </div>
 
-        <div className="paper-card space-y-3 p-5">
+        <div className="space-y-3 p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <TrendingUp className="h-4 w-4 text-emerald-600" /> GSC progress
           </h2>
@@ -141,7 +141,7 @@ export function StrategyGoalsView({
         </div>
       </div>
 
-      <div className="paper-card space-y-4 p-5">
+      <div className="space-y-4 p-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <Target className="h-4 w-4 text-blue-600" /> Create goal
         </h2>
@@ -168,7 +168,7 @@ export function StrategyGoalsView({
         </div>
       </div>
 
-      <div className="paper-card divide-y overflow-hidden">
+      <div className="divide-y overflow-hidden">
         <div className="border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">Goals ({goals.length})</h2>
         </div>
@@ -200,7 +200,7 @@ export function StrategyGoalsView({
       </div>
 
       {briefs.length > 0 ? (
-        <div className="paper-card divide-y overflow-hidden">
+        <div className="divide-y overflow-hidden">
           <div className="border-b border-border px-4 py-3">
             <h2 className="text-sm font-semibold">Briefs ({briefs.length})</h2>
           </div>
@@ -253,16 +253,17 @@ export function StrategyCalendarView({
   return (
     <div className="space-y-4">
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Scheduled" value={scheduled.length} icon={<Calendar className="h-5 w-5" />} />
-        <StatCard label="Total pieces" value={pieces.length} icon={<FileText className="h-5 w-5" />} />
-        <StatCard
-          label="This month"
-          value={scheduled.filter((p) => p.plannedDate?.startsWith(new Date().toISOString().slice(0, 7))).length}
-          icon={<TrendingUp className="h-5 w-5" />}
-        />
-      </div>
-      <div className="paper-card divide-y overflow-hidden">
+      <MetricRow
+        items={[
+          { label: "scheduled", value: scheduled.length },
+          { label: "total", value: pieces.length },
+          {
+            label: "this month",
+            value: scheduled.filter((p) => p.plannedDate?.startsWith(new Date().toISOString().slice(0, 7))).length,
+          },
+        ]}
+      />
+      <div className="divide-y overflow-hidden">
         {scheduled.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">No planned dates on content pieces yet.</p>
         ) : (
@@ -311,7 +312,7 @@ export function StrategyRoadmapsView({
             key={roadmap.id}
             renderLink={renderLink}
             href={`/growth-roadmaps/${roadmap.slug}`}
-            className="paper-card block p-4 transition-colors hover:bg-secondary/20"
+            className="block p-4 transition-colors hover:bg-secondary/20"
           >
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -355,7 +356,7 @@ export function StrategyTopicalMapView({
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {keywords.map((kw) => (
-          <div key={kw} className="paper-card p-4">
+          <div key={kw} className="p-4">
             <p className="text-sm font-semibold">{kw}</p>
             <p className="mt-1 text-xs text-muted-foreground">Primary brand keyword</p>
           </div>
@@ -375,7 +376,7 @@ export function StrategyTopicalMapView({
         </div>
       ) : null}
       {briefClusters && briefClusters.length > 0 ? (
-        <div className="paper-card divide-y overflow-hidden">
+        <div className="divide-y overflow-hidden">
           <div className="px-4 py-3">
             <h2 className="text-sm font-semibold">Brief clusters</h2>
           </div>

@@ -20,6 +20,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
     "@workspace/jobs": "workspace:*",
+    "@workspace/media": "workspace:*",
     "@workspace/security": "workspace:*",
     "@workspace/seo-tools": "workspace:*",
     "@workspace/serp-provider": "workspace:*",

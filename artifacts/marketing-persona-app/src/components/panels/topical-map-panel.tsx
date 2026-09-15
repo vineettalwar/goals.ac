@@ -141,7 +141,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {!activeProjectId ? (
-        <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
+        <div className="rounded-xl flex flex-col items-center justify-center p-16 text-center">
           <Map className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="font-medium">No project selected</p>
           <p className="text-sm text-muted-foreground mt-1 mb-4">
@@ -154,7 +154,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
       ) : null}
 
       {activeProjectId && loading && (
-        <div className="paper-card rounded-xl p-12 flex flex-col items-center gap-4">
+        <div className="rounded-xl p-12 flex flex-col items-center gap-4">
           <Spinner size="lg" />
           <p className="text-sm text-muted-foreground">Analyzing your niche and building keyword clusters…</p>
         </div>
@@ -163,7 +163,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
       {activeProjectId && map && (
         <div className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="paper-card rounded-xl p-5 flex items-center gap-5">
+            <div className="rounded-xl p-5 flex items-center gap-5">
               <ScoreRing score={map.topicalAuthority} />
               <div>
                 <p className="font-semibold">Topical Authority</p>
@@ -171,7 +171,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
               </div>
             </div>
 
-            <div className="paper-card rounded-xl p-5 space-y-2">
+            <div className="rounded-xl p-5 space-y-2">
               <div className="flex items-center gap-2 text-green-700">
                 <Zap className="h-4 w-4" />
                 <p className="font-semibold text-sm">Quick wins</p>
@@ -185,7 +185,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
               </ul>
             </div>
 
-            <div className="paper-card rounded-xl p-5 space-y-2">
+            <div className="rounded-xl p-5 space-y-2">
               <div className="flex items-center gap-2 text-primary">
                 <TrendingUp className="h-4 w-4" />
                 <p className="font-semibold text-sm">Write next</p>
@@ -195,7 +195,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           {map.contentGaps.length > 0 && (
-            <div className="paper-card rounded-xl p-5">
+            <div className="rounded-xl p-5">
               <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Top content gaps</h2>
               <div className="flex flex-wrap gap-2">
                 {map.contentGaps.map((gap) => (
@@ -209,7 +209,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
 
           <div className="space-y-3">
             {map.clusters.map((cluster, ci) => (
-              <div key={ci} className="paper-card rounded-xl overflow-hidden">
+              <div key={ci} className="rounded-xl overflow-hidden">
                 <button type="button"
                   className="w-full p-5 flex items-center gap-4 text-left hover:bg-muted/30 transition-colors"
                   onClick={() => setExpandedCluster(expandedCluster === ci ? null : ci)}
@@ -260,7 +260,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {activeProjectId && !map && !loading && (
-        <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
+        <div className="rounded-xl flex flex-col items-center justify-center p-16 text-center">
           <Map className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="font-medium">No topical map yet</p>
           <p className="text-sm text-muted-foreground mt-1 mb-4">

@@ -51,7 +51,7 @@ export function VoiceStyleEditView({
   }
 
   return (
-    <div className="paper-card space-y-6 p-6">
+    <div className="space-y-6 p-6">
       <div>
         <h2 className="font-semibold">Brand Voice</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">

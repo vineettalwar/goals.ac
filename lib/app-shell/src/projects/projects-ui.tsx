@@ -72,7 +72,7 @@ export function ProjectsView({
           {projects.map((project) => (
             <div
               key={project.id}
-              className="paper-card flex items-center gap-4 p-5 transition-colors hover:bg-secondary/20"
+              className="flex items-center gap-4 p-5 transition-colors hover:bg-secondary/20"
             >
               <ProjectLink
                 renderLink={renderLink}

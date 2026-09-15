@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 
 type AdminOrganization = {
   id: number;
@@ -96,7 +97,7 @@ export function AdminOrganizationsPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-5 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-5`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>

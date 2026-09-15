@@ -159,8 +159,8 @@ export function AutopilotActivityPanel({
 
   if (compact) {
     return (
-      <section className="paper-card overflow-hidden" aria-labelledby="autopilot-activity-heading">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-secondary/25 px-5 py-4 sm:px-6">
+      <section className="overflow-hidden" aria-labelledby="autopilot-activity-heading">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-0 py-4">
           <div className="min-w-0">
             <h2 id="autopilot-activity-heading" className="text-base font-semibold tracking-tight">
               Autopilot
@@ -179,7 +179,7 @@ export function AutopilotActivityPanel({
             </DashLink>
           </div>
         </div>
-        <div className="space-y-3 p-5 sm:p-6">
+        <div className="space-y-3 pt-4">
           {onSaveAutopilot ? (
             <AutopilotSettingsCompact
               projectId={projectId}
@@ -199,8 +199,8 @@ export function AutopilotActivityPanel({
   }
 
   return (
-    <section className="paper-card overflow-hidden" aria-labelledby="autopilot-activity-heading">
-      <div className="border-b border-border bg-secondary/25 px-5 py-4 sm:px-6">
+    <section className="overflow-hidden" aria-labelledby="autopilot-activity-heading">
+      <div className="border-b border-border py-4">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             <h2 id="autopilot-activity-heading" className="text-base font-semibold tracking-tight">
@@ -232,7 +232,7 @@ export function AutopilotActivityPanel({
         </div>
       </div>
 
-      <div className="p-5 sm:p-6">
+      <div className="pt-4">
         {onSaveAutopilot ? (
           <AutopilotSettingsCompact
             projectId={projectId}
@@ -276,9 +276,7 @@ export function AutopilotActivityPanel({
         <div className="grid gap-6 md:grid-cols-2 md:gap-8">
           <div>
             <div className="mb-2.5 flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                Recent content
-              </p>
+              <p className="text-sm text-muted-foreground">Recent content</p>
               <DashLink
                 renderLink={renderLink}
                 href={`/projects/${projectId}/content-studio`}
@@ -315,7 +313,7 @@ export function AutopilotActivityPanel({
 
           <div>
             <div className="mb-2.5 flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Recent publishes
                 {recentPublishes.length > 0 ? (
                   <span className="ml-1.5 font-normal normal-case tracking-normal text-muted-foreground/80">

@@ -50,7 +50,7 @@ export function OrgSecurityPanel({ canManage }: { canManage: boolean }) {
   if (!canManage) return null;
 
   return (
-    <div className="paper-card p-5 space-y-4">
+    <div className="p-5 space-y-4">
       <div>
         <h2 className="text-sm font-semibold">Organization security</h2>
         <p className="text-xs text-muted-foreground mt-1">

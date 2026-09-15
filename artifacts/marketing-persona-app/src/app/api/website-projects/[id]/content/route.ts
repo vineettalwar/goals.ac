@@ -14,6 +14,7 @@ import {
 import { eq, desc, inArray, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/org/org-access";
+import { ROADMAP_SUMMARY_COLUMNS } from "@/lib/projects/pin-roadmap-to-project";
 
 export async function GET(
   _req: Request,
@@ -50,7 +51,11 @@ export async function GET(
   const roadmapIds = pinnedRoadmapLinks.map((r) => r.roadmapId);
   const roadmaps =
     roadmapIds.length > 0
-      ? await db.select().from(roadmapsTable).where(inArray(roadmapsTable.id, roadmapIds)).orderBy(desc(roadmapsTable.createdAt))
+      ? await db
+          .select(ROADMAP_SUMMARY_COLUMNS)
+          .from(roadmapsTable)
+          .where(inArray(roadmapsTable.id, roadmapIds))
+          .orderBy(desc(roadmapsTable.createdAt))
       : [];
 
   const strategyIds = contentStrategies.map((s) => s.id);

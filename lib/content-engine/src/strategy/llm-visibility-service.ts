@@ -13,6 +13,7 @@ import {
   LLM_VISIBILITY_ENGINES,
 } from "@workspace/seo-tools/llmVisibilityChecker";
 import { isLlmMentionsConfigured, lookupBrandMentions } from "@workspace/serp-provider";
+import { applyDataForSeoPlatformEnv } from "../support/integrations/dataforseo-credentials";
 import { resolveAiClient } from "@workspace/ai-providers";
 import { getDecryptedUserGeminiKey } from "../support/ai/user-api-key";
 import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
@@ -23,7 +24,8 @@ import {
   liveVisibilitySnapshotsFromLookup,
 } from "./live-visibility-snapshots";
 
-export function getVisibilityDataMode(): "live" | "simulated" {
+export async function getVisibilityDataMode(): Promise<"live" | "simulated"> {
+  await applyDataForSeoPlatformEnv();
   return isLlmMentionsConfigured() ? "live" : "simulated";
 }
 
@@ -118,6 +120,7 @@ async function runLiveBrandLookup(
 }
 
 export async function runVisibilityCheckForProject(projectId: number): Promise<number> {
+  await applyDataForSeoPlatformEnv();
   const [project] = await db
     .select({
       id: websiteProjectsTable.id,

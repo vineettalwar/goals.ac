@@ -36,3 +36,17 @@ export function normalizeCompetitorUrlList(urls: string[]): string[] {
 
   return normalized;
 }
+
+export function replaceCompetitorUrl(
+  urls: string[],
+  oldUrl: string,
+  nextRaw: string,
+): { ok: true; urls: string[] } | { ok: false; reason: "invalid" | "duplicate" } {
+  const normalized = normalizeCompetitorUrl(nextRaw);
+  if (!normalized) return { ok: false, reason: "invalid" };
+  const others = urls.filter((u) => u !== oldUrl);
+  if (others.some((u) => hostFromUrl(u) === hostFromUrl(normalized))) {
+    return { ok: false, reason: "duplicate" };
+  }
+  return { ok: true, urls: urls.map((u) => (u === oldUrl ? normalized : u)) };
+}

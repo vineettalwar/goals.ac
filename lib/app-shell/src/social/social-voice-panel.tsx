@@ -76,7 +76,7 @@ export function SocialVoicePanel({
         ) : null}
       </div>
 
-      <div className="paper-card space-y-3 p-4">
+      <div className="space-y-3 p-4">
         <div>
           <h3 className="text-sm font-semibold">Import past posts</h3>
           <p className="text-sm text-muted-foreground">
@@ -143,7 +143,7 @@ export function SocialVoicePanel({
           Loading…
         </div>
       ) : channelData ? (
-        <div className="paper-card space-y-4 p-4 text-sm">
+        <div className="space-y-4 p-4 text-sm">
           <div>
             <h3 className="text-sm font-semibold">Extracted voice</h3>
             {channelData.lastAnalyzedAt ? (

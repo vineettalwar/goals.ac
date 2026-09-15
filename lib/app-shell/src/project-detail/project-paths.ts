@@ -13,8 +13,7 @@ export function projectIntegrationsPath(
 }
 
 export function orgIntegrationsPath(tab?: "ai" | "tools"): string {
-  if (tab) return `/integrations/${tab}`;
-  return "/integrations";
+  return `/integrations/${tab ?? "ai"}`;
 }
 
 export function contentPiecePath(

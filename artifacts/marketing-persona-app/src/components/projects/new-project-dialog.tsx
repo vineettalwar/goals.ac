@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Bird, CheckCircle2, Clock, Loader2, Search, X } from "lucide-react";
+import { Bird, CheckCircle2, Clock, Loader2, Search, SkipForward, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { isQuotaExhaustedPayload } from "@/components/billing/quota-payload-guards";
 import { QuotaUpgradePrompt } from "@/components/billing/quota-upgrade-prompt";
+import {
+  BRAND_SCRAPE_SKIPPED,
+  scrapeStatusIsSettled,
+} from "@workspace/content-engine/brand/project-voice-ready";
 
 const schema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -27,7 +31,7 @@ interface NewProjectDialogProps {
 }
 
 type SetupStepId = "queue" | "crawl" | "brand";
-type SetupStepStatus = "pending" | "active" | "done" | "failed";
+type SetupStepStatus = "pending" | "active" | "done" | "failed" | "skipped";
 
 const SETUP_STEPS: {
   id: SetupStepId;
@@ -45,18 +49,26 @@ function deriveSetupSteps(
   scrapeStatus: string | null | undefined,
 ): Record<SetupStepId, SetupStepStatus> {
   const crawlDone = crawlStatus === "done" || crawlStatus === "failed";
-  const scrapeDone = scrapeStatus === "done" || scrapeStatus === "failed";
+  const scrapeDone = scrapeStatusIsSettled(scrapeStatus);
   const crawlFailed = crawlStatus === "failed";
   const scrapeFailed = scrapeStatus === "failed";
+  const scrapeSkipped = scrapeStatus === BRAND_SCRAPE_SKIPPED;
+  const brandStatus: SetupStepStatus = scrapeSkipped
+    ? "skipped"
+    : scrapeFailed
+      ? "failed"
+      : scrapeDone
+        ? "done"
+        : "pending";
 
   if (!crawlStatus && !scrapeStatus) {
     return { queue: "active", crawl: "pending", brand: "pending" };
   }
-  if (!crawlDone && scrapeStatus !== "done" && scrapeStatus !== "failed") {
+  if (!crawlDone) {
     return {
       queue: "done",
       crawl: crawlFailed ? "failed" : "active",
-      brand: "pending",
+      brand: brandStatus === "pending" ? "pending" : brandStatus,
     };
   }
   if (!scrapeDone) {
@@ -69,27 +81,34 @@ function deriveSetupSteps(
   return {
     queue: "done",
     crawl: crawlFailed ? "failed" : "done",
-    brand: scrapeFailed ? "failed" : "done",
+    brand: brandStatus === "pending" ? "done" : brandStatus,
   };
 }
 
 function SetupProgress({
   crawlStatus,
   scrapeStatus,
+  onSkipBrand,
 }: {
   crawlStatus?: string | null;
   scrapeStatus?: string | null;
+  onSkipBrand?: () => void;
 }) {
   const statuses = deriveSetupSteps(crawlStatus, scrapeStatus);
   const focus =
     SETUP_STEPS.find((s) => statuses[s.id] === "active") ??
     SETUP_STEPS.find((s) => statuses[s.id] === "failed") ??
+    SETUP_STEPS.find((s) => statuses[s.id] === "skipped") ??
     SETUP_STEPS[SETUP_STEPS.length - 1]!;
   const FocusIcon = focus.Icon;
   const focusStatus = statuses[focus.id];
   const completed = SETUP_STEPS.filter(
-    (s) => statuses[s.id] === "done" || statuses[s.id] === "failed",
+    (s) => statuses[s.id] === "done" || statuses[s.id] === "failed" || statuses[s.id] === "skipped",
   ).length;
+  const canSkipBrand =
+    Boolean(onSkipBrand) &&
+    focus.id === "brand" &&
+    (focusStatus === "active" || focusStatus === "failed" || focusStatus === "pending");
   const next = SETUP_STEPS.find(
     (s) => statuses[s.id] === "pending" && SETUP_STEPS.indexOf(s) > SETUP_STEPS.indexOf(focus),
   );
@@ -113,13 +132,17 @@ function SetupProgress({
             <p className="mt-0.5 text-sm text-muted-foreground">
               {focusStatus === "failed"
                 ? "Could not finish this step — you can continue anyway."
-                : focusStatus === "done"
-                  ? "Done"
-                  : "Working…"}
+                : focusStatus === "skipped"
+                  ? "Skipped — you can add a brand voice later."
+                  : focusStatus === "done"
+                    ? "Done"
+                    : "Working…"}
             </p>
           </div>
           {focusStatus === "done" ? (
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          ) : focusStatus === "skipped" ? (
+            <SkipForward className="h-4 w-4 text-muted-foreground" />
           ) : focusStatus === "failed" ? (
             <X className="h-4 w-4 text-red-600" />
           ) : focusStatus === "active" ? (
@@ -128,6 +151,15 @@ function SetupProgress({
             <Clock className="h-4 w-4 text-muted-foreground" />
           )}
         </div>
+        {canSkipBrand ? (
+          <button
+            type="button"
+            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+            onClick={onSkipBrand}
+          >
+            Skip reading brand voice
+          </button>
+        ) : null}
       </div>
       {next ? (
         <p className="text-sm text-muted-foreground">
@@ -151,7 +183,9 @@ function SetupProgress({
                     ? "h-1.5 flex-1 rounded-full bg-emerald-500/70"
                     : st === "failed"
                       ? "h-1.5 flex-1 rounded-full bg-red-500/70"
-                      : "h-1.5 flex-1 rounded-full bg-border"
+                      : st === "skipped"
+                        ? "h-1.5 flex-1 rounded-full bg-muted-foreground/40"
+                        : "h-1.5 flex-1 rounded-full bg-border"
               }
             />
           );
@@ -205,8 +239,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
             const scrape = data.scrapeStatus;
             const crawl = data.crawlStatus;
             if (
-              scrape === "done" ||
-              scrape === "failed" ||
+              scrapeStatusIsSettled(scrape) ||
               ((!scrape || scrape === "pending") && (crawl === "done" || crawl === "failed") && attempts > 8)
             ) {
               setSetupSettled(true);
@@ -262,6 +295,20 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
     onCreated?.(project);
   }
 
+  async function skipBrandVoice() {
+    const id = createdProjectId;
+    if (id == null) return;
+    setScrapeStatus(BRAND_SCRAPE_SKIPPED);
+    setSetupSettled(true);
+    await fetch(`/api/website-projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scrapeStatus: BRAND_SCRAPE_SKIPPED }),
+    }).catch(() => {
+      // local skip still lets them open the project
+    });
+  }
+
   function finish(goToProject: boolean) {
     const id = createdProjectId;
     onOpenChange(false);
@@ -287,7 +334,11 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
 
           {createdProjectId ? (
             <div className="space-y-4">
-              <SetupProgress crawlStatus={crawlStatus} scrapeStatus={scrapeStatus} />
+              <SetupProgress
+                crawlStatus={crawlStatus}
+                scrapeStatus={scrapeStatus}
+                onSkipBrand={skipBrandVoice}
+              />
               <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="outline" onClick={() => finish(false)}>
                   Close

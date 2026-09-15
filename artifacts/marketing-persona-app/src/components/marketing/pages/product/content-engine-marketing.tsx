@@ -1,83 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import {
-  BarChart3,
-  BookOpen,
-  Briefcase,
-  CheckCircle2,
-  FileSearch,
-  Globe,
-  GraduationCap,
-  HelpCircle,
-  LayoutTemplate,
-  ListOrdered,
-  Newspaper,
-  PenLine,
-  RefreshCw,
-  Scale,
-  Send,
-  Share2,
-  Webhook,
-} from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
 import { DarkCTABand } from "@/components/marketing/sections/dark-cta-band";
 import { MarketingCTA } from "@/components/marketing/sections/marketing-cta";
-import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 
-/** Formats on the default blog_wordpress surface (SEO_LONGFORM_FORMATS). */
 const SEO_FORMATS = [
-  { icon: BookOpen, name: "Blog Post", range: "900–1,200 words" },
-  { icon: GraduationCap, name: "Guide", range: "1,400–2,000 words" },
-  { icon: GraduationCap, name: "Tutorial", range: "1,200–1,600 words" },
-  { icon: LayoutTemplate, name: "Pillar Page", range: "2,000–3,000 words" },
-  { icon: FileSearch, name: "Whitepaper", range: "1,800–2,500 words" },
-  { icon: HelpCircle, name: "FAQ Article", range: "8–12 Q&As" },
-  { icon: Newspaper, name: "News Article", range: "600–900 words" },
-  { icon: Globe, name: "Location Page", range: "800–1,200 words" },
-  { icon: Scale, name: "Comparison", range: "1,400–2,000 words" },
-  { icon: ListOrdered, name: "Listicle", range: "1,200–1,800 words" },
-  { icon: Briefcase, name: "Case Study", range: "1,200–1,800 words" },
+  { name: "Blog Post", range: "900–1,200 words" },
+  { name: "Guide", range: "1,400–2,000 words" },
+  { name: "Tutorial", range: "1,200–1,600 words" },
+  { name: "Pillar Page", range: "2,000–3,000 words" },
+  { name: "Whitepaper", range: "1,800–2,500 words" },
+  { name: "FAQ Article", range: "8–12 Q&As" },
+  { name: "News Article", range: "600–900 words" },
+  { name: "Location Page", range: "800–1,200 words" },
+  { name: "Comparison", range: "1,400–2,000 words" },
+  { name: "Listicle", range: "1,200–1,800 words" },
+  { name: "Case Study", range: "1,200–1,800 words" },
 ] as const;
 
 const PIPELINE_STEPS = [
   {
-    step: "01",
-    icon: FileSearch,
-    title: "Research & brief",
+    title: "Brief",
     desc: "Keywords, competitors, and intent become a brief before generation starts.",
   },
   {
-    step: "02",
-    icon: PenLine,
     title: "Draft",
     desc: "Long-form SEO drafts in your brand voice from Content Studio.",
   },
   {
-    step: "03",
-    icon: RefreshCw,
-    title: "Humanize & score",
-    desc: "Humanize pass plus dual editorial and SERP scores in the writing room.",
+    title: "Review",
+    desc: "Humanize pass plus editorial and SERP scores. You approve before live.",
   },
   {
-    step: "04",
-    icon: Send,
-    title: "Review & publish",
-    desc: "Readiness gates, then publish to your CMS. You approve before live.",
-  },
-  {
-    step: "05",
-    icon: BarChart3,
-    title: "Measure & refresh",
-    desc: "Track GEO and search signals, then refresh pages that are slipping.",
+    title: "Publish",
+    desc: "Readiness gates, then publish to your CMS. Measure and refresh what slips.",
   },
 ] as const;
-
-const glassCard = cardSurfaceClass("glass");
 
 export function ContentEngineMarketing() {
   const appCta = PRODUCT_CTA_HREF;
@@ -104,23 +67,13 @@ export function ContentEngineMarketing() {
         bridgeTop
         titleLine1="The Studio"
         titleLine2="loop"
-        description="One numbered path. Not a format catalog with a publish button bolted on."
+        description="Brief, draft, review, publish. Same path whether you click Generate or run Autopilot."
       >
-        <ol className="grid md:grid-cols-2 gap-4">
-          {PIPELINE_STEPS.map(({ step, icon: Icon, title, desc }) => (
-            <li key={title} className={`${glassCard} p-5`}>
-              <div className="flex gap-4">
-                <div className="shrink-0">
-                  <span className="text-xs font-semibold tracking-wider text-white/45">{step}</span>
-                  <div className="mt-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-white mb-1">{title}</h3>
-                  <p className="text-sm text-white/65 leading-relaxed">{desc}</p>
-                </div>
-              </div>
+        <ol className="max-w-2xl space-y-8">
+          {PIPELINE_STEPS.map(({ title, desc }) => (
+            <li key={title}>
+              <h3 className="text-base font-semibold text-white">{title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-white/65">{desc}</p>
             </li>
           ))}
         </ol>
@@ -133,20 +86,13 @@ export function ContentEngineMarketing() {
         bordered
         className="py-20"
       >
-        <div className="grid md:grid-cols-3 gap-4">
-          {[
-            "Humanize pass strips AI tells while keeping headings and links",
-            "Editorial + SERP scores update as you edit",
-            "Publish readiness blocks sloppy meta, dashes, and structure gaps",
-          ].map((label) => (
-            <div key={label} className={`${glassCard} p-5 flex items-start gap-3`}>
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-white/70 leading-relaxed">{label}</p>
-            </div>
-          ))}
-        </div>
+        <ul className="max-w-2xl space-y-4 text-sm leading-relaxed text-white/70">
+          <li>Humanize pass strips AI tells while keeping headings and links</li>
+          <li>Editorial + SERP scores update as you edit</li>
+          <li>Publish readiness blocks sloppy meta, dashes, and structure gaps</li>
+        </ul>
         <p className="mt-6 text-sm text-white/55">
-          <Link href="/article-quality" className="text-white/85 hover:text-white underline-offset-2 hover:underline">
+          <Link href="/article-quality" className="text-white/85 underline-offset-2 hover:text-white hover:underline">
             Open the article quality demo
           </Link>
         </p>
@@ -158,22 +104,16 @@ export function ContentEngineMarketing() {
         titleLine2="that ship today"
         description="Default Studio surface: long-form SEO articles. Repurpose to social or email from an approved piece when you need distribution."
       >
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <ul className="max-w-xl columns-1 gap-x-10 sm:columns-2">
           {SEO_FORMATS.map((format) => (
-            <div
-              key={format.name}
-              className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5"
-            >
-              <format.icon className="h-4 w-4 mt-0.5 shrink-0 text-blue-300" />
-              <div className="min-w-0">
-                <div className="text-sm font-semibold leading-tight text-white">{format.name}</div>
-                <div className="text-[11px] text-white/55 mt-0.5">{format.range}</div>
-              </div>
-            </div>
+            <li key={format.name} className="mb-2 break-inside-avoid text-sm text-white/80">
+              {format.name}{" "}
+              <span className="text-white/45">{format.range}</span>
+            </li>
           ))}
-        </div>
-        <p className="mt-5 text-sm text-white/55 leading-relaxed">
-          Also available via repurpose / full surface: LinkedIn, X, email sequences, landing page copy, and more.
+        </ul>
+        <p className="mt-5 text-sm leading-relaxed text-white/55">
+          Also available via repurpose: LinkedIn, X, email sequences, landing page copy.
         </p>
       </MarketingSection>
 
@@ -184,46 +124,17 @@ export function ContentEngineMarketing() {
         bordered
         className="py-20"
       >
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className={`${glassCard} p-6`}>
-            <div className="flex items-center gap-2 mb-5">
-              <Globe className="h-5 w-5 text-primary" />
-              <h3 className="font-bold text-lg text-white">CMS &amp; site publishing</h3>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-2 text-sm">
-              {["WordPress (deep)", "Ghost (deep)", "Shopify (deep)", "Drupal", "Joomla", "Notion", "Webflow", "Webhook"].map(
-                (name) => (
-                  <div
-                    key={name}
-                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 font-medium text-white"
-                  >
-                    {name}
-                  </div>
-                ),
-              )}
-            </div>
-            <p className="mt-4 text-xs text-white/55 leading-relaxed">
-              See{" "}
-              <Link href="/integrations" className="text-white/80 hover:text-white underline-offset-2 hover:underline">
-                integrations
-              </Link>{" "}
-              for Basic publish badges on thinner stacks.
-            </p>
-          </div>
-          <div className={`${glassCard} p-6`}>
-            <div className="flex items-center gap-2 mb-5">
-              <Share2 className="h-5 w-5 text-primary" />
-              <h3 className="font-bold text-lg text-white">After the article</h3>
-            </div>
-            <p className="text-sm text-white/65 leading-relaxed mb-4">
-              Repurpose approved articles to LinkedIn, X, Instagram, Facebook, Bluesky, and Mastodon — or send HMAC-signed JSON via webhook.
-            </p>
-            <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-2.5 flex items-start gap-2 text-xs text-white/65">
-              <Webhook className="h-4 w-4 mt-0.5 shrink-0" />
-              Distribution is secondary to the SEO article loop, not the hero SKU.
-            </div>
-          </div>
-        </div>
+        <p className="max-w-2xl text-sm leading-relaxed text-white/70">
+          WordPress, Ghost, Shopify (deep). Drupal, Joomla, Notion, Webflow, webhook (Basic). After the article,
+          repurpose to LinkedIn, X, Instagram, Facebook, Bluesky, and Mastodon.
+        </p>
+        <p className="mt-4 text-sm text-white/55">
+          See{" "}
+          <Link href="/integrations" className="text-white/80 underline-offset-2 hover:text-white hover:underline">
+            integrations
+          </Link>{" "}
+          for destination details.
+        </p>
       </MarketingSection>
 
       <DarkCTABand
@@ -234,21 +145,9 @@ export function ContentEngineMarketing() {
         primaryCta={{ label: "See Autopilot", href: "/content-autopilot" }}
         secondaryCta={{ label: "Run free GEO audit", href: "/geo-audit" }}
       >
-        <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-          {[
-            "Scheduled queue, not black-box spam",
-            "Quality scores on every queued draft",
-            "You keep editorial control",
-          ].map((label) => (
-            <div
-              key={label}
-              className="glass-card glass-card-hover rounded-2xl p-5 flex items-start gap-4"
-            >
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-white/70 leading-relaxed">{label}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mx-auto max-w-xl text-sm leading-relaxed text-white/65">
+          Scheduled queue, scores on every draft, you keep editorial control.
+        </p>
       </DarkCTABand>
 
       <MarketingCTA

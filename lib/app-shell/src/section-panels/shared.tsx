@@ -19,12 +19,34 @@ export function PanelLoading({ label = "Loading…" }: { label?: string }) {
   );
 }
 
+export function MetricRow({
+  items,
+}: {
+  items: Array<{ label: string; value: ReactNode }>;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <p className="text-sm text-muted-foreground">
+      {items.map((item, index) => (
+        <span key={item.label}>
+          {index > 0 ? (
+            <span className="mx-1.5 text-border" aria-hidden>
+              ·
+            </span>
+          ) : null}
+          <span className="font-medium tabular-nums text-foreground">{item.value}</span> {item.label}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 export function StatCard({
   label,
   value,
   hint,
-  icon,
-  tone,
+  icon: _icon,
+  tone: _tone,
 }: {
   label: string;
   value: ReactNode;
@@ -32,25 +54,11 @@ export function StatCard({
   icon?: ReactNode;
   tone?: "default" | "emerald" | "amber" | "blue";
 }) {
-  const toneClass =
-    tone === "emerald"
-      ? "border-emerald-500/20 bg-emerald-500/5"
-      : tone === "amber"
-        ? "border-amber-500/20 bg-amber-500/5"
-        : tone === "blue"
-          ? "border-blue-500/20 bg-blue-500/5"
-          : "";
-
   return (
-    <div className={cn("paper-card p-5", toneClass)}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="mt-1 text-3xl font-bold tabular-nums">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-        </div>
-        {icon ? <span className="text-muted-foreground">{icon}</span> : null}
-      </div>
+    <div>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight">{value}</p>
+      {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -136,20 +144,19 @@ export function SectionTabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
+    <div className="mb-4 flex flex-wrap gap-1">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => onChange(tab.id)}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             active === tab.id
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
           )}
         >
-          {tab.icon}
           {tab.label}
         </button>
       ))}
@@ -158,20 +165,14 @@ export function SectionTabs({
 }
 
 export function ScoreRing({ score, size = "lg" }: { score: number; size?: "lg" | "md" }) {
-  const tone =
-    score >= 70 ? "text-emerald-600" : score >= 40 ? "text-amber-600" : "text-red-600";
-  const ring =
-    score >= 70 ? "border-emerald-500/30" : score >= 40 ? "border-amber-500/30" : "border-red-500/30";
   return (
-    <div
+    <p
       className={cn(
-        "flex items-center justify-center rounded-full border-4 font-bold tabular-nums",
-        ring,
-        tone,
-        size === "lg" ? "h-20 w-20 text-2xl" : "h-14 w-14 text-lg",
+        "font-semibold tabular-nums tracking-tight text-foreground",
+        size === "lg" ? "text-3xl" : "text-xl",
       )}
     >
       {score}
-    </div>
+    </p>
   );
 }

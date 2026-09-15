@@ -20,7 +20,7 @@ export function AdminSectionLayout({
   tabs,
   actions,
   children,
-  wide = false,
+  wide = true,
 }: AdminSectionLayoutProps) {
   return (
     <div className={`space-y-6 ${wide ? APP_SHELL_PAGE_WIDE : APP_SHELL_PAGE}`}>

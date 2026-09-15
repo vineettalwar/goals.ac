@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Zap, Save, CheckCircle2 } from "lucide-react";
 import type { AutopilotSettings, VisibilitySettings } from "@workspace/db/schema";
 import { DEFAULT_AUTOPILOT_SETTINGS, DEFAULT_VISIBILITY_SETTINGS } from "@workspace/db/schema";
+import type { CmsIntegrationCredentials } from "@workspace/content-engine/support/publishing/cms-integration-types";
+import { resolvePrimaryBlogDestination } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -45,6 +47,7 @@ interface Props {
 export function ProjectAutomationPanel({ projectId }: Props) {
   const [autopilot, setAutopilot] = useState<AutopilotSettings>(DEFAULT_AUTOPILOT_SETTINGS);
   const [visibility, setVisibility] = useState<VisibilitySettings>(DEFAULT_VISIBILITY_SETTINGS);
+  const [blogCmsConnected, setBlogCmsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingAutopilot, setSavingAutopilot] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -54,12 +57,17 @@ export function ProjectAutomationPanel({ projectId }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [autoRes, visRes] = await Promise.all([
+      const [autoRes, visRes, cmsRes] = await Promise.all([
         fetch(`/api/website-projects/${projectId}/autopilot-settings`),
         fetch(`/api/website-projects/${projectId}/visibility-settings`),
+        fetch(`/api/website-projects/${projectId}/cms-integrations`),
       ]);
       if (autoRes.ok) setAutopilot({ ...DEFAULT_AUTOPILOT_SETTINGS, ...(await autoRes.json()) });
       if (visRes.ok) setVisibility({ ...DEFAULT_VISIBILITY_SETTINGS, ...(await visRes.json()) });
+      if (cmsRes.ok) {
+        const creds = (await cmsRes.json()) as CmsIntegrationCredentials;
+        setBlogCmsConnected(Boolean(resolvePrimaryBlogDestination(creds)));
+      }
     } finally {
       setLoading(false);
     }
@@ -118,7 +126,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="paper-card space-y-5 rounded-xl p-6">
+      <div className="space-y-5 rounded-xl p-6">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />
           <h3 className="font-semibold">Content Autopilot</h3>
@@ -127,7 +135,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          Cadence + review queue — not unattended spam. Generate the next due article from your content strategy on a daily or weekly schedule.
+          Cadence + review queue — not unattended spam. Writes the next due calendar topic, or queues one keyword / cold-start topic for today when the calendar is empty. Live publish still needs a connected CMS; review gates still apply.
         </p>
 
         {autopilotSaved && (
@@ -140,7 +148,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
           <div>
             <p className="text-sm font-medium">Enable autopilot</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Picks the next due topic from your content strategy calendar</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Next due calendar topic, or one auto-queued topic for today</p>
           </div>
           <Switch
             checked={autopilot.enabled}
@@ -178,6 +186,11 @@ export function ProjectAutomationPanel({ projectId }: Props) {
               </SelectContent>
             </Select>
           </div>
+          {autopilot.publishMode === "live" && !blogCmsConnected && (
+            <p className="text-sm text-amber-800 dark:text-amber-200 sm:col-span-2">
+              Connect WordPress, Shopify, Webflow, or Wix before live auto-publish. You can still save these settings.
+            </p>
+          )}
           <div className="space-y-2">
             <Label>Timezone</Label>
             <Select
@@ -211,15 +224,15 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
           <div>
             <p className="text-sm font-medium">Auto-queue keyword opportunities</p>
-            <p className="text-xs text-muted-foreground mt-0.5">High-score keyword gaps added to your content strategy calendar</p>
+            <p className="text-xs text-muted-foreground mt-0.5">When the calendar has nothing due, queue one high-score keyword for today</p>
           </div>
           <Switch
-            checked={autopilot.autoQueueOpportunities ?? false}
+            checked={autopilot.autoQueueOpportunities ?? true}
             onCheckedChange={(checked) => setAutopilot((p) => ({ ...p, autoQueueOpportunities: checked }))}
           />
         </div>
 
-        {(autopilot.autoQueueOpportunities ?? false) && (
+        {(autopilot.autoQueueOpportunities ?? true) && (
           <div className="space-y-2">
             <Label>Minimum opportunity score to auto-queue</Label>
             <Select
@@ -253,7 +266,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         </div>
       </div>
 
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h3 className="font-semibold">Internal link hub</h3>
         <p className="text-sm text-muted-foreground">
           Review coverage and suggestions from drafts before publish — white-hat internal linking, no exchange schemes.{" "}
@@ -263,7 +276,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         </p>
       </div>
 
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h3 className="font-semibold">AI Visibility & GEO</h3>
         <p className="text-sm text-muted-foreground">
           Weekly LLM citation tracking and GEO re-audits.{" "}

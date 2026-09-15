@@ -1,9 +1,12 @@
 import { db } from "./db";
 import { sumAsInt } from "@workspace/db";
 import {
+  ANALYTICS_PROPERTY_PROVIDERS,
   analyticsPropertyConnectionsTable,
   gscSearchQueriesTable,
+  platformSettingsTable,
   websiteProjectsTable,
+  type AnalyticsPropertyProvider,
 } from "@workspace/db/schema-sqlite";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
@@ -16,6 +19,7 @@ import {
   type AnalyticsPropertyTokenEnv,
 } from "@workspace/cf-edge/analytics-property-client";
 import { getArticlePerformance } from "@workspace/content-engine/analytics/article-performance";
+import { getGa4SyncStatus } from "@workspace/content-engine/analytics/ga4-analytics-service";
 import {
   getDecryptedSemrushCredentialsForUser,
   getOrgAiSettingsForUser,
@@ -30,6 +34,68 @@ import {
 import type { ContentStyle } from "@workspace/db/schema-sqlite";
 import { defaultSyncDateRange } from "@workspace/seo-tools";
 import { requireProjectAccess } from "./project-access";
+
+const UNSELECTED_PROPERTY_ID = "";
+
+function toIsoString(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : String(value);
+}
+
+function toNullablePropertyId(propertyId: string): string | null {
+  return propertyId && propertyId !== UNSELECTED_PROPERTY_ID ? propertyId : null;
+}
+
+function serializeGa4Connection(row: {
+  provider: string;
+  propertyId: string;
+  propertyName: string | null;
+  streamId: string | null;
+  propertyVerified: boolean;
+  accountEmail: string | null;
+  connectedAt: Date | string;
+}) {
+  return {
+    provider: row.provider as AnalyticsPropertyProvider,
+    connected: true,
+    propertyId: toNullablePropertyId(row.propertyId),
+    propertyName: row.propertyName,
+    streamId: row.streamId,
+    propertyVerified: row.propertyVerified,
+    accountEmail: row.accountEmail,
+    connectedAt: toIsoString(row.connectedAt),
+  };
+}
+
+function emptyGa4Status(provider: AnalyticsPropertyProvider) {
+  return {
+    provider,
+    connected: false,
+    propertyId: null,
+    propertyName: null,
+    streamId: null,
+    propertyVerified: false,
+    accountEmail: null,
+    connectedAt: null,
+  };
+}
+
+async function ga4OAuthConfigured(env: AnalyticsPropertyTokenEnv): Promise<boolean> {
+  let googleIntegrationsEnabled = true;
+  try {
+    const [row] = await db
+      .select({ googleIntegrationsEnabled: platformSettingsTable.googleIntegrationsEnabled })
+      .from(platformSettingsTable)
+      .where(eq(platformSettingsTable.id, 1));
+    googleIntegrationsEnabled = row?.googleIntegrationsEnabled ?? true;
+  } catch {
+    // Unmigrated platform_settings — default to enabled.
+  }
+  return (
+    googleIntegrationsEnabled &&
+    Boolean(env.GOOGLE_CLIENT_ID?.trim() && env.GOOGLE_CLIENT_SECRET?.trim())
+  );
+}
 
 export async function handleAnalyticsRead(
   request: Request,
@@ -166,10 +232,41 @@ export async function handleAnalyticsRead(
       return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
     const rows = await db
-      .select()
+      .select({
+        provider: analyticsPropertyConnectionsTable.provider,
+        propertyId: analyticsPropertyConnectionsTable.propertyId,
+        propertyName: analyticsPropertyConnectionsTable.propertyName,
+        streamId: analyticsPropertyConnectionsTable.streamId,
+        propertyVerified: analyticsPropertyConnectionsTable.propertyVerified,
+        accountEmail: analyticsPropertyConnectionsTable.accountEmail,
+        connectedAt: analyticsPropertyConnectionsTable.connectedAt,
+      })
       .from(analyticsPropertyConnectionsTable)
       .where(eq(analyticsPropertyConnectionsTable.projectId, projectId));
-    return withCors(request, Response.json({ properties: rows }));
+    const byProvider = new Map(rows.map((row) => [row.provider, row]));
+    const connections = ANALYTICS_PROPERTY_PROVIDERS.map((provider) => {
+      const row = byProvider.get(provider);
+      return row ? serializeGa4Connection(row) : emptyGa4Status(provider);
+    });
+    return withCors(
+      request,
+      Response.json({
+        connections,
+        oauthConfigured: { googleAnalytics4: await ga4OAuthConfigured(env) },
+      }),
+    );
+  }
+
+  const ga4SyncMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/analytics-properties\/ga4\/sync$/,
+  );
+  if (ga4SyncMatch && method === "GET") {
+    const projectId = Number.parseInt(ga4SyncMatch[1]!, 10);
+    const access = await requireProjectAccess(projectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
+    }
+    return withCors(request, Response.json(await getGa4SyncStatus(projectId)));
   }
 
   const articlePerfMatch = path.match(/^\/api\/website-projects\/(\d+)\/article-performance$/);

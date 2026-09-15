@@ -86,7 +86,7 @@ export function ProjectStyleTab({
   }
 
   return (
-    <div className="paper-card space-y-4 rounded-xl p-6">
+    <div className="space-y-4 rounded-xl p-6">
       <div>
         <h2 className="font-semibold">Content Style</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">

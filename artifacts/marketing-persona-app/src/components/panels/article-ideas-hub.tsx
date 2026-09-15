@@ -27,6 +27,7 @@ import {
 } from "@workspace/content-engine/support/content/content-language";
 import type { KeywordOpportunity } from "@/lib/queries/types";
 import { ArticleIdeasOpportunityList } from "./article-ideas-opportunity-list";
+import { notifyGscSyncResult } from "@/lib/integrations/search/gsc-sync-result";
 
 export type SourceFilter =
   | "all"
@@ -158,9 +159,7 @@ export function ArticleIdeasHub({
       return;
     }
     const data = await res.json();
-    toast.success(
-      `Synced ${data.rowsUpserted ?? 0} rows · ${data.opportunitiesInserted ?? 0} new ideas`,
-    );
+    notifyGscSyncResult(data);
     await loadStatuses();
     await refetchOpportunities();
     onRefetch?.();
@@ -264,7 +263,7 @@ export function ArticleIdeasHub({
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="paper-card p-4 rounded-xl flex items-center justify-between gap-3">
+        <div className="p-4 rounded-xl flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-orange-500" />
             <div>
@@ -282,7 +281,7 @@ export function ArticleIdeasHub({
             </Button>
           )}
         </div>
-        <div className="paper-card p-4 rounded-xl flex items-center justify-between gap-3">
+        <div className="p-4 rounded-xl flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4 text-primary" />
             <div>
@@ -305,7 +304,7 @@ export function ArticleIdeasHub({
             </Button>
           ) : (
             <Button asChild variant="outline" size="sm">
-              <Link href="/search/visibility">Connect</Link>
+              <Link href={`/projects/${projectId}/integrations/search`}>Connect</Link>
             </Button>
           )}
         </div>
@@ -355,7 +354,7 @@ export function ArticleIdeasHub({
         ))}
       </div>
 
-      <div className="paper-card p-6 rounded-xl space-y-4">
+      <div className="p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-primary" />
           Article ideas
@@ -368,8 +367,7 @@ export function ArticleIdeasHub({
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">
-            No ideas yet. Sync Search Console, run discovery above, or import keywords in the
-            Import tab.
+            No ideas yet. Sync Search Console, run discovery above, or import keywords.
           </p>
         ) : (
           <ArticleIdeasOpportunityList

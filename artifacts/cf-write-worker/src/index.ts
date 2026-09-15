@@ -1,16 +1,15 @@
 import { setD1Binding } from "@workspace/db";
-import { sendToCfQueue } from "@workspace/jobs/cf-queues";
-import { QUEUES } from "@workspace/jobs/queues";
 import { wireCfEdgeEnv } from "@workspace/cf-edge/wire";
+import { applyDataForSeoPlatformEnv } from "@workspace/content-engine/support/integrations/dataforseo-credentials";
 import { corsPreflight, withCors } from "@workspace/cf-edge/cors";
-import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import { kvPutJson } from "@workspace/cf-edge/kv-cache";
-import { verifySessionClaims } from "@workspace/cf-edge/jwt";
+import { requireWorkerSession, workerSessionErrorBody } from "@workspace/cf-edge/session";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
-import { z } from "zod";
+import { setContentMediaR2Binding } from "@workspace/media";
 import { handleAdminWrite } from "./admin-routes";
 import { handleCmsIntegrationsTest } from "./cms-integrations-test";
 import { handleContentPiecesWrite } from "./content-pieces";
+import { handleContentPiecesQueueWrite } from "./content-pieces-queue";
 import { handleContentPiecesAiWrite } from "./content-pieces-ai";
 import { handleContentPiecesWorkflowWrite } from "./content-pieces-workflow";
 import { handleAutopilotSettingsWrite } from "./autopilot-settings";
@@ -30,6 +29,7 @@ import { handleOrgMembersWrite } from "./org-members";
 import { handleBillingPortalPost } from "./billing-portal";
 import { handleBillingCheckoutPost } from "./billing-checkout";
 import { handleSearchPropertiesWrite } from "./search-properties";
+import { handleAnalyticsPropertiesWrite } from "./analytics-properties";
 import { handleCmsIntegrationsWrite } from "./cms-integrations";
 import { handleStudioWrite } from "./studio-routes";
 import { handleKeywordWrite } from "./keyword-routes";
@@ -53,8 +53,6 @@ import { handleProjectCredentialsWrite } from "./project-credentials-routes";
 import { handleRoadmapPinWrite } from "./roadmap-pin-routes";
 import { handleWordpressTestWrite } from "./wordpress-test-routes";
 import { edgeNotImplementedResponse, isUnimplementedGeneratePath } from "@workspace/cf-edge/edge-not-implemented";
-import { persistSitemapCrawl } from "@workspace/content-engine/support/brand/brand-scan-context";
-import { getAccessibleProject } from "./project-access";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -62,35 +60,18 @@ export interface Env extends CfEdgeBindings {
   FORCE_QUEUE_WRITES: string;
   AUTH_SECRET: string;
   GEMINI_KEY_ENCRYPTION_SECRET: string;
+  GEMINI_API_KEY?: string;
+  AI_INTEGRATIONS_GEMINI_API_KEY?: string;
+  AI_PROVIDER?: string;
   DATAFORSEO_LOGIN?: string;
   DATAFORSEO_PASSWORD?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BING_WEBMASTER_CLIENT_ID?: string;
   APP_URL?: string;
+  CONTENT_MEDIA_R2?: import("@workspace/media").ContentMediaR2Binding;
+  CONTENT_MEDIA_PUBLIC_BASE_URL?: string;
 }
-
-const contentGenerateBody = z
-  .object({
-    contentItemId: z.number().int().positive().optional(),
-    contentPieceId: z.number().int().positive().optional(),
-    projectId: z.number().int().positive(),
-    generateVariants: z.boolean().optional(),
-    schedulePublish: z.boolean().optional(),
-  })
-  .refine((data) => data.contentItemId != null || data.contentPieceId != null, {
-    message: "contentItemId or contentPieceId required",
-  });
-
-const contentPublishBody = z.object({
-  contentPieceId: z.number().int().positive(),
-  platform: z.string().min(1).optional(),
-  confirmCmsUpdate: z.boolean().optional(),
-});
-
-const scrapeBody = z.object({
-  projectId: z.number().int().positive(),
-});
 
 async function trackJob(env: Env, jobId: string, queue: string, meta: Record<string, unknown>) {
   await kvPutJson(env.AI_CACHE, `job:status:${jobId}`, {
@@ -106,6 +87,8 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     wireCfEdgeEnv(env);
     setD1Binding(env.DB);
+    await applyDataForSeoPlatformEnv();
+    if (env.CONTENT_MEDIA_R2) setContentMediaR2Binding(env.CONTENT_MEDIA_R2);
     const preflight = corsPreflight(request);
     if (preflight) return preflight;
 
@@ -116,11 +99,12 @@ export default {
       return withCors(request, Response.json({ status: "ok", worker: "goals-ac-write" }));
     }
 
-    const session = await verifySessionClaims(request, env.AUTH_SECRET);
-    if (!session?.id) {
-      return withCors(request, Response.json({ error: "Unauthorized" }, { status: 401 }));
+    const auth = await requireWorkerSession(request, env.AUTH_SECRET, { path, method: request.method });
+    if (!auth.ok) {
+      return withCors(request, Response.json(workerSessionErrorBody(auth), { status: auth.status }));
     }
-    const userId = Number.parseInt(session.id, 10);
+    const session = auth.session;
+    const userId = auth.userId;
 
     try {
       const adminHandled = await handleAdminWrite(request, path, session.role, session, env.AUTH_SECRET);
@@ -168,7 +152,12 @@ export default {
       const autopilotHandled = await handleAutopilotSettingsWrite(request, path, userId);
       if (autopilotHandled) return autopilotHandled;
 
-      const projectsHandled = await handleWebsiteProjectsWrite(request, path, userId);
+      const projectsHandled = await handleWebsiteProjectsWrite(
+        request,
+        path,
+        userId,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
       if (projectsHandled) return projectsHandled;
 
       const orgMembersHandled = await handleOrgMembersWrite(request, path, userId);
@@ -180,8 +169,23 @@ export default {
       const billingCheckoutHandled = await handleBillingCheckoutPost(request, path, userId);
       if (billingCheckoutHandled) return billingCheckoutHandled;
 
-      const searchPropertiesHandled = await handleSearchPropertiesWrite(request, path, userId, env);
+      const searchPropertiesHandled = await handleSearchPropertiesWrite(
+        request,
+        path,
+        userId,
+        env,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
       if (searchPropertiesHandled) return searchPropertiesHandled;
+
+      const analyticsPropertiesHandled = await handleAnalyticsPropertiesWrite(
+        request,
+        path,
+        userId,
+        env,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (analyticsPropertiesHandled) return analyticsPropertiesHandled;
 
       const studioHandled = await handleStudioWrite(request, path, userId);
       if (studioHandled) return studioHandled;
@@ -198,7 +202,7 @@ export default {
       const orgSecurityHandled = await handleOrgSecurityWrite(request, path, userId);
       if (orgSecurityHandled) return orgSecurityHandled;
 
-      const mfaHandled = await handleMfaRoutes(request, path, userId);
+      const mfaHandled = await handleMfaRoutes(request, path, userId, env.AUTH_SECRET);
       if (mfaHandled) return mfaHandled;
 
       const inviteHandled = await handleInviteAcceptPost(request, path, userId);
@@ -208,6 +212,14 @@ export default {
         trackJob(env, jobId, queue, meta),
       );
       if (contentPiecesHandled) return contentPiecesHandled;
+
+      const contentPiecesQueueHandled = await handleContentPiecesQueueWrite(
+        request,
+        path,
+        userId,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (contentPiecesQueueHandled) return contentPiecesQueueHandled;
 
       const contentPiecesWorkflowHandled = await handleContentPiecesWorkflowWrite(request, path, userId);
       if (contentPiecesWorkflowHandled) return contentPiecesWorkflowHandled;
@@ -280,195 +292,6 @@ export default {
 
       const wordpressTestHandled = await handleWordpressTestWrite(request, path, userId);
       if (wordpressTestHandled) return wordpressTestHandled;
-
-      if (path === "/api/content-pieces/generate" && request.method === "POST") {
-        const parsed = contentGenerateBody.safeParse(await request.json().catch(() => null));
-        if (!parsed.success) {
-          return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
-        }
-        const jobId = await sendToCfQueue(QUEUES.contentGenerate, {
-          ...parsed.data,
-          userId,
-        });
-        const id = jobId ?? `cf:${QUEUES.contentGenerate}:${Date.now()}`;
-        await trackJob(env, id, QUEUES.contentGenerate, { userId, projectId: parsed.data.projectId });
-        return withCors(request, acceptedJobResponse(id, QUEUES.contentGenerate));
-      }
-
-      const publishMatch = path.match(/^\/api\/content-pieces\/(\d+)\/publish$/);
-      if (publishMatch && request.method === "POST") {
-        const body = (await request.json().catch(() => null)) as {
-          contentPieceId?: number;
-          platform?: string;
-          confirmCmsUpdate?: boolean;
-        } | null;
-        const parsed = contentPublishBody.safeParse({
-          contentPieceId: Number.parseInt(publishMatch[1]!, 10),
-          platform: body?.platform,
-          confirmCmsUpdate: body?.confirmCmsUpdate,
-        });
-        if (!parsed.success) {
-          return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
-        }
-
-        const { db } = await import("./db");
-        const { contentPiecesTable } = await import("@workspace/db/schema-sqlite");
-        const { eq } = await import("drizzle-orm");
-        const [piece] = await db
-          .select()
-          .from(contentPiecesTable)
-          .where(eq(contentPiecesTable.id, parsed.data.contentPieceId))
-          .limit(1);
-        if (!piece) {
-          return withCors(request, Response.json({ error: "Content piece not found" }, { status: 404 }));
-        }
-        const project = await getAccessibleProject(piece.websiteProjectId, userId);
-        if (!project) {
-          return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
-        }
-
-        const meta = (piece.pieceMetadata ?? {}) as {
-          source?: string;
-          sourceUrl?: string;
-          cmsRemoteId?: string;
-          cmsRemoteLink?: string;
-          updateConfirmed?: boolean;
-        };
-        const isWordpressTarget =
-          !parsed.data.platform || parsed.data.platform === "wordpress";
-        if (meta.source === "refresh" && isWordpressTarget) {
-          const remoteId = meta.cmsRemoteId?.trim();
-          if (remoteId && !meta.updateConfirmed && !parsed.data.confirmCmsUpdate) {
-            return withCors(
-              request,
-              Response.json(
-                {
-                  error: "Confirm WordPress update target before publishing",
-                  needsConfirm: true,
-                  cmsRemoteId: remoteId,
-                  cmsRemoteLink: meta.cmsRemoteLink ?? null,
-                  sourceUrl: meta.sourceUrl ?? null,
-                },
-                { status: 422 },
-              ),
-            );
-          }
-          if (remoteId && parsed.data.confirmCmsUpdate && !meta.updateConfirmed) {
-            await db
-              .update(contentPiecesTable)
-              .set({
-                pieceMetadata: {
-                  ...(typeof piece.pieceMetadata === "object" && piece.pieceMetadata
-                    ? piece.pieceMetadata
-                    : {}),
-                  updateConfirmed: true,
-                },
-              })
-              .where(eq(contentPiecesTable.id, piece.id));
-          }
-          if (!remoteId && !parsed.data.confirmCmsUpdate) {
-            return withCors(
-              request,
-              Response.json(
-                {
-                  error:
-                    "No WordPress post matched this URL. Set cmsRemoteId on the piece, or confirm creating a new post.",
-                  needsConfirm: true,
-                  cmsRemoteId: null,
-                  sourceUrl: meta.sourceUrl ?? null,
-                  createNew: true,
-                },
-                { status: 422 },
-              ),
-            );
-          }
-        }
-
-        const jobId = await sendToCfQueue(QUEUES.contentPublish, {
-          contentPieceId: parsed.data.contentPieceId,
-          userId,
-          platform: parsed.data.platform,
-        });
-        const id = jobId ?? `cf:${QUEUES.contentPublish}:${Date.now()}`;
-        await trackJob(env, id, QUEUES.contentPublish, { userId });
-        return withCors(request, acceptedJobResponse(id, QUEUES.contentPublish));
-      }
-
-      const crawlMatch = path.match(/^\/api\/website-projects\/(\d+)\/crawl$/);
-      if (crawlMatch && request.method === "POST") {
-        const projectId = Number.parseInt(crawlMatch[1]!, 10);
-        if (!Number.isFinite(projectId)) {
-          return withCors(request, Response.json({ error: "Invalid project id" }, { status: 400 }));
-        }
-        try {
-          const project = await getAccessibleProject(projectId, userId);
-          if (!project) {
-            return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-          }
-          const result = await persistSitemapCrawl(projectId, project.url);
-          return withCors(
-            request,
-            Response.json({
-              sitemapUrl: result.sitemapUrl,
-              pageCount: result.pageCount,
-              crawlStatus: "done",
-            }),
-          );
-        } catch (err) {
-          return withCors(
-            request,
-            Response.json(
-              { error: err instanceof Error ? err.message : "Sitemap crawl failed" },
-              { status: 502 },
-            ),
-          );
-        }
-      }
-
-      const scrapeMatch = path.match(/^\/api\/website-projects\/(\d+)\/scrape$/);
-      if (scrapeMatch && request.method === "POST") {
-        const projectId = Number.parseInt(scrapeMatch[1]!, 10);
-        const parsed = scrapeBody.safeParse({ projectId });
-        if (!parsed.success) {
-          return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
-        }
-        const project = await getAccessibleProject(parsed.data.projectId, userId);
-        if (!project) {
-          return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-        }
-        const jobId = await sendToCfQueue(QUEUES.brandVoiceIndex, {
-          projectId: parsed.data.projectId,
-        });
-        const id = jobId ?? `cf:${QUEUES.brandVoiceIndex}:${Date.now()}`;
-        await trackJob(env, id, QUEUES.brandVoiceIndex, { userId, projectId });
-        return withCors(request, acceptedJobResponse(id, QUEUES.brandVoiceIndex));
-      }
-
-      const syncMatch = path.match(/^\/api\/website-projects\/(\d+)\/search-properties\/gsc\/sync$/);
-      if (syncMatch && request.method === "POST") {
-        const projectId = Number.parseInt(syncMatch[1]!, 10);
-        const project = await getAccessibleProject(projectId, userId);
-        if (!project) {
-          return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-        }
-        const jobId = await sendToCfQueue(QUEUES.gscSearchAnalyticsSync, { projectId, userId });
-        const id = jobId ?? `cf:${QUEUES.gscSearchAnalyticsSync}:${Date.now()}`;
-        await trackJob(env, id, QUEUES.gscSearchAnalyticsSync, { userId, projectId });
-        return withCors(request, acceptedJobResponse(id, QUEUES.gscSearchAnalyticsSync));
-      }
-
-      const ga4Match = path.match(/^\/api\/website-projects\/(\d+)\/analytics-properties\/ga4\/sync$/);
-      if (ga4Match && request.method === "POST") {
-        const projectId = Number.parseInt(ga4Match[1]!, 10);
-        const project = await getAccessibleProject(projectId, userId);
-        if (!project) {
-          return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-        }
-        const jobId = await sendToCfQueue(QUEUES.ga4AnalyticsSync, { projectId, userId });
-        const id = jobId ?? `cf:${QUEUES.ga4AnalyticsSync}:${Date.now()}`;
-        await trackJob(env, id, QUEUES.ga4AnalyticsSync, { userId, projectId });
-        return withCors(request, acceptedJobResponse(id, QUEUES.ga4AnalyticsSync));
-      }
 
       if (isUnimplementedGeneratePath(path, request.method)) {
         return withCors(request, edgeNotImplementedResponse(request));

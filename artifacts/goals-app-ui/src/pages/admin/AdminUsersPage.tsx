@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 
@@ -108,7 +109,7 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-5 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} min-w-0 space-y-5`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>
@@ -122,7 +123,7 @@ export function AdminUsersPage() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <input
           type="search"
           value={search}
@@ -157,8 +158,8 @@ export function AdminUsersPage() {
 
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-full text-left text-sm">
+      <div className="min-w-0 overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-3 py-2 font-medium">Name</th>

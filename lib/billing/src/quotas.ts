@@ -8,6 +8,7 @@ import {
   resolvePlanArticleQuota,
   resolvePlanRoadmapQuota,
 } from "./plan-quota-config";
+import { resolveUsageCompanyId } from "./usage-events";
 
 export { loadPlanQuotaLimits, resolvePlanArticleQuota, resolvePlanRoadmapQuota, resolvePlanProjectQuota } from "./plan-quota-config";
 export { DEFAULT_PLAN_QUOTA_LIMITS, PLAN_QUOTA_LIMITS } from "./plans";
@@ -118,10 +119,12 @@ export async function checkCountQuota(input: CountQuotaCheckInput): Promise<Coun
     return { ok: true };
   }
 
+  const companyId =
+    input.kind === "article" ? await resolveUsageCompanyId(input.companyId) : null;
   const used =
     input.kind === "article"
-      ? input.companyId != null
-        ? await getMonthlyArticleCountForCompany(input.companyId)
+      ? companyId != null
+        ? await getMonthlyArticleCountForCompany(companyId)
         : await getMonthlyArticleCountForUser(input.userId)
       : await getMonthlyRoadmapCountForUser(input.userId);
 

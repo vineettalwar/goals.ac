@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
-import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import {
   CONTACT_CTA_LABEL,
   CONTACT_HREF,
 } from "@/lib/marketing/site/marketing-contact";
-
-const glassCard = cardSurfaceClass("glass");
 
 const PROOF_LINKS = [
   {
@@ -31,8 +28,8 @@ const PROOF_LINKS = [
 
 export function SocialProofSection() {
   return (
-    <section className="py-24 bg-black border-t border-white/10 relative z-20">
-      <div className="max-w-5xl mx-auto px-6">
+    <section className="relative z-20 border-t border-white/10 bg-black py-24">
+      <div className="mx-auto max-w-5xl px-6">
         <div className="mb-14 text-center">
           <EditorialHeading
             line1="See the product"
@@ -42,37 +39,35 @@ export function SocialProofSection() {
           />
         </div>
 
-        <div className={`${glassCard} p-6 mb-10 max-w-xl mx-auto flex gap-3 items-start`}>
-          <Clock className="h-5 w-5 text-(--accent-warm) shrink-0 mt-0.5" aria-hidden />
-          <p className="text-sm text-white/65 leading-relaxed">
-            Customer stories live on{" "}
-            <Link href="/success-stories" className="text-white/80 hover:text-white underline-offset-2 hover:underline">
-              /success-stories
-            </Link>{" "}
-            when we have results cleared to publish. The links below are live product demos.
-          </p>
-        </div>
+        <p className="mb-10 text-center text-sm text-white/65">
+          Customer stories live on{" "}
+          <Link
+            href="/success-stories"
+            className="text-white/80 underline-offset-2 hover:text-white hover:underline"
+          >
+            /success-stories
+          </Link>{" "}
+          when we have results cleared to publish.
+        </p>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <ul className="mx-auto max-w-xl space-y-6">
           {PROOF_LINKS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`${glassCard} p-6 block h-full hover:bg-white/[0.07] transition-colors`}
-            >
-              <h3 className="font-bold mb-2 text-white">{item.label}</h3>
-              <p className="text-sm text-white/65 leading-relaxed">{item.description}</p>
-              <span className="inline-flex items-center gap-1 text-xs text-white/80 mt-4">
-                Try it <ArrowRight className="h-3.5 w-3.5" />
-              </span>
-            </Link>
+            <li key={item.href}>
+              <Link href={item.href} className="group block">
+                <h3 className="font-medium text-white">{item.label}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-white/65">{item.description}</p>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm text-white/80 group-hover:text-white">
+                  Try it <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
 
         <p className="mt-10 text-center">
           <Link
             href={CONTACT_HREF}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 transition-colors hover:text-white"
           >
             {CONTACT_CTA_LABEL} <ArrowRight className="h-4 w-4" />
           </Link>

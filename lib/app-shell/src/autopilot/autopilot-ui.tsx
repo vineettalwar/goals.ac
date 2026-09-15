@@ -59,7 +59,7 @@ export function AutopilotView({
   const publishMode = editable ? draft.publishMode : settings?.publishMode;
 
   return (
-    <div className="paper-card p-6">
+    <div className="p-6">
       <div className="mb-6 flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary">
           <Zap className="h-5 w-5 text-primary" />
@@ -174,11 +174,11 @@ export function AutopilotView({
         ) : (
           <dl className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-border px-4 py-3">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cadence</dt>
+              <dt className="text-xs text-muted-foreground">Cadence</dt>
               <dd className="mt-1 text-sm font-medium">{autopilotCadenceLabel(cadence)}</dd>
             </div>
             <div className="rounded-lg border border-border px-4 py-3">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Publish mode</dt>
+              <dt className="text-xs text-muted-foreground">Publish mode</dt>
               <dd className="mt-1 text-sm font-medium">{autopilotPublishModeLabel(publishMode)}</dd>
             </div>
           </dl>

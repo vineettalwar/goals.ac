@@ -6,6 +6,17 @@ vi.mock("@workspace/cf-edge/jwt", () => ({
   verifySessionClaims: vi.fn(async () => sessionState.session),
 }));
 
+vi.mock("@workspace/cf-edge/session", () => ({
+  requireWorkerSession: async (request: Request, secret: string) => {
+    const { verifySessionClaims } = await import("@workspace/cf-edge/jwt");
+    const session = await verifySessionClaims(request, secret);
+    if (!session?.id) return { ok: false, status: 401, error: "Unauthorized" };
+    return { ok: true, session, userId: Number.parseInt(session.id, 10) };
+  },
+  workerSessionErrorBody: (result: { error: string; code?: string }) =>
+    result.code ? { error: result.code, message: result.error } : { error: result.error },
+}));
+
 vi.mock("@workspace/db", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {

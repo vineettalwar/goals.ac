@@ -9,6 +9,7 @@ import {
   parseSocialHubTab,
   projectDetailPath,
 } from "@workspace/app-shell";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { NewProjectButton } from "@/components/NewProjectButton";
 import { SectionShell } from "@/components/SectionShell";
 import { useAuth } from "@/context/auth";
@@ -134,7 +135,7 @@ export function PartnerPage() {
   const { projects, loading, error } = usePartnerProjects();
 
   return (
-    <SectionShell title="Partner portal" description="Agency billing and client workspaces." requireProject={false}>
+    <SectionShell title="Clients" description="Visibility, GEO, and publish status across projects." requireProject={false}>
       {authLoading && !user ? (
         <p className="text-sm text-muted-foreground">Loading organization…</p>
       ) : error ? (
@@ -218,7 +219,7 @@ export function GrowthRoadmapPage({ slug }: { slug: string }) {
   const { roadmap, loading, error } = useGrowthRoadmap(slug);
 
   return (
-    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className={APP_SHELL_PAGE}>
       <GrowthRoadmapView roadmap={roadmap} slug={slug} loading={loading} error={error} renderLink={renderLink} />
     </div>
   );

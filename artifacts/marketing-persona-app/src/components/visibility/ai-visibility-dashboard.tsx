@@ -75,8 +75,7 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
 
   const loading =
     Boolean(projectId) &&
-    settingsQuery.isLoading &&
-    summaryQuery.isLoading &&
+    (settingsQuery.isLoading || summaryQuery.isLoading) &&
     !summary;
 
   const hasSnapshots = (summary?.recentSnapshots.length ?? 0) > 0;
@@ -275,9 +274,13 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
                 onSaveSettings={saveSettings}
               />
             )
+          ) : summaryQuery.isError ? (
+            <p className="text-sm text-muted-foreground">
+              Could not load citation data. Connect Search Console below, then refresh this page.
+            </p>
           ) : null}
 
-          {summary ? <SourcesDisclosure projectId={projectId} /> : null}
+          <SourcesDisclosure projectId={projectId} />
         </>
       )}
     </div>

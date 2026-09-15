@@ -23,6 +23,7 @@ export interface VoiceForm {
 
 export function ProjectVoiceForm({
   projectId,
+  onSkillDrafted,
   form,
   setForm,
   pasteSample,
@@ -38,6 +39,7 @@ export function ProjectVoiceForm({
   removeWritingExample,
 }: {
   projectId: string;
+  onSkillDrafted?: () => void;
   form: VoiceForm;
   setForm: React.Dispatch<React.SetStateAction<VoiceForm>>;
   pasteSample: string;
@@ -54,7 +56,7 @@ export function ProjectVoiceForm({
 }) {
   return (
     <div className="space-y-6">
-          <BrandVoiceSkillEditor projectId={projectId} />
+          <BrandVoiceSkillEditor projectId={projectId} onDrafted={onSkillDrafted} />
 
           <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 space-y-3">
             <div>

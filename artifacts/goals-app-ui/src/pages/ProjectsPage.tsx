@@ -6,6 +6,7 @@ import {
   projectDetailPath,
   type ProjectListItem,
 } from "@workspace/app-shell";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { DeleteProjectDialog } from "@/components/DeleteProjectDialog";
 import { NewProjectButton } from "@/components/NewProjectButton";
 import { useAuth } from "@/context/auth";
@@ -46,7 +47,7 @@ export function ProjectsPage() {
     <>
       {error ? <p className="px-4 pt-8 text-sm text-red-700 sm:px-6 lg:px-8">{error}</p> : null}
       {canManageTeam ? (
-        <div className="max-w-5xl px-4 pt-8 sm:px-6 lg:px-8">
+        <div className={`${APP_SHELL_PAGE} py-0! pt-8`}>
           <TeamManagementView
             members={members}
             projects={projects}

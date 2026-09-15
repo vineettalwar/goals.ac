@@ -41,7 +41,21 @@ describe("buildNavModel product surface", () => {
     const partner = buildNavModel({ userRole: "user", orgRole: "owner" });
     const admin = buildNavModel({ userRole: "super_admin" });
 
-    expect(labels(partner)).toContain("Partner");
+    expect(labels(partner)).toContain("Clients");
     expect(admin.footerItems.map((item) => item.label)).toContain("Admin");
+    expect(admin.footerItems.find((item) => item.label === "Integrations")?.href).toBe(
+      "__integrations__",
+    );
+  });
+
+  it("keeps Search and Strategy as single destinations", () => {
+    const items = buildNavModel({}).navSections.flatMap((section) => section.items);
+    const search = items.find((item) => item.label === "Search");
+    const strategy = items.find((item) => item.label === "Strategy");
+
+    expect(search?.href).toBe("/search/keywords");
+    expect(search?.children).toBeUndefined();
+    expect(strategy?.href).toBe("/strategy/roadmaps");
+    expect(strategy?.children).toBeUndefined();
   });
 });

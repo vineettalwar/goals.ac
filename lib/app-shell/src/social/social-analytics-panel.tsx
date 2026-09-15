@@ -84,7 +84,7 @@ export function SocialAnalyticsPanel({
           { label: "Comments", value: totals?.comments },
           { label: "Shares", value: totals?.shares },
         ].map((card) => (
-          <div key={card.label} className="paper-card p-4">
+          <div key={card.label} className="p-4">
             <p className="text-xs text-muted-foreground">{card.label}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{fmt(card.value)}</p>
           </div>
@@ -97,7 +97,7 @@ export function SocialAnalyticsPanel({
           Loading analytics…
         </div>
       ) : !metrics?.rows.length ? (
-        <div className="paper-card space-y-3 px-4 py-10 text-center">
+        <div className="space-y-3 px-4 py-10 text-center">
           <BarChart3 className="mx-auto h-8 w-8 text-muted-foreground opacity-40" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">No metrics yet</p>

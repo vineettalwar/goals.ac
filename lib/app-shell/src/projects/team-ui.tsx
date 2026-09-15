@@ -153,7 +153,7 @@ export function TeamManagementView({
   }
 
   return (
-    <div className="paper-card mb-6 p-5">
+    <div className="mb-6 p-5">
       <h2 className="text-sm font-semibold">Team access</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         Owners and site admins manage all projects. Editors can create and publish content. Viewers

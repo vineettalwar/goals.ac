@@ -139,3 +139,52 @@ export function cleanAndParse<T>(raw: string): T {
     return JSON.parse(sanitized) as T;
   }
 }
+
+/**
+ * Close a JSON object/array that was cut off mid-generation (Gemini hits max tokens
+ * inside `body_markdown`). Does not invent keys — only terminates open strings/braces.
+ */
+export function closeTruncatedJson(raw: string): string {
+  const block = sanitizeJsonControlChars(extractJsonBlock(raw));
+  let inString = false;
+  let escaped = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < block.length; i++) {
+    const ch = block[i]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") stack.push("}");
+    else if (ch === "[") stack.push("]");
+    else if (ch === "}" || ch === "]") stack.pop();
+  }
+
+  let out = block;
+  if (escaped) out = out.slice(0, -1);
+  if (inString) out += '"';
+  while (stack.length > 0) out += stack.pop();
+  return out;
+}
+
+/** Parse model JSON, repairing truncation instead of throwing. */
+export function cleanAndParseLenient<T>(raw: string): T {
+  try {
+    return cleanAndParse<T>(raw);
+  } catch {
+    return JSON.parse(closeTruncatedJson(raw)) as T;
+  }
+}

@@ -9,6 +9,7 @@ export type SectionLinkProps = {
 export type SectionTab = {
   label: string;
   to: string;
+  exact?: boolean;
 };
 
 export type SectionProject = {

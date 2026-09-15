@@ -95,6 +95,41 @@ export function resolveOllamaBaseUrl(options?: AiProviderOptions): string {
   );
 }
 
+/** Laptop / LAN Ollama hosts that Cloudflare production cannot dial. */
+export function isLoopbackOllamaUrl(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".local")
+    );
+  } catch {
+    return true;
+  }
+}
+
+export function isCloudflareWorkerRuntime(): boolean {
+  try {
+    return typeof navigator !== "undefined" && /Cloudflare-Workers/i.test(navigator.userAgent);
+  } catch {
+    return false;
+  }
+}
+
+/** Local Node/Next can use laptop Ollama; Cloudflare Workers cannot. */
+export function assertOllamaReachableHere(
+  baseUrl: string,
+  remoteRuntime = isCloudflareWorkerRuntime(),
+): void {
+  if (!isLoopbackOllamaUrl(baseUrl) || !remoteRuntime) return;
+  throw new Error(
+    `Ollama at ${baseUrl} is not reachable from Cloudflare Workers. Point OLLAMA_BASE_URL at a public host, or run the app locally with AI_PROVIDER=ollama.`,
+  );
+}
+
 /** Ordered model candidates: per-user setting, then OLLAMA_MODEL env. */
 export function resolveOllamaModelCandidates(options?: AiProviderOptions): string[] {
   const candidates: string[] = [];

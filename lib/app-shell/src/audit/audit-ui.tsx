@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ExternalLink, Search, FileText } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { cn } from "../cn";
-import { btnPrimary, inputClass, ScoreRing } from "../section-panels/shared";
+import { btnPrimary, inputClass } from "../section-panels/shared";
 import {
   auditDetailPath,
   formatAuditDate,
@@ -35,14 +35,14 @@ function GeoScoreBadge({ score, className }: { score: number; className?: string
 
 function IssueStatusBadge({ status }: { status: GeoIssue["status"] }) {
   const styles: Record<GeoIssue["status"], string> = {
-    pass: "bg-emerald-100 text-emerald-800",
-    warn: "bg-amber-100 text-amber-800",
-    fail: "bg-red-100 text-red-800",
+    pass: "text-emerald-800",
+    warn: "text-amber-800",
+    fail: "text-red-800",
   };
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+        "inline-flex shrink-0 text-xs capitalize text-muted-foreground",
         styles[status],
       )}
     >
@@ -65,15 +65,8 @@ export function GeoAuditRunPanel({
   error?: string | null;
 }) {
   return (
-    <div className="paper-card mb-6 space-y-4 p-5">
-      <div>
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <Search className="h-4 w-4 text-violet-600" /> Run GEO audit
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Checks title, schema.org, heading structure, and Open Graph for AI discoverability.
-        </p>
-      </div>
+    <div className="mb-6 space-y-3">
+      <h2 className="text-sm font-semibold">Run GEO audit</h2>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <div className="flex flex-wrap gap-2">
         <input
@@ -119,11 +112,11 @@ export function GeoAuditListView({
       ) : error ? (
         <p className="text-sm text-red-700">{error}</p>
       ) : audits.length === 0 ? (
-        <div className="paper-card p-8 text-center text-sm text-muted-foreground">
+        <div className="py-8 text-sm text-muted-foreground">
           No GEO audits yet. Run your first audit above.
         </div>
       ) : (
-        <div className="paper-card divide-y overflow-hidden">
+        <div className="divide-y divide-border border-t border-border">
           {audits.map((audit) => (
             <AuditLink
               key={audit.id}
@@ -180,9 +173,9 @@ export function GeoAuditDetailView({
 
       {audit ? (
         <div className="mt-4 space-y-4">
-          <div className="paper-card flex flex-wrap items-start justify-between gap-4 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold">GEO audit</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">GEO audit</h1>
               <a
                 href={audit.url}
                 target="_blank"
@@ -194,14 +187,12 @@ export function GeoAuditDetailView({
               </a>
               <p className="mt-1 text-xs text-muted-foreground">{formatAuditDate(audit.createdAt)}</p>
             </div>
-            <ScoreRing score={audit.geoScore} />
+            <p className="text-3xl font-semibold tabular-nums tracking-tight">{audit.geoScore}</p>
           </div>
 
           {Array.isArray(audit.issues) && audit.issues.length > 0 ? (
-            <div className="paper-card overflow-hidden">
-              <div className="border-b border-border px-4 py-3">
-                <h2 className="text-sm font-semibold">Issues ({audit.issues.length})</h2>
-              </div>
+            <div className="border-t border-border">
+              <h2 className="py-3 text-sm font-semibold">Issues ({audit.issues.length})</h2>
               <div className="divide-y">
                 {audit.issues.map((issue, index) => (
                   <div key={`${issue.check}-${index}`} className="px-4 py-3">
@@ -220,10 +211,8 @@ export function GeoAuditDetailView({
           ) : null}
 
           {Array.isArray(audit.recommendations) && (audit.recommendations as string[]).length > 0 ? (
-            <div className="paper-card p-5">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <FileText className="h-4 w-4 text-primary" /> Write next
-              </h2>
+            <div>
+              <h2 className="mb-3 text-sm font-semibold">Write next</h2>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 {(audit.recommendations as string[]).map((item) => (
                   <li key={item}>{item}</li>
@@ -232,8 +221,8 @@ export function GeoAuditDetailView({
             </div>
           ) : null}
 
-          <details className="paper-card">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
+          <details>
+            <summary className="cursor-pointer py-3 text-sm font-semibold">
               Raw audit data
             </summary>
             <pre className="overflow-auto border-t border-border p-4 text-xs">

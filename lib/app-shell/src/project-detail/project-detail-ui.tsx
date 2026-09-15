@@ -53,7 +53,7 @@ function DetailLink({
 function FieldRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm">{value || "—"}</p>
     </div>
   );
@@ -116,7 +116,7 @@ function BrandTabPanel({
   }
 
   return (
-    <div className="paper-card grid gap-6 p-6 sm:grid-cols-2">
+    <div className="grid gap-6 p-6 sm:grid-cols-2">
       <FieldRow label="Company" value={brand.companyName} />
       <FieldRow label="Industry" value={brand.industry} />
       <FieldRow label="Target audience" value={brand.targetAudience} />
@@ -176,7 +176,7 @@ function VoiceTabPanel({
   }
 
   return (
-    <div className="paper-card grid gap-6 p-6 sm:grid-cols-2">
+    <div className="grid gap-6 p-6 sm:grid-cols-2">
       <FieldRow label="Tone" value={style.tonePreset} />
       <FieldRow label="Persona" value={style.personaName} />
       <FieldRow
@@ -218,7 +218,7 @@ function ContentTabPanel({
   }
 
   return (
-    <div className="paper-card divide-y overflow-hidden">
+    <div className="divide-y overflow-hidden">
       {pieces.map((piece) => (
         <DetailLink
           key={piece.id}
@@ -252,7 +252,7 @@ function PublishingTabPanel({
   const connected = new Set(connectedPlatforms ?? []);
   return (
     <div className="space-y-4">
-      <div className="paper-card space-y-3 p-6">
+      <div className="space-y-3 p-6">
         <h3 className="font-semibold">Publishing & integrations</h3>
         <p className="text-sm text-muted-foreground">
           Connect WordPress, Shopify, Ghost, Webflow, and other CMS platforms to publish content from
@@ -274,7 +274,7 @@ function PublishingTabPanel({
               key={platform.key}
               renderLink={renderLink}
               href={projectIntegrationsPath(projectId)}
-              className={`paper-card flex items-center gap-3 p-4 transition-colors hover:bg-secondary/20 ${isConnected ? "border-emerald-500/25 bg-emerald-500/3" : ""}`}
+              className={`flex items-center gap-3 p-4 transition-colors hover:bg-secondary/20 ${isConnected ? "border-emerald-500/25 bg-emerald-500/3" : ""}`}
             >
               <IntegrationIconBox>
                 <CmsPlatformIcon platform={platform} />
@@ -480,7 +480,7 @@ export function ProjectDetailView({
             key={item.label}
             renderLink={renderLink}
             href={item.href}
-            className="paper-card flex cursor-pointer flex-col items-center gap-2 rounded-xl p-4 text-center transition-colors hover:bg-muted/40"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl p-4 text-center transition-colors hover:bg-muted/40"
           >
             <span className="text-primary">{item.icon}</span>
             <span className="text-sm font-medium">{item.label}</span>
