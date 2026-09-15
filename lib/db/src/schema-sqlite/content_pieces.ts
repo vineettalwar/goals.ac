@@ -65,6 +65,9 @@ export type ContentPieceMetadata = {
   faqSection?: { question: string; answer: string }[];
   citations?: { text: string; url: string; source: string }[];
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
+  ctrTitleSuggestions?: Array<{ title: string; seoTitle: string; metaDescription: string }>;
+  internalLinkPlan?: { anchorText: string; postIds: number[] } | null;
+  outboundInternalLinksApplied?: number;
   jsonLdSchema?: object;
   humanized?: boolean;
   humanizationAudit?: {

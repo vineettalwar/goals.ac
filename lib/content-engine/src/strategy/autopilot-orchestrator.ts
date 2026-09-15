@@ -144,6 +144,7 @@ export async function generateFromContentItem(
     userId,
     keyword: item.primaryKeyword,
     caps: UNATTENDED_AGENT_LOOP_CAPS,
+    plannerMode: "deterministic",
     generateDraft: async () => {
       const out = await studioDraftFromKeyword({
         projectId: resolvedProjectId,

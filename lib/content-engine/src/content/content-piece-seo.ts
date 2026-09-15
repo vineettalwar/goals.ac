@@ -87,6 +87,11 @@ export type ContentPieceMetadata = {
   requiresReview?: boolean;
   /** True when generated using the (deprecated) animal agent team pipeline. */
   generatedWithAgents?: boolean;
+  /** CTR title/meta options from `suggest_ctr_title` (Action Queue). */
+  ctrTitleSuggestions?: Array<{ title: string; seoTitle: string; metaDescription: string }>;
+  /** Inbound link plan from `suggest_internal_links` (not a live CMS PATCH). */
+  internalLinkPlan?: { anchorText: string; postIds: number[] } | null;
+  outboundInternalLinksApplied?: number;
   /** `runAgentLoop` id persisted on this piece. */
   agentRunId?: number;
   /** True when Studio/Autopilot/Daily Five went through `runAgentLoop`. */

@@ -50,8 +50,10 @@ An employee run is a persisted `AgentLoop`: a goal, a tool registry, a step/cred
 ## Remaining gaps
 
 - MCP catalog does not yet expose `gsc_query` as its own MCP tool; the loop calls the same DB/services MCP uses.
-- Trajectory UI is the Actions page “Trajectory” button plus Studio SSE `loop_step` events, not a rich job inspector.
-- Public `POST .../generate-with-agents` is still the old named-agent pipeline.
+- Trajectory UI is the Actions page “Trajectory” button plus Studio SSE `loop_step` events (not Owl ticks).
+- Public `POST .../generate-with-agents` is the quarantined named-agent pipeline (non-primary).
+- Interactive Studio uses a **hybrid planner** (LLM tool pick, deterministic fallback). Autopilot/Daily Five/Action execute stay on `defaultEmployeePlanner`.
+- Action Queue **Approve** either resumes `awaiting_approval` (runs `publish_live` → `content-publish`) or stamps `approved` so Autopilot can pick the item over the calendar.
 
 ## API
 

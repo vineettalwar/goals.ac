@@ -13,7 +13,10 @@ export function dbTrajectorySink(): TrajectorySink {
         goal: run.goal as unknown as Record<string, unknown>,
         status: run.status,
         stopReason: run.stopReason,
-        policy: run.policy as unknown as Record<string, unknown>,
+        policy: {
+          ...(run.policy as unknown as Record<string, unknown>),
+          ...(run.pendingApproval ? { pendingApproval: run.pendingApproval } : {}),
+        },
         trajectory: run.trajectory,
         creditsSpent: run.creditsSpent,
         contentPieceId: run.contentPieceId ?? null,
@@ -34,6 +37,7 @@ export function dbTrajectorySink(): TrajectorySink {
 export async function loadAgentRun(id: number): Promise<AgentRunRecord | null> {
   const [row] = await db.select().from(agentRunsTable).where(eq(agentRunsTable.id, id)).limit(1);
   if (!row) return null;
+  const policy = row.policy as AgentRunRecord["policy"];
   return {
     id: row.id,
     websiteProjectId: row.websiteProjectId,
@@ -41,10 +45,11 @@ export async function loadAgentRun(id: number): Promise<AgentRunRecord | null> {
     goal: row.goal as AgentRunRecord["goal"],
     status: row.status,
     stopReason: row.stopReason,
-    policy: row.policy as AgentRunRecord["policy"],
+    policy,
     trajectory: (row.trajectory ?? []) as AgentRunRecord["trajectory"],
     creditsSpent: row.creditsSpent,
     contentPieceId: row.contentPieceId,
+    pendingApproval: policy?.pendingApproval,
   };
 }
 

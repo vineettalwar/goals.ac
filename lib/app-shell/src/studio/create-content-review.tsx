@@ -76,32 +76,9 @@ export function ReviewStep({
       ) : null}
 
       {showAgentTeamToggle && flow === "create" && onChangeUseAgentTeam ? (
-        <div className="space-y-3 rounded-xl border border-border bg-muted/20 px-4 py-4">
-          <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={useAgentTeam}
-              onChange={(e) => onChangeUseAgentTeam(e.target.checked)}
-              className="mt-0.5 rounded"
-            />
-            <span>
-              <span className="font-medium text-foreground">Research loop</span>
-              {" — "}
-              Studio always runs the same employee loop + generator. This checkbox is ignored (legacy).
-            </span>
-          </label>
-          {useAgentTeam && onChangeAgentFastMode ? (
-            <label className="ml-7 flex cursor-pointer items-center gap-3 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={agentFastMode}
-                onChange={(e) => onChangeAgentFastMode(e.target.checked)}
-                className="rounded"
-              />
-              Fast mode (skip marketing + linguist)
-            </label>
-          ) : null}
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Generation always uses the employee loop (research tools, then the studio generator). The old animal-team checkbox is gone.
+        </p>
       ) : null}
 
       <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-muted/30">
@@ -155,12 +132,7 @@ export function ReviewStep({
           )
         ) : null}
         {showAgentTeamToggle && flow === "create" ? (
-          <ReviewRow
-            label="Generation"
-            value={
-              useAgentTeam ? "Employee loop (legacy toggle)" : "Employee loop"
-            }
-          />
+          <ReviewRow label="Generation" value="Employee loop" />
         ) : null}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { agentActionItemsTable, contentPiecesTable } from "@workspace/db/schema";
+import { agentActionItemsTable, agentRunsTable, contentPiecesTable } from "@workspace/db/schema";
+import type { AgentLoopPayload } from "@workspace/jobs/queues";
 import { generateContentPiece } from "../content/content-studio-generator";
 import { loadBrandContextForProject } from "../support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "../support/ai/user-api-key";
@@ -74,6 +75,7 @@ export async function executeStoredAgentRun(input: {
   goal: AgentGoal;
   stepBudget?: number;
   actionItemId?: number;
+  resumeApproved?: boolean;
 }): Promise<RunAgentLoopResult> {
   const credentials = await detectLoopCredentials(input.projectId);
   const sink = dbTrajectorySink();
@@ -86,15 +88,26 @@ export async function executeStoredAgentRun(input: {
       }),
   });
 
+  const prior = input.runId ? await loadAgentRun(input.runId) : null;
+  const resume = Boolean(input.resumeApproved && prior);
+
   const result = await runAgentLoop({
     runId: input.runId,
     goal: input.goal,
     tools,
     credentials,
     stepBudget: input.stepBudget ?? 10,
-    policy: { allowLivePublish: false, approveFirstForLivePublish: true },
+    policy: resume
+      ? {
+          allowLivePublish: true,
+          approveFirstForLivePublish: false,
+          plannerMode: "deterministic",
+          maxCredits: prior?.policy.maxCredits ?? 20,
+        }
+      : { allowLivePublish: false, approveFirstForLivePublish: true, plannerMode: "deterministic" },
     sink,
     userId: input.userId,
+    resumeFrom: resume && prior ? prior : undefined,
   });
 
   if (result.contentPieceId) {
@@ -144,4 +157,58 @@ export async function executeAgentRunById(runId: number): Promise<RunAgentLoopRe
     userId: existing.userId,
     goal: existing.goal,
   });
+}
+
+export async function startExecuteActionRun(input: {
+  projectId: number;
+  userId: number;
+  actionId: number;
+}): Promise<{ runId: number; payload: AgentLoopPayload }> {
+  const [action] = await db
+    .select()
+    .from(agentActionItemsTable)
+    .where(eq(agentActionItemsTable.id, input.actionId))
+    .limit(1);
+  if (!action || action.websiteProjectId !== input.projectId) {
+    throw new Error("Action not found");
+  }
+  const [run] = await db
+    .insert(agentRunsTable)
+    .values({
+      websiteProjectId: input.projectId,
+      userId: input.userId,
+      goalKind: "execute_action",
+      goal: {
+        kind: "execute_action",
+        text: action.title,
+        projectId: input.projectId,
+        keyword: action.keyword,
+        actionItemId: action.id,
+        actionType: action.actionType,
+        targetUrl: action.url,
+      },
+      status: "running",
+      policy: { allowLivePublish: false, approveFirstForLivePublish: true, plannerMode: "deterministic", maxCredits: 20 },
+      trajectory: [],
+    })
+    .returning({ id: agentRunsTable.id });
+  if (!run) throw new Error("Failed to create agent run");
+  await db
+    .update(agentActionItemsTable)
+    .set({ status: "running", lastRunId: run.id, updatedAt: new Date() })
+    .where(eq(agentActionItemsTable.id, input.actionId));
+  return {
+    runId: run.id,
+    payload: {
+      projectId: input.projectId,
+      userId: input.userId,
+      runId: run.id,
+      actionItemId: input.actionId,
+      goalKind: "execute_action",
+      keyword: action.keyword,
+      actionType: action.actionType,
+      targetUrl: action.url ?? undefined,
+      text: action.title,
+    },
+  };
 }

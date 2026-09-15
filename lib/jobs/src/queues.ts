@@ -80,7 +80,7 @@ export interface ContentGeneratePayload {
   generateVariants?: boolean;
   schedulePublish?: boolean;
   triggeredByAutopilot?: boolean;
-  /** @deprecated Ignored. Studio/Autopilot/Daily Five always run `runAgentLoop` + `generateContentPiece`. */
+  /** @deprecated Ignored. Primary path is `runAgentLoop`. Animal pipeline is public generate-with-agents only. */
   useAgentTeam?: boolean;
   agentFastMode?: boolean;
 }
@@ -223,6 +223,8 @@ export interface AgentLoopPayload {
   actionType?: string;
   targetUrl?: string;
   text?: string;
+  /** Human approved a gated `publish_live` — resume with allowLivePublish. */
+  resumeApproved?: boolean;
 }
 
 /** Maps each queue name to the payload shape(s) it accepts. */

@@ -19,8 +19,12 @@ import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
 import { isBacklinksConfigured } from "@workspace/serp-provider";
 import type { ContentFormatType } from "@workspace/db";
 import type { ContentPieceMetadata } from "../content/content-piece-seo";
+import { resolveAiClientForUser } from "../support/ai/resolve-ai-client-for-user";
+import { modelForProviderTier } from "@workspace/ai-providers";
 import { runAgentLoop } from "./loop";
 import { createFirstPartyTools } from "./tools";
+import { defaultEmployeePlanner } from "./planner";
+import { buildPlannerChoicePrompt, createHybridPlanner, parsePlannerJson } from "./hybrid-planner";
 import { dbTrajectorySink } from "./persist";
 import {
   trajectoryHasVerifiedEvidence,
@@ -86,6 +90,8 @@ export async function runResearchThenDraftLoop(input: {
   generateDraft: (args: Record<string, unknown>) => Promise<AgentToolResult>;
   sink?: TrajectorySink;
   onPersist?: (run: RunAgentLoopResult) => void;
+  /** Autopilot/Daily Five: deterministic. Studio default: hybrid LLM+fallback. */
+  plannerMode?: "deterministic" | "hybrid";
 }): Promise<RunAgentLoopResult> {
   const caps = input.caps ?? STUDIO_AGENT_LOOP_CAPS;
   const credentials = await detectLoopCredentials(input.projectId);
@@ -96,6 +102,29 @@ export async function runResearchThenDraftLoop(input: {
       input.onPersist?.(run);
     },
   };
+  const plannerMode = input.plannerMode ?? "hybrid";
+  const planner =
+    plannerMode === "deterministic"
+      ? defaultEmployeePlanner
+      : createHybridPlanner({
+          choose: async (ctx, tools) => {
+            if (!input.userId) return null;
+            try {
+              const resolved = await resolveAiClientForUser(input.userId);
+              const prompt = buildPlannerChoicePrompt(ctx, tools);
+              const model = modelForProviderTier(resolved.providerId, "rapid");
+              const out = await resolved.client.generate({
+                prompt,
+                temperature: 0,
+                maxOutputTokens: 280,
+                ...(model ? { model } : {}),
+              });
+              return parsePlannerJson(out.text, tools.map((tool) => tool.name));
+            } catch {
+              return null;
+            }
+          },
+        });
   return runAgentLoop({
     goal: {
       kind: "research_then_draft",
@@ -111,7 +140,9 @@ export async function runResearchThenDraftLoop(input: {
       allowLivePublish: false,
       approveFirstForLivePublish: true,
       maxCredits: caps.maxCredits,
+      plannerMode,
     },
+    planner,
     sink,
     userId: input.userId,
   });

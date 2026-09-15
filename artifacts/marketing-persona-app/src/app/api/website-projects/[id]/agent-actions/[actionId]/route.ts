@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
-import { agentActionItemsTable } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
+import { approveActionQueueItem } from "@workspace/content-engine/agent-loop";
+import { enqueue, QUEUES } from "@workspace/jobs";
+import { eq } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { agentActionItemsTable } from "@workspace/db/schema";
 
 const Body = z.object({
   status: z.enum(["open", "approved", "dismissed", "blocked"]),
@@ -29,6 +31,25 @@ export async function PATCH(
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+
+  if (parsed.data.status === "approved") {
+    try {
+      const result = await approveActionQueueItem({ projectId, actionId, userId: userId! });
+      if (result.resumePayload) {
+        await enqueue(QUEUES.agentLoop, result.resumePayload);
+      }
+      const [item] = await db
+        .select()
+        .from(agentActionItemsTable)
+        .where(eq(agentActionItemsTable.id, actionId))
+        .limit(1);
+      return NextResponse.json({ item, approval: result.status, runId: result.runId });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Approve failed";
+      const status = message === "Action not found" ? 404 : 400;
+      return NextResponse.json({ error: message }, { status });
+    }
+  }
 
   const [existing] = await db
     .select()

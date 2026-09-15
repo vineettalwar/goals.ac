@@ -118,7 +118,7 @@ export function ActionQueuePage() {
   return (
     <SectionShell
       title="Action queue"
-      description="Scored SEO work with evidence. Run with the employee loop, or approve for a human later."
+      description="Scored SEO work with evidence. Run with the employee loop. Approve releases the item to Autopilot, or resumes a gated live publish."
       tabs={searchTabs}
     >
       <div>
@@ -182,7 +182,7 @@ export function ActionQueuePage() {
                         disabled={busyId !== null}
                         onClick={() => void patch(item.id, "approved")}
                       >
-                        Approve
+                        Approve / release
                       </button>
                       <button
                         type="button"

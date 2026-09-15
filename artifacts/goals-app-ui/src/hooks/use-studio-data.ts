@@ -32,8 +32,6 @@ type CreateGeneratePayload = {
   competitorFocusUrl?: string;
   competitorUrls?: string[];
   briefId?: number;
-  useAgentTeam?: boolean;
-  agentFastMode?: boolean;
 };
 
 function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
@@ -55,10 +53,6 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
     if (!payload.competitorFocusUrl) payload.competitorFocusUrl = competitorUrls[0];
   }
   if (input.briefId) payload.briefId = input.briefId;
-  if (input.useAgentTeam) {
-    payload.useAgentTeam = true;
-    if (input.agentFastMode) payload.agentFastMode = true;
-  }
   return payload;
 }
 
@@ -197,17 +191,6 @@ async function createPieceViaStream(
   return finalPiece;
 }
 
-const AGENT_ORDER = [
-  "owl",
-  "ferret",
-  "hummingbird",
-  "spider",
-  "fox",
-  "mockingbird",
-  "hawk",
-  "chameleon",
-] as const;
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -227,8 +210,8 @@ async function pollPieceUntilReady(pieceId: number): Promise<ContentPiece> {
   throw new Error("Generation timed out");
 }
 
-/** When SSE is unavailable on edge: draft → queue generate → poll, with synthetic agent ticks. */
-async function createPieceViaQueuedAgents(
+/** When SSE is unavailable: draft → queue generate → poll. No fake animal ticks. */
+async function createPieceViaQueuedLoop(
   projectId: string,
   input: CreateContentDraftInput,
   payload: CreateGeneratePayload,
@@ -249,65 +232,22 @@ async function createPieceViaQueuedAgents(
 
     onProgress?.({
       phase: "analyzing",
-      agentEvent: { type: "pipeline_start", totalAgents: AGENT_ORDER.length },
+      agentEvent: { type: "loop_step", tool: "queue", decision: "Queued employee loop" },
     });
 
     await apiFetch(`/api/content-pieces/${draft.id}/generate`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        useAgentTeam: true,
-        ...(payload.agentFastMode ? { agentFastMode: true } : {}),
-      }),
+      body: JSON.stringify({}),
       timeoutMs: API_FETCH_AI_TIMEOUT_MS,
     });
 
-    const started = Date.now();
-    let tick = 0;
-    while (Date.now() - started < 10 * 60_000) {
-      await sleep(2500);
-      if (tick < AGENT_ORDER.length) {
-        const agent = AGENT_ORDER[tick]!;
-        onProgress?.({
-          phase: "drafting",
-          agentEvent: {
-            type: "agent",
-            agent,
-            status: "working",
-            message: `${agent} working…`,
-          },
-        });
-        if (tick > 0) {
-          const prev = AGENT_ORDER[tick - 1]!;
-          onProgress?.({
-            phase: "drafting",
-            agentEvent: {
-              type: "agent",
-              agent: prev,
-              status: "completed",
-              message: `${prev} done`,
-            },
-          });
-        }
-        tick += 1;
-      }
-
-      const piece = await apiFetch<ContentPiece>(`/api/content-pieces/${draft.id}`);
-      if (piece.status === "failed") {
-        throw new Error("Agent team generation failed");
-      }
-      if (piece.status !== "generating" && (piece.bodyMarkdown?.trim() || piece.wordCount)) {
-        onProgress?.({
-          phase: "finishing",
-          agentEvent: {
-            type: "pipeline_complete",
-            totalDurationMs: Date.now() - started,
-          },
-        });
-        return piece;
-      }
-    }
-    throw new Error("Agent team generation timed out");
+    const piece = await pollPieceUntilReady(draft.id);
+    onProgress?.({
+      phase: "finishing",
+      agentEvent: { type: "loop_step", tool: "generate_draft", decision: "Draft ready", ok: true },
+    });
+    return piece;
   } catch {
     return null;
   }
@@ -396,8 +336,8 @@ export function useStudioData(projectId: string | null) {
 
       options?.onProgress?.({ phase: "analyzing" });
       let piece = await createPieceViaStream(projectId, payload, options?.onProgress);
-      if (!piece && payload.useAgentTeam) {
-        piece = await createPieceViaQueuedAgents(projectId, input, payload, options?.onProgress);
+      if (!piece) {
+        piece = await createPieceViaQueuedLoop(projectId, input, payload, options?.onProgress);
       }
       if (!piece) {
         options?.onProgress?.({ phase: "finishing" });

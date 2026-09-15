@@ -300,18 +300,13 @@ export function useCreateContentDialog({
       competitorFocusUrl: focus || undefined,
       competitorUrls: urls.length > 0 ? urls : undefined,
       briefId,
-      ...(isSeoLongform(formatType) && useAgentTeam
-        ? { useAgentTeam: true, ...(agentFastMode ? { agentFastMode: true } : {}) }
-        : {}),
     });
   }
 
   const stepTitle = showGenerating
     ? flow === "repurpose"
       ? `Repurposing into ${formatTypeLabel(formatType)}…`
-      : useAgentTeam
-        ? `Agent team writing your ${formatTypeLabel(formatType)}…`
-        : `Writing your ${formatTypeLabel(formatType)}…`
+      : `Writing your ${formatTypeLabel(formatType)}…`
     : currentStep === "path"
       ? "How do you want to start?"
       : currentStep === "format"

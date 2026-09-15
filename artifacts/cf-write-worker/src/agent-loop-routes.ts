@@ -8,6 +8,7 @@ import { db } from "./db";
 import { agentActionItemsTable, agentRunsTable } from "@workspace/db/schema-sqlite";
 import { getAccessibleProject } from "./project-access";
 import type { TrackJob } from "./content-pieces-shared";
+import { approveActionQueueItem, startExecuteActionRun } from "@workspace/content-engine/agent-loop";
 
 const PatchActionBody = z.object({
   status: z.enum(["open", "approved", "dismissed", "blocked"]),
@@ -63,56 +64,20 @@ export async function handleAgentLoopWrite(
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
-    const [action] = await db
-      .select()
-      .from(agentActionItemsTable)
-      .where(eq(agentActionItemsTable.id, actionId))
-      .limit(1);
-    if (!action || action.websiteProjectId !== projectId) {
+    let started: Awaited<ReturnType<typeof startExecuteActionRun>>;
+    try {
+      started = await startExecuteActionRun({ projectId, userId, actionId });
+    } catch {
       return withCors(request, Response.json({ error: "Action not found" }, { status: 404 }));
     }
-    const [run] = await db
-      .insert(agentRunsTable)
-      .values({
-        websiteProjectId: projectId,
-        userId,
-        goalKind: "execute_action",
-        goal: {
-          kind: "execute_action",
-          text: action.title,
-          projectId,
-          keyword: action.keyword,
-          actionItemId: action.id,
-          actionType: action.actionType,
-          targetUrl: action.url,
-        },
-        status: "running",
-        policy: { allowLivePublish: false, approveFirstForLivePublish: true, maxCredits: 20 },
-        trajectory: [],
-      })
-      .returning({ id: agentRunsTable.id });
-    await db
-      .update(agentActionItemsTable)
-      .set({ status: "running", lastRunId: run?.id ?? null, updatedAt: new Date() })
-      .where(eq(agentActionItemsTable.id, actionId));
-    const jobId = await sendToCfQueue(QUEUES.agentLoop, {
-      projectId,
-      userId,
-      runId: run?.id,
-      actionItemId: actionId,
-      goalKind: "execute_action",
-      keyword: action.keyword,
-      actionType: action.actionType,
-      targetUrl: action.url ?? undefined,
-      text: action.title,
-    });
+    const jobId = await sendToCfQueue(QUEUES.agentLoop, started.payload);
     if (jobId && trackJob) {
-      await trackJob(jobId, QUEUES.agentLoop, { userId, projectId, runId: run?.id, actionItemId: actionId });
+      await trackJob(jobId, QUEUES.agentLoop, { userId, projectId, runId: started.runId, actionItemId: actionId });
     }
     return withCors(
       request,
       acceptedJobResponse(jobId ?? `cf:${QUEUES.agentLoop}:${Date.now()}`, QUEUES.agentLoop, {
-        runId: run?.id,
+        runId: started.runId,
         actionId,
       }),
     );
@@ -129,6 +94,25 @@ export async function handleAgentLoopWrite(
     const parsed = PatchActionBody.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
+    }
+    if (parsed.data.status === "approved") {
+      try {
+        const result = await approveActionQueueItem({ projectId, actionId, userId });
+        if (result.resumePayload) {
+          const jobId = await sendToCfQueue(QUEUES.agentLoop, result.resumePayload);
+          if (jobId && trackJob) {
+            await trackJob(jobId, QUEUES.agentLoop, { userId, projectId, runId: result.runId, actionItemId: actionId });
+          }
+        }
+        const [item] = await db
+          .select()
+          .from(agentActionItemsTable)
+          .where(eq(agentActionItemsTable.id, actionId))
+          .limit(1);
+        return withCors(request, Response.json({ item, approval: result.status, runId: result.runId }));
+      } catch {
+        return withCors(request, Response.json({ error: "Action not found" }, { status: 404 }));
+      }
     }
     const [existing] = await db
       .select({ id: agentActionItemsTable.id, websiteProjectId: agentActionItemsTable.websiteProjectId })

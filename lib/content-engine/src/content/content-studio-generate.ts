@@ -484,6 +484,9 @@ export interface AgentTeamGenerationOptions {
  * owl → ferret → hummingbird → spider → fox → mockingbird → hawk → chameleon
  *
  * Progress events are emitted for each agent stage.
+ * @deprecated Non-primary. The product generate path is `runAgentLoop` +
+ * `generateContentPiece`. This animal pipeline remains only for the public
+ * `POST /api/v1/content-pieces/generate-with-agents` contract.
  */
 export async function generateContentPieceWithAgents(
   format: ContentFormatType,

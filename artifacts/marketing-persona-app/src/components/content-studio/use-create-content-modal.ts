@@ -24,6 +24,7 @@ import {
   useCreateContentKeyboard,
 } from "./create-content-modal-navigation";
 import { useAgentTeamState } from "@/components/content/agents";
+import { applyLoopStepEvent, type LoopStepEvent } from "@workspace/app-shell/studio";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/seo-longform-formats";
 
 export function useCreateContentModal({
@@ -88,7 +89,14 @@ export function useCreateContentModal({
     currentStep === "optimize-importing";
 
   const agentTeam = useAgentTeamState();
-  const { reset: resetAgentTeam, handleEvent: onAgentEvent } = agentTeam;
+  const [loopSteps, setLoopSteps] = useState<LoopStepEvent[]>([]);
+  const onAgentEvent = useCallback((event: { type: string; [key: string]: unknown }) => {
+    setLoopSteps((prev) => applyLoopStepEvent(prev, event));
+  }, []);
+  const resetAgentTeam = useCallback(() => {
+    agentTeam.reset();
+    setLoopSteps([]);
+  }, [agentTeam]);
 
   const handleClose = useCallback(() => {
     if (form.generating) return;
@@ -342,6 +350,7 @@ export function useCreateContentModal({
     agentTeamState: agentTeam.state,
     agentTeamRunning: agentTeam.isRunning,
     agentTeamElapsedMs: agentTeam.totalElapsedMs,
+    loopSteps,
     repurposeFormat: form.repurposeFormat,
     setRepurposeFormat: form.setRepurposeFormat,
     repurposeKeyword: form.repurposeKeyword,

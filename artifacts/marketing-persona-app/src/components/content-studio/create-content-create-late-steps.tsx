@@ -34,6 +34,7 @@ import { FORMAT_META } from "./content-studio-format-data";
 import {
   LINKEDIN_ARCHETYPES,
   LINKEDIN_HOOK_TYPES,
+  LoopStepProgress,
 } from "@workspace/app-shell/studio";
 import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,7 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
     angleHint, setAngleHint, contentSection, setContentSection, editorNotes, setEditorNotes,
     sourceUrlsInput, setSourceUrlsInput, suggestedSections, plannedDate, setPlannedDate, generating, detectedSections,
     useAgentTeam, setUseAgentTeam, agentFastMode, setAgentFastMode,
-    agentTeamState, agentTeamRunning, agentTeamElapsedMs,
+    agentTeamState, agentTeamRunning, agentTeamElapsedMs, loopSteps,
     handleContinue, bypassCache, setBypassCache, competitorFocusUrl, setCompetitorFocusUrl,
     showBedrockModelPicker, bedrockModel, setBedrockModel, saveBedrockModel, setSaveBedrockModel,
     canManageBedrockModel,
@@ -244,32 +245,6 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                     Bypass cache (force fresh generation)
                   </label>
 
-                  <label className="flex items-start gap-3 mt-4 text-sm text-muted-foreground cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={useAgentTeam}
-                      onChange={(e) => setUseAgentTeam(e.target.checked)}
-                      className="rounded mt-0.5"
-                    />
-                    <span>
-                      <span className="text-foreground font-medium">Research loop</span>
-                      {" — "}
-                      Generate always uses the employee loop + shared studio generator. This checkbox is ignored (legacy).
-                    </span>
-                  </label>
-
-                  {useAgentTeam ? (
-                    <label className="flex items-center gap-3 mt-3 ml-7 text-sm text-muted-foreground cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agentFastMode}
-                        onChange={(e) => setAgentFastMode(e.target.checked)}
-                        className="rounded"
-                      />
-                      Fast mode (skip marketing + linguist)
-                    </label>
-                  ) : null}
-
                   <div className="mt-8">
                     <Button size="lg" onClick={handleContinue} disabled={!keyword.trim()} className="gap-2">
                       <FileText className="w-4 h-4" />
@@ -285,6 +260,7 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                   subtitle={`Target: ${keyword.trim()} · ${FORMAT_META[selectedFormat].wordRange} · employee loop`}
                 >
                   <div className="mt-10 space-y-3">
+                      <LoopStepProgress steps={loopSteps} isRunning={generating} />
                       {detectedSections.length === 0 ? (
                         <div className="flex items-center gap-3 text-muted-foreground">
                           <Loader2 className="w-5 h-5 animate-spin shrink-0" />

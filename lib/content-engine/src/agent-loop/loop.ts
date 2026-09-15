@@ -6,6 +6,7 @@ import {
   summarizeArgs,
   type AgentLoopContext,
   type AgentRunRecord,
+  type PendingApproval,
   type RunAgentLoopInput,
   type RunAgentLoopResult,
   type TrajectorySink,
@@ -18,18 +19,20 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
   const planner = input.planner ?? defaultEmployeePlanner;
   const tools = input.tools;
   const toolByName = new Map(tools.map((tool) => [tool.name, tool]));
+  const prior = input.resumeFrom;
 
   const run: AgentRunRecord = {
-    id: input.runId,
+    id: input.runId ?? prior?.id,
     websiteProjectId: input.goal.projectId,
-    userId: input.userId ?? null,
+    userId: input.userId ?? prior?.userId ?? null,
     goal: input.goal,
     status: "running",
     stopReason: null,
     policy,
-    trajectory: [],
-    creditsSpent: 0,
-    contentPieceId: input.goal.contentPieceId ?? null,
+    trajectory: prior ? [...prior.trajectory] : [],
+    creditsSpent: prior?.creditsSpent ?? 0,
+    contentPieceId: input.goal.contentPieceId ?? prior?.contentPieceId ?? null,
+    pendingApproval: undefined,
   };
 
   const persist = async () => {
@@ -60,6 +63,8 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
       trajectory: run.trajectory,
       creditsSpent: run.creditsSpent,
       stepIndex,
+      userId: run.userId,
+      contentPieceId: run.contentPieceId,
     };
 
     const decision = await planner(ctx, tools);
@@ -97,6 +102,9 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
     }
 
     if (tool.risk === "publish_live" && (policy.approveFirstForLivePublish || !policy.allowLivePublish)) {
+      const pending: PendingApproval = { tool: tool.name, args: decision.args, reason: decision.reason };
+      run.pendingApproval = pending;
+      run.policy = { ...policy, pendingApproval: pending };
       run.status = "awaiting_approval";
       run.stopReason = "Live publish requires human approval";
       const gateStep: TrajectoryStep = {
@@ -116,6 +124,8 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
     const raw = await tool.execute(decision.args, ctx);
     const result = sanitizeVerifiedFlags(raw);
     run.creditsSpent += tool.creditCost;
+    run.pendingApproval = undefined;
+    run.policy = { ...run.policy, pendingApproval: undefined };
     run.trajectory.push({
       at: new Date().toISOString(),
       decision: decision.reason,

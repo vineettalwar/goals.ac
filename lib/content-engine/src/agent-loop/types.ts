@@ -35,17 +35,33 @@ export type AgentGoal = {
   targetUrl?: string;
 };
 
+export type PlannerMode = "deterministic" | "hybrid" | "llm";
+
+export type PendingApproval = {
+  tool: string;
+  args: Record<string, unknown>;
+  reason: string;
+};
+
 export type AgentPolicy = {
   /** Live CMS publish always waits unless this is true (tests / explicit override). */
   allowLivePublish: boolean;
   approveFirstForLivePublish: boolean;
   maxCredits: number;
+  /**
+   * `deterministic` — Autopilot / unattended spend control (`defaultEmployeePlanner`).
+   * `hybrid` / `llm` — interactive Studio (and chat when that PR lands): LLM may pick
+   * a legal tool; invalid picks fall back to the deterministic planner.
+   */
+  plannerMode: PlannerMode;
+  pendingApproval?: PendingApproval;
 };
 
 export const DEFAULT_AGENT_POLICY: AgentPolicy = {
   allowLivePublish: false,
   approveFirstForLivePublish: true,
   maxCredits: 20,
+  plannerMode: "deterministic",
 };
 
 export type TrajectoryStep = {
@@ -76,6 +92,7 @@ export type AgentRunRecord = {
   trajectory: TrajectoryStep[];
   creditsSpent: number;
   contentPieceId?: number | null;
+  pendingApproval?: PendingApproval;
 };
 
 export type AgentLoopContext = {
@@ -85,6 +102,8 @@ export type AgentLoopContext = {
   trajectory: TrajectoryStep[];
   creditsSpent: number;
   stepIndex: number;
+  userId?: number | null;
+  contentPieceId?: number | null;
 };
 
 export type AgentTool = {
@@ -119,6 +138,8 @@ export type RunAgentLoopInput = {
   userId?: number | null;
   runId?: number;
   planner?: AgentPlanner;
+  /** Continue a persisted run (approval resume). Replays trajectory so the planner skips done tools. */
+  resumeFrom?: AgentRunRecord;
 };
 
 export type RunAgentLoopResult = AgentRunRecord;
@@ -159,4 +180,9 @@ export function sanitizeVerifiedFlags(result: AgentToolResult): AgentToolResult 
 
 export function trajectoryHasVerifiedEvidence(trajectory: TrajectoryStep[]): boolean {
   return trajectory.some((step) => step.evidenceRefs?.some((ref) => ref.verified));
+}
+
+/** Successful tool calls only — gated `publish_live` (ok:false) is not “already done”. */
+export function toolSucceeded(trajectory: TrajectoryStep[], name: string): boolean {
+  return trajectory.some((step) => step.tool === name && step.ok === true);
 }

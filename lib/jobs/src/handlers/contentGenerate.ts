@@ -201,6 +201,7 @@ async function generateExistingContentPiece(
       keyword: piece.targetKeyword ?? "",
       contentPieceId,
       caps: UNATTENDED_AGENT_LOOP_CAPS,
+      plannerMode: "deterministic",
       generateDraft: async () => {
         const out = await studioDraftFromKeyword({
           projectId,

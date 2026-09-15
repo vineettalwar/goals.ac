@@ -12,6 +12,11 @@ import type {
 } from "@workspace/jobs";
 import { fillDueAutopilotItem } from "@workspace/content-engine/strategy/autopilot-refill";
 import {
+  listActionQueueItems,
+  pickAutopilotQueueWork,
+  startExecuteActionRun,
+} from "@workspace/content-engine/agent-loop";
+import {
   parseAutopilotSettings,
   shouldRunAutopilot,
   todayInTimezone,
@@ -80,6 +85,26 @@ export async function runAutopilotForProject(projectId: number): Promise<void> {
   }
 
   const today = todayInTimezone(settings.timezone);
+  const queueItems = await listActionQueueItems(projectId);
+  const preferred = pickAutopilotQueueWork(queueItems);
+  if (preferred) {
+    try {
+      const started = await startExecuteActionRun({
+        projectId,
+        userId: project.userId,
+        actionId: preferred.id,
+      });
+      await enqueue(QUEUES.agentLoop, started.payload);
+      logger.info(
+        { projectId, actionId: preferred.id, runId: started.runId, score: preferred.opportunityScore },
+        "Autopilot: enqueued action-queue item",
+      );
+      return;
+    } catch (err) {
+      logger.warn({ projectId, actionId: preferred.id, err }, "Autopilot: action-queue claim failed, falling back to calendar");
+    }
+  }
+
   const next = await fillDueAutopilotItem(projectId, project.userId, today);
   if (!next) {
     logger.info({ projectId }, "Autopilot: no due content items");

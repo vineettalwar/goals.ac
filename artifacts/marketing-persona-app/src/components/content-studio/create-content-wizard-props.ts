@@ -54,6 +54,7 @@ export type CreateContentWizardProps = {
   agentTeamState: import("@/components/content/agents").AgentTeamState;
   agentTeamRunning: boolean;
   agentTeamElapsedMs?: number;
+  loopSteps: import("@workspace/app-shell/studio").LoopStepEvent[];
   handleContinue: () => void;
   bypassCache: boolean;
   setBypassCache: (v: boolean) => void;
