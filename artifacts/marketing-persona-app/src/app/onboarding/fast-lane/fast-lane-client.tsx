@@ -9,11 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { StepIndicator } from "@/components/onboarding/step-indicator";
 import { PartnerDemoChecklist } from "@/components/onboarding/partner-demo-checklist";
-import {
-  AgentTeamProgress,
-  useAgentTeamState,
-  type AgentTeamState,
-} from "@/components/content/agents";
+import { LoopStepProgress, loopStepsFromTrajectory, type LoopStepEvent } from "@workspace/app-shell/studio";
 import { setActiveProjectCookie } from "@/lib/active-project/cookie";
 import { clearAutopilotIntent } from "@/lib/projects/autopilot-intent";
 
@@ -44,11 +40,7 @@ type PieceRow = {
   wordCount: number;
   bodyMarkdown?: string;
   pieceMetadata?: {
-    agentTeamProgress?: {
-      agents: AgentTeamState;
-      isRunning: boolean;
-      totalElapsedMs?: number;
-    };
+    agentRunId?: number;
   } | null;
 };
 
@@ -79,8 +71,8 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
   const [readyCount, setReadyCount] = useState(0);
   const [firstPieceId, setFirstPieceId] = useState<number | null>(null);
   const [visibilitySnapshot, setVisibilitySnapshot] = useState<FastLaneStatus["visibility"] | null>(null);
-  const agentTeam = useAgentTeamState();
-  const { hydrate, reset, handleEvent } = agentTeam;
+  const [loopSteps, setLoopSteps] = useState<LoopStepEvent[]>([]);
+  const [loopRunning, setLoopRunning] = useState(false);
 
   const applyStatus = useCallback((data: FastLaneStatus) => {
     const progress = data.articleProgress;
@@ -91,23 +83,36 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
     return { ready, progress };
   }, []);
 
-  const hydrateAgentFromPieces = useCallback(async () => {
-    const res = await fetch(`/api/content-pieces?websiteProjectId=${projectId}`);
-    if (!res.ok) return;
-    const { pieces } = (await res.json()) as { pieces: PieceRow[] };
-    const generating =
-      pieces.find((p) => p.status === "generating") ??
-      pieces.find((p) => p.pieceMetadata?.agentTeamProgress?.isRunning) ??
-      pieces[0];
-    const progress = generating?.pieceMetadata?.agentTeamProgress;
-    if (progress?.agents) {
-      hydrate({
-        agents: progress.agents,
-        isRunning: progress.isRunning,
-        totalElapsedMs: progress.totalElapsedMs,
-      });
+  const hydrateLoopFromRuns = useCallback(async () => {
+    const listRes = await fetch(`/api/website-projects/${projectId}/agent-runs`);
+    if (!listRes.ok) return;
+    const data = (await listRes.json()) as {
+      runs?: Array<{ id: number; status: string; goalKind: string }>;
+    };
+    const latest = (data.runs ?? []).find((row) => row.goalKind === "research_then_draft");
+    if (!latest) {
+      const piecesRes = await fetch(`/api/content-pieces?websiteProjectId=${projectId}`);
+      if (!piecesRes.ok) return;
+      const { pieces } = (await piecesRes.json()) as { pieces: PieceRow[] };
+      const stamped = pieces.find((p) => p.pieceMetadata?.agentRunId)?.pieceMetadata?.agentRunId;
+      if (!stamped) return;
+      const runRes = await fetch(`/api/agent-runs/${stamped}`);
+      if (!runRes.ok) return;
+      const runData = (await runRes.json()) as {
+        run: { status: string; trajectory: LoopStepEvent[] };
+      };
+      setLoopSteps(loopStepsFromTrajectory(runData.run.trajectory, runData.run.status));
+      setLoopRunning(runData.run.status === "running");
+      return;
     }
-  }, [projectId, hydrate]);
+    const runRes = await fetch(`/api/agent-runs/${latest.id}`);
+    if (!runRes.ok) return;
+    const runData = (await runRes.json()) as {
+      run: { status: string; trajectory: LoopStepEvent[] };
+    };
+    setLoopSteps(loopStepsFromTrajectory(runData.run.trajectory, runData.run.status));
+    setLoopRunning(runData.run.status === "running");
+  }, [projectId]);
 
   const pollProgress = useCallback(
     async (expected: number) => {
@@ -117,7 +122,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
         if (statusRes.ok) {
           const data = (await statusRes.json()) as FastLaneStatus;
           const { ready, progress } = applyStatus(data);
-          await hydrateAgentFromPieces();
+          await hydrateLoopFromRuns();
 
           if (ready >= expected || (progress?.failed ?? 0) > 0) {
             return true;
@@ -127,13 +132,14 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
       }
       return false;
     },
-    [projectId, applyStatus, hydrateAgentFromPieces],
+    [projectId, applyStatus, hydrateLoopFromRuns],
   );
 
   const runFastLane = useCallback(async () => {
     setPhase("scan");
     setMessage("Scanning your website…");
-    reset();
+    setLoopSteps([]);
+    setLoopRunning(false);
 
     let attempts = 0;
     while (attempts < 30) {
@@ -166,8 +172,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
     const articleCount = data.articleCount ?? 3;
     setQueuedCount(articleCount);
     setPhase("generate");
-    setMessage(`Agent team writing your first ${articleCount} articles…`);
-    handleEvent({ type: "pipeline_start", totalAgents: 8 });
+    setMessage(`Employee loop writing your first ${articleCount} articles…`);
 
     await pollProgress(articleCount);
 
@@ -178,7 +183,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
 
     setPhase("done");
     clearAutopilotIntent();
-  }, [projectId, pollProgress, applyStatus, reset, handleEvent]);
+  }, [projectId, pollProgress, applyStatus]);
 
   useEffect(() => {
     setActiveProjectCookie(Number(projectId));
@@ -275,11 +280,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
               <PartnerDemoChecklist projectId={projectId} firstPieceId={firstPieceId} />
             </>
           ) : phase === "generate" ? (
-            <AgentTeamProgress
-              agentState={agentTeam.state}
-              isRunning={agentTeam.isRunning || readyCount < queuedCount}
-              totalElapsedMs={agentTeam.totalElapsedMs}
-            />
+            <LoopStepProgress steps={loopSteps} isRunning={loopRunning || readyCount < queuedCount} />
           ) : (
             <div className="flex flex-col items-center py-6 gap-3">
               <Spinner size="lg" />

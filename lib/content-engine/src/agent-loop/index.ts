@@ -4,7 +4,9 @@ export { defaultEmployeePlanner } from "./planner";
 export { createHybridPlanner, parsePlannerJson, buildPlannerChoicePrompt } from "./hybrid-planner";
 export { createFirstPartyTools } from "./tools";
 export { dbTrajectorySink, loadAgentRun, listAgentRunsForProject } from "./persist";
-export { executeStoredAgentRun, executeAgentRunById, startExecuteActionRun } from "./run-job";
+export { presentAgentRun, presentAgentRunListItem } from "./present-run";
+export type { PresentedAgentRun, PresentedAgentRunListItem } from "./present-run";
+export { executeStoredAgentRun, executeAgentRunById, startExecuteActionRun, startOpportunityScanRun } from "./run-job";
 export { approveActionQueueItem } from "./approve-resume";
 export {
   syncActionQueueFromSignals,

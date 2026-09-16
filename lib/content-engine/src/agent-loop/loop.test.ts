@@ -195,6 +195,35 @@ describe("runAgentLoop", () => {
     });
     expect(result.status).toBe("awaiting_approval");
     expect(result.stopReason).toMatch(/approval/i);
+    const gate = result.trajectory.find((step) => step.tool === "publish_live");
+    expect(gate?.ok).toBe(false);
+    expect(gate?.error).toMatch(/approval/i);
+  });
+
+  it("records tool error text on failed write tools", async () => {
+    const draft: AgentTool = {
+      name: "generate_draft",
+      description: "draft",
+      risk: "write",
+      creditCost: 1,
+      async execute() {
+        return {
+          ok: false,
+          summary: "Draft failed",
+          error: "model timeout",
+          evidenceRefs: [],
+          hasToolEvidence: false,
+        };
+      },
+    };
+    const result = await runAgentLoop({
+      goal: { kind: "research_then_draft", text: "draft", projectId: 1, keyword: "x" },
+      tools: [gscHit, draft],
+      stepBudget: 6,
+    });
+    expect(result.status).toBe("failed");
+    const step = result.trajectory.find((row) => row.tool === "generate_draft");
+    expect(step?.error).toBe("model timeout");
   });
 
   it("resumes gated publish_live and executes the tool", async () => {

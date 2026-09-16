@@ -5,10 +5,14 @@ import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
 import { db } from "./db";
-import { agentActionItemsTable, agentRunsTable } from "@workspace/db/schema-sqlite";
+import { agentActionItemsTable } from "@workspace/db/schema-sqlite";
 import { getAccessibleProject } from "./project-access";
 import type { TrackJob } from "./content-pieces-shared";
-import { approveActionQueueItem, startExecuteActionRun } from "@workspace/content-engine/agent-loop";
+import {
+  approveActionQueueItem,
+  startExecuteActionRun,
+  startOpportunityScanRun,
+} from "@workspace/content-engine/agent-loop";
 
 const PatchActionBody = z.object({
   status: z.enum(["open", "approved", "dismissed", "blocked"]),
@@ -29,30 +33,19 @@ export async function handleAgentLoopWrite(
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
-    const [run] = await db
-      .insert(agentRunsTable)
-      .values({
-        websiteProjectId: projectId,
-        userId,
-        goalKind: "opportunity_scan",
-        goal: { kind: "opportunity_scan", text: "Score GSC and persist the action queue", projectId },
-        status: "running",
-        policy: { allowLivePublish: false, approveFirstForLivePublish: true, maxCredits: 20 },
-        trajectory: [],
-      })
-      .returning({ id: agentRunsTable.id });
-    const jobId = await sendToCfQueue(QUEUES.agentLoop, {
-      projectId,
-      userId,
-      runId: run?.id,
-      goalKind: "opportunity_scan",
-    });
+    let started: Awaited<ReturnType<typeof startOpportunityScanRun>>;
+    try {
+      started = await startOpportunityScanRun({ projectId, userId });
+    } catch {
+      return withCors(request, Response.json({ error: "Could not start scan" }, { status: 500 }));
+    }
+    const jobId = await sendToCfQueue(QUEUES.agentLoop, started.payload);
     if (jobId && trackJob) {
-      await trackJob(jobId, QUEUES.agentLoop, { userId, projectId, runId: run?.id });
+      await trackJob(jobId, QUEUES.agentLoop, { userId, projectId, runId: started.runId });
     }
     return withCors(
       request,
-      acceptedJobResponse(jobId ?? `cf:${QUEUES.agentLoop}:${Date.now()}`, QUEUES.agentLoop, { runId: run?.id }),
+      acceptedJobResponse(jobId ?? `cf:${QUEUES.agentLoop}:${Date.now()}`, QUEUES.agentLoop, { runId: started.runId }),
     );
   }
 

@@ -95,6 +95,7 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
         decision: decision.reason,
         tool: decision.tool,
         summary: run.stopReason,
+        error: run.stopReason,
         ok: false,
       });
       await persist();
@@ -114,6 +115,7 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
         argsSummary: summarizeArgs(decision.args),
         ok: false,
         summary: run.stopReason,
+        error: run.stopReason,
         creditsSpent: run.creditsSpent,
       };
       run.trajectory.push(gateStep);
@@ -134,6 +136,7 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
       evidenceRefs: result.evidenceRefs,
       ok: result.ok,
       summary: result.summary,
+      ...(result.ok ? {} : { error: result.error ?? result.summary }),
       creditsSpent: run.creditsSpent,
     });
     await persist();

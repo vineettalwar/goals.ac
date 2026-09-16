@@ -16,7 +16,7 @@ export {
   useAgentTeamState,
   type AgentTeamState,
 } from "./agent-team-progress";
-export { LoopStepProgress, applyLoopStepEvent, type LoopStepEvent } from "./loop-step-progress";
+export { LoopStepProgress, applyLoopStepEvent, loopStepsFromTrajectory, type LoopStepEvent } from "./loop-step-progress";
 export {
   AgentTeamStage,
   behindTheScenesEntries,

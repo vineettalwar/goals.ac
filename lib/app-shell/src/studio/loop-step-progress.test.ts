@@ -19,4 +19,16 @@ describe("applyLoopStepEvent", () => {
     steps = applyLoopStepEvent(steps, { type: "agent", agent: "owl", status: "working" });
     expect(steps).toHaveLength(1);
   });
+
+  it("keeps failed loop_step error text", () => {
+    const steps = applyLoopStepEvent([], {
+      type: "loop_step",
+      tool: "generate_draft",
+      ok: false,
+      error: "model timeout",
+      summary: "Draft failed",
+    });
+    expect(steps[0]?.ok).toBe(false);
+    expect(steps[0]?.error).toBe("model timeout");
+  });
 });

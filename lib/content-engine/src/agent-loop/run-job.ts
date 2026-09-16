@@ -161,6 +161,44 @@ export async function executeAgentRunById(runId: number): Promise<RunAgentLoopRe
   });
 }
 
+export async function startOpportunityScanRun(input: {
+  projectId: number;
+  userId: number;
+}): Promise<{ runId: number; payload: AgentLoopPayload }> {
+  const [run] = await db
+    .insert(agentRunsTable)
+    .values({
+      websiteProjectId: input.projectId,
+      userId: input.userId,
+      goalKind: "opportunity_scan",
+      goal: {
+        kind: "opportunity_scan",
+        text: "Score GSC and persist the action queue",
+        projectId: input.projectId,
+      },
+      status: "running",
+      policy: {
+        allowLivePublish: false,
+        approveFirstForLivePublish: true,
+        plannerMode: "deterministic",
+        maxCredits: 20,
+      },
+      trajectory: [],
+    })
+    .returning({ id: agentRunsTable.id });
+  if (!run) throw new Error("Failed to create agent run");
+  return {
+    runId: run.id,
+    payload: {
+      projectId: input.projectId,
+      userId: input.userId,
+      runId: run.id,
+      goalKind: "opportunity_scan",
+      text: "Score GSC and persist the action queue",
+    },
+  };
+}
+
 export async function startExecuteActionRun(input: {
   projectId: number;
   userId: number;

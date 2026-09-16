@@ -20,9 +20,9 @@ export type CreateContentDraftInput = {
   competitorUrls?: string[];
   /** Source brief this piece was created from (deep-linked via ?briefId=). */
   briefId?: number;
-  /** Run Owl→Chameleon agent team instead of single-pass generation. */
+  /** @deprecated Ignored. Studio always uses `runAgentLoop`. Public generate-with-agents only. */
   useAgentTeam?: boolean;
-  /** Skip marketing + linguist agents when useAgentTeam is on. */
+  /** @deprecated Ignored with `useAgentTeam`. */
   agentFastMode?: boolean;
 };
 
