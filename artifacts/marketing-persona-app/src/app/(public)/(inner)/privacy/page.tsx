@@ -10,14 +10,39 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPageClient titleLine1="Privacy" titleLine2="policy" lastUpdated="September 16, 2026">
+    <LegalPageClient titleLine1="Privacy" titleLine2="policy" lastUpdated="September 17, 2026">
       <p className="text-sm text-white/65 leading-relaxed">
-        Controller: Some Tech Work UG (haftungsbeschränkt), Wiesbaden, Germany. Contact{" "}
+        Controller (Art. 4 Nr. 7 DSGVO): Some Tech Work UG (haftungsbeschränkt), Hans-Böckler-Str. 76,
+        65199 Wiesbaden, Germany. Contact{" "}
         <a className="text-(--accent-warm) hover:underline" href="mailto:privacy@goals.ac">
           privacy@goals.ac
         </a>
-        . This policy describes the product as shipped (Cloudflare Workers, D1, Stripe billing, multi-provider AI). It is not a substitute for a signed DPA. Draft DPA: ask counsel; internal template lives in the repo for legal review.
+        . No external data protection officer is appointed (Art. 37 DSGVO is not triggered at our
+        current size). Supervisory authority: Der Hessische Beauftragte für Datenschutz und
+        Informationsfreiheit. This policy describes the product as shipped. It is not a signed AVV.
+        Request an AVV at{" "}
+        <a className="text-(--accent-warm) hover:underline" href="/dpa">
+          /dpa
+        </a>
+        .
       </p>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Legal bases (Art. 6 DSGVO)</h2>
+        <ul className="list-disc space-y-2 pl-5 text-sm text-white/65 leading-relaxed">
+          <li>
+            <strong className="text-white/80">Art. 6 Abs. 1 b</strong> — contract: account, generation,
+            publish, billing.
+          </li>
+          <li>
+            <strong className="text-white/80">Art. 6 Abs. 1 c</strong> — legal duty: tax invoices, VAT.
+          </li>
+          <li>
+            <strong className="text-white/80">Art. 6 Abs. 1 f</strong> — legitimate interest: security,
+            abuse prevention, essential session cookies (see TDDDG § 25 Abs. 2).
+          </li>
+        </ul>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">1. Information we collect</h2>
@@ -65,7 +90,10 @@ export default function PrivacyPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">6. Hosting and location</h2>
         <p className="text-sm text-white/65 leading-relaxed">
-          Production API and database run on Cloudflare Workers and D1. The repo does not pin a D1 location hint. Treat storage as Cloudflare&apos;s global network unless we confirm an EU pin in writing. Local development may use PostgreSQL on your machine.
+          Production API and database run on Cloudflare Workers and D1. We do not pin an EU D1
+          location in application config. Treat storage as Cloudflare&apos;s network unless we confirm
+          an EU pin in writing. Transfers outside the EEA rely on Cloudflare&apos;s and each AI
+          provider&apos;s SCCs / DPF where they publish them. Local development may use PostgreSQL.
         </p>
       </section>
 
@@ -79,7 +107,13 @@ export default function PrivacyPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">8. Your rights</h2>
         <p className="text-sm text-white/65 leading-relaxed">
-          Depending on applicable law you may access, correct, export, or delete personal data, and object to or restrict processing. Email privacy@goals.ac. A processor agreement (DPA/AVV) is available for counsel review on request; it is not in-app clickwrap.
+          GDPR rights (access, rectification, erasure, restriction, portability, objection) and the
+          right to lodge a complaint with a supervisory authority (Art. 77), in Hesse typically HBDI.
+          Email privacy@goals.ac or use in-product export. A processor agreement is not clickwrap; see{" "}
+          <a className="text-(--accent-warm) hover:underline" href="/dpa">
+            /dpa
+          </a>
+          .
         </p>
       </section>
     </LegalPageClient>

@@ -20,7 +20,8 @@ Real B2B SEO/CMS product. Encryption, SSRF guard, credit ledger, dual Drizzle sc
 
 - Dual runtime remains: Next is local reference; production is Edge Mesh. Feature cost is still 2× until Next is archived.
 - No GitHub Actions (policy). Quality is `pnpm run typecheck`, `test:unit`, `parity:gate`.
-- DPA is a counsel draft (`docs/legal/dpa-template.md`), not a signed AVV.
+- DPA is a counsel draft (`docs/legal/dpa-template.md`), not a signed AVV. Public request page: `/dpa`.
+- BITV: `/accessibility` states WCAG 2.1 AA as the design target. Not certified. B2B SaaS is outside BITV-as-public-body and typically outside BFSG consumer scope.
 - D1 is not EU-pinned in wrangler. Say that out loud.
 - Observability is email + optional `PUBLISH_ALERT_WEBHOOK_URL` + `wrangler tail`, not Sentry.
 - SSO is not implemented. MFA + invite-only are.

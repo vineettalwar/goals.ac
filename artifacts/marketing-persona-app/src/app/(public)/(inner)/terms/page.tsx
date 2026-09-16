@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPageClient titleLine1="Terms of" titleLine2="service" lastUpdated="September 16, 2026">
+    <LegalPageClient titleLine1="Terms of" titleLine2="service" lastUpdated="September 17, 2026">
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">1. Service description</h2>
         <p className="text-sm text-white/65 leading-relaxed">
@@ -101,7 +101,16 @@ export default function TermsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">10. Contact</h2>
+        <h2 className="text-xl font-semibold">10. B2B, governing law</h2>
+        <p className="text-sm text-white/65 leading-relaxed">
+          The service is offered to businesses (Unternehmer, § 14 BGB), not consumers. There is no
+          consumer withdrawal right (Widerrufsrecht) for a B2B SaaS contract. German law applies,
+          excluding UN CISG. Venue is Wiesbaden, to the extent permitted.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">11. Contact</h2>
         <p className="text-sm text-white/65 leading-relaxed">
           Questions about these terms can be sent to{" "}
           <a className="text-(--accent-warm) hover:underline" href="mailto:legal@goals.ac">

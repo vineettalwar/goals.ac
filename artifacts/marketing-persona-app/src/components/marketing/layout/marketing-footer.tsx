@@ -34,7 +34,15 @@ export function MarketingFooter() {
         ))}
       </div>
       <div className="mx-auto max-w-6xl px-6 pb-6 font-mono text-[11px] tracking-normal text-muted-foreground">
-        © {new Date().getFullYear()} goals.ac. All rights reserved.
+        © {new Date().getFullYear()} Some Tech Work UG (haftungsbeschränkt).{" "}
+        <Link href="/imprint" className="hover:text-foreground">
+          Impressum
+        </Link>
+        {" · "}
+        <Link href="/accessibility" className="hover:text-foreground">
+          Accessibility
+        </Link>
+        .
       </div>
     </footer>
   );

@@ -11,6 +11,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/privacy")).toBe(true);
     expect(isPublicPath("/cookies")).toBe(true);
     expect(isPublicPath("/subprocessors")).toBe(true);
+    expect(isPublicPath("/dpa")).toBe(true);
+    expect(isPublicPath("/accessibility")).toBe(true);
     expect(isPublicPath("/imprint")).toBe(true);
     expect(isPublicPath("/about")).toBe(true);
     expect(isPublicPath("/features")).toBe(true);

@@ -5,13 +5,13 @@ import { LegalPageClient } from "@/components/marketing/pages/company/legal-page
 export const metadata: Metadata = {
   title: "Imprint",
   description:
-    "Legal disclosure (Impressum) for goals.ac / Some Tech Work UG (haftungsbeschränkt): register, representation, contact, and EU dispute resolution.",
+    "Legal disclosure (Impressum) for goals.ac / Some Tech Work UG (haftungsbeschränkt): register, representation, contact, DDG, and EU dispute resolution.",
   robots: { index: true, follow: true },
 };
 
 export default function ImprintPage() {
   return (
-    <LegalPageClient titleLine1="Imprint" lastUpdated="September 6, 2026">
+    <LegalPageClient titleLine1="Imprint" lastUpdated="September 17, 2026">
       <section className="space-y-3">
         <p className="text-sm text-white/65 leading-relaxed">
           German statutory disclosure (Impressum) for our UG, plus the standard EU ODR notice. Site
@@ -26,7 +26,7 @@ export default function ImprintPage() {
         <h2 className="text-xl font-semibold">What this page is</h2>
         <p className="text-sm text-white/65 leading-relaxed">
           Some Tech Work UG (haftungsbeschränkt) is incorporated in Germany and operates goals.ac.
-          Section 5 of the Telemediengesetz (TMG) requires a dedicated disclosure of business identity,
+          Section 5 of the Digitale-Dienste-Gesetz (DDG; formerly TMG) requires a dedicated disclosure of business identity,
           representation, and register data for commercial sites. The German section below is the
           operative legal notice.
         </p>
@@ -44,7 +44,7 @@ export default function ImprintPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Angaben gemäß § 5 TMG</h2>
+        <h2 className="text-xl font-semibold">Angaben gemäß § 5 DDG</h2>
         <p className="text-sm text-white/65 leading-relaxed whitespace-pre-line">
           {`Some Tech Work UG (haftungsbeschränkt)
 Hans-Böckler-Str. 76
@@ -80,7 +80,7 @@ Deutschland`}
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
+        <h2 className="text-xl font-semibold">Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
         <p className="text-sm text-white/65 leading-relaxed whitespace-pre-line">
           {`Vineet Talwar
 Hans-Böckler-Str. 76
@@ -104,15 +104,31 @@ Hans-Böckler-Str. 76
         </p>
         <p className="text-sm text-white/65 leading-relaxed">
           Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer
-          Verbraucherschlichtungsstelle teilzunehmen.
+          Verbraucherschlichtungsstelle teilzunehmen. goals.ac is offered to businesses
+          (B2B), not to consumers.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Accessibility / Barrierefreiheit</h2>
+        <p className="text-sm text-white/65 leading-relaxed">
+          Statement (BITV 2.0 / WCAG 2.1 AA target, not certified):{" "}
+          <Link className="text-(--accent-warm) hover:underline" href="/accessibility">
+            /accessibility
+          </Link>
+          . AVV/DPA request:{" "}
+          <Link className="text-(--accent-warm) hover:underline" href="/dpa">
+            /dpa
+          </Link>
+          .
         </p>
       </section>
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Haftung für Inhalte</h2>
         <p className="text-sm text-white/65 leading-relaxed">
-          Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach
-          den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter
+          Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für eigene Inhalte auf diesen Seiten nach
+          den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 DDG sind wir als Diensteanbieter
           jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen
           oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
         </p>

@@ -166,7 +166,7 @@ Beehiiv has no Simple Icons mark; yellow square + `b`.
 | **HIGH-11** | `viewer` can write via routes outside middleware allowlist | Next `middleware.ts` `WRITE_API_PREFIXES` + handlers that only `requireAuth()` | Add missing prefixes **or** `requireOrgPermission` on `/api/goals`, `/briefs`, `/companies`, `/personas`, `/tracked-keywords`, `/competitor-analysis`, `/keyword-analysis`, `/roadmaps` |
 | **HIGH-12** | Coverage/cannibalization verdict computed but not enforced upstream | `content-coverage.ts`, `content-strategy-generator.ts` | `existingTitles` now reaches publish gate (BLOCK-4); strategy generator still parallel batches with no cross-batch dedup — drop or re-rank overlapped briefs |
 | **HIGH-17** | Dark mode toggle with no `.dark` token block | `globals.css`, `lib/app-shell/src/product-theme.css` | Either ship real dark tokens or remove the toggle |
-| **HIGH-18** | Cookie consent still missing (EU B2B); Impressum now at `/imprint` | Marketing `(public)` pages | Counsel before EU charge; privacy/terms/imprint exist |
+| **HIGH-18** | Cookie notice + DDG imprint + BITV statement shipped; CMP not used (essential-only / TDDDG) | Marketing `(public)` | Counsel still signs AVV; USt-IdNr still beantragt |
 | **BLOCK-4 residual** | `minQualityScore` still unset | `contentPublish.ts` + admin publish-quality distribution | **Intentional** until someone reads score histogram — see `docs/DECISIONS.md` 2026-09-04 |
 
 ### P2 — medium / lower (pick when P0–P1 clear)

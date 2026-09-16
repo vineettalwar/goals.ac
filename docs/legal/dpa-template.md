@@ -40,3 +40,10 @@ On termination, Controller may export then delete the account. Processor will de
 ## Instructions
 
 Processor processes only on documented instructions in the product (generate, publish, connect integrations) and this DPA.
+
+## German notes
+
+- Processor: Some Tech Work UG (haftungsbeschränkt), Wiesbaden. AVV under Art. 28 DSGVO / § 62 BDSG.
+- TOMs: TLS, AES-256-GCM for secrets, invite-only default, optional MFA and IP allowlist, org audit log.
+- Subprocessor changes: notice to the Controller admin; public list at `/subprocessors`.
+- Breach: notify Controller without undue delay after confirmation (Art. 33/34 support).

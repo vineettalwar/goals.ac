@@ -9,9 +9,12 @@ export const metadata: Metadata = {
 
 export default function CookiesPage() {
   return (
-    <LegalPageClient titleLine1="Cookie" titleLine2="notice" lastUpdated="September 16, 2026">
+    <LegalPageClient titleLine1="Cookie" titleLine2="notice" lastUpdated="September 17, 2026">
       <p className="text-sm text-white/65 leading-relaxed">
-        We set essential cookies only. There is no advertising pixel and no third-party analytics cookie. A consent management platform is not loaded.
+        German TDDDG § 25: storing information on your device needs consent unless it is strictly
+        necessary for a service you requested. Our session cookie is necessary to keep you signed in.
+        The active-project cookie is necessary to remember which site you opened in the product. We do
+        not set advertising or analytics cookies, so we do not load a CMP.
       </p>
       <ul className="list-disc space-y-2 pl-5 text-sm text-white/65 leading-relaxed">
         <li>
