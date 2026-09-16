@@ -206,7 +206,9 @@
     "./vertical-guardrails": "./src/verticals/vertical-guardrails.ts",
     "./strategy/first-article-service": "./src/strategy/first-article-service.ts",
     "./first-article-service": "./src/strategy/first-article-service.ts",
-    "./agent-loop": "./src/agent-loop/index.ts"
+    "./agent-loop": "./src/agent-loop/index.ts",
+    "./agent-loop/chat-catalog": "./src/agent-loop/chat-catalog.ts",
+    "./agent-loop/seo-chat-format": "./src/agent-loop/seo-chat-format.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

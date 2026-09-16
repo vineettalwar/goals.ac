@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, ListPlus, PenLine, Plus } from "lucide-react";
 import { cn } from "../cn";
-import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop";
-import { chatCapabilityPrompts, type ChatProductSurface } from "@workspace/content-engine/agent-loop";
+import { chatCapabilityPrompts, type ChatProductSurface } from "@workspace/content-engine/agent-loop/chat-catalog";
+import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop/seo-chat-format";
 import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
 
 type Thread = { id: number; title: string; updatedAt?: string | Date };
