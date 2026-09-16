@@ -16,6 +16,9 @@ const AI_PROVIDER_OPTIONS: Array<{ value: AiProviderChoice; label: string }> = [
   { value: "gemini", label: "Google Gemini" },
   { value: "openai", label: "OpenAI (ChatGPT)" },
   { value: "anthropic", label: "Anthropic (Claude)" },
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "groq", label: "Groq" },
+  { value: "nvidia", label: "NVIDIA NIM" },
   { value: "bedrock", label: "AWS Bedrock" },
   { value: "ollama", label: "Ollama (local)" },
 ];
@@ -44,8 +47,52 @@ const ANTHROPIC_KEY_DIALOG: ProviderKeyDialogConfig = {
   permissionMessage: "Only organization owners and site admins can manage the Anthropic API key.",
 };
 
+const OPENROUTER_KEY_DIALOG: ProviderKeyDialogConfig = {
+  providerLabel: "OpenRouter",
+  inputId: "openrouter-api-key",
+  dialogTitleId: "openrouter-key-dialog-title",
+  placeholder: "sk-or-…",
+  helpText: "Get a key at",
+  helpUrl: "https://openrouter.ai/keys",
+  helpLinkLabel: "openrouter.ai",
+  removeConfirmMessage: "Remove the organization OpenRouter API key?",
+  permissionMessage: "Only organization owners and site admins can manage the OpenRouter API key.",
+};
+
+const GROQ_KEY_DIALOG: ProviderKeyDialogConfig = {
+  providerLabel: "Groq",
+  inputId: "groq-api-key",
+  dialogTitleId: "groq-key-dialog-title",
+  placeholder: "gsk_…",
+  helpText: "Get a key at",
+  helpUrl: "https://console.groq.com/keys",
+  helpLinkLabel: "console.groq.com",
+  removeConfirmMessage: "Remove the organization Groq API key?",
+  permissionMessage: "Only organization owners and site admins can manage the Groq API key.",
+};
+
+const NVIDIA_KEY_DIALOG: ProviderKeyDialogConfig = {
+  providerLabel: "NVIDIA",
+  inputId: "nvidia-api-key",
+  dialogTitleId: "nvidia-key-dialog-title",
+  placeholder: "nvapi-…",
+  helpText: "Get a key at",
+  helpUrl: "https://build.nvidia.com/settings",
+  helpLinkLabel: "build.nvidia.com",
+  removeConfirmMessage: "Remove the organization NVIDIA API key?",
+  permissionMessage: "Only organization owners and site admins can manage the NVIDIA API key.",
+};
+
 function normalizeProviderChoice(value: string | null | undefined): AiProviderChoice {
-  if (value === "openai" || value === "anthropic" || value === "bedrock" || value === "ollama") {
+  if (
+    value === "openai" ||
+    value === "anthropic" ||
+    value === "openrouter" ||
+    value === "groq" ||
+    value === "nvidia" ||
+    value === "bedrock" ||
+    value === "ollama"
+  ) {
     return value;
   }
   return "gemini";
@@ -77,6 +124,21 @@ export type OrgAiProvidersPanelProps = {
   onTestAnthropicKey?: (key: string) => Promise<{ ok: boolean; error?: string }>;
   anthropicSaving?: boolean;
   anthropicDeleting?: boolean;
+  onSaveOpenrouterKey?: (key: string) => Promise<void>;
+  onDeleteOpenrouterKey?: () => Promise<void>;
+  onTestOpenrouterKey?: (key: string) => Promise<{ ok: boolean; error?: string }>;
+  openrouterSaving?: boolean;
+  openrouterDeleting?: boolean;
+  onSaveGroqKey?: (key: string) => Promise<void>;
+  onDeleteGroqKey?: () => Promise<void>;
+  onTestGroqKey?: (key: string) => Promise<{ ok: boolean; error?: string }>;
+  groqSaving?: boolean;
+  groqDeleting?: boolean;
+  onSaveNvidiaKey?: (key: string) => Promise<void>;
+  onDeleteNvidiaKey?: () => Promise<void>;
+  onTestNvidiaKey?: (key: string) => Promise<{ ok: boolean; error?: string }>;
+  nvidiaSaving?: boolean;
+  nvidiaDeleting?: boolean;
   onSaveBedrockCredentials?: (form: BedrockCredentialsForm) => Promise<void>;
   onDeleteBedrockCredentials?: () => Promise<void>;
   onTestBedrockCredentials?: (
@@ -88,6 +150,8 @@ export type OrgAiProvidersPanelProps = {
     provider: AiProviderChoice;
     ollamaBaseUrl: string;
     ollamaModel: string;
+    openrouterModel: string;
+    nvidiaModel: string;
   }) => Promise<void>;
   providerSaving?: boolean;
   providerMessage?: string | null;
@@ -114,6 +178,21 @@ export function OrgAiProvidersPanel({
   onTestAnthropicKey,
   anthropicSaving = false,
   anthropicDeleting = false,
+  onSaveOpenrouterKey,
+  onDeleteOpenrouterKey,
+  onTestOpenrouterKey,
+  openrouterSaving = false,
+  openrouterDeleting = false,
+  onSaveGroqKey,
+  onDeleteGroqKey,
+  onTestGroqKey,
+  groqSaving = false,
+  groqDeleting = false,
+  onSaveNvidiaKey,
+  onDeleteNvidiaKey,
+  onTestNvidiaKey,
+  nvidiaSaving = false,
+  nvidiaDeleting = false,
   onSaveBedrockCredentials,
   onDeleteBedrockCredentials,
   onTestBedrockCredentials,
@@ -127,10 +206,15 @@ export function OrgAiProvidersPanel({
   const [geminiDialogOpen, setGeminiDialogOpen] = useState(false);
   const [openaiDialogOpen, setOpenaiDialogOpen] = useState(false);
   const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
+  const [openrouterDialogOpen, setOpenrouterDialogOpen] = useState(false);
+  const [groqDialogOpen, setGroqDialogOpen] = useState(false);
+  const [nvidiaDialogOpen, setNvidiaDialogOpen] = useState(false);
   const [bedrockDialogOpen, setBedrockDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>("gemini");
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
   const [ollamaModel, setOllamaModel] = useState("");
+  const [openrouterModel, setOpenrouterModel] = useState("");
+  const [nvidiaModel, setNvidiaModel] = useState("");
 
   useEffect(() => {
     if (!aiSummary) return;
@@ -142,6 +226,8 @@ export function OrgAiProvidersPanel({
         "http://localhost:11434",
     );
     setOllamaModel(aiSummary.settings?.ollamaModel ?? aiSummary.ollama?.model ?? "");
+    setOpenrouterModel(aiSummary.settings?.openrouterModel ?? "");
+    setNvidiaModel(aiSummary.settings?.nvidiaModel ?? "");
   }, [aiSummary]);
 
   const active = aiSummary?.activeProvider ?? selectedProvider;
@@ -205,6 +291,51 @@ export function OrgAiProvidersPanel({
         />
         <IntegrationTile
           compact
+          icon={<AiProviderIcon provider="openrouter" />}
+          title="OpenRouter"
+          description="Organization BYOK key"
+          connected={Boolean(aiSummary?.hasOpenrouterKey)}
+          summary={
+            active === "openrouter"
+              ? `${keySummary(Boolean(aiSummary?.hasOpenrouterKey), aiSummary?.openrouterLastFour, aiSummary?.settings?.openrouterModel ?? undefined)} · active`
+              : keySummary(Boolean(aiSummary?.hasOpenrouterKey), aiSummary?.openrouterLastFour)
+          }
+          onClick={() => {
+            if (onSaveOpenrouterKey) setOpenrouterDialogOpen(true);
+          }}
+        />
+        <IntegrationTile
+          compact
+          icon={<AiProviderIcon provider="groq" />}
+          title="Groq"
+          description="Organization BYOK key"
+          connected={Boolean(aiSummary?.hasGroqKey)}
+          summary={
+            active === "groq"
+              ? `${keySummary(Boolean(aiSummary?.hasGroqKey), aiSummary?.groqLastFour)} · active`
+              : keySummary(Boolean(aiSummary?.hasGroqKey), aiSummary?.groqLastFour)
+          }
+          onClick={() => {
+            if (onSaveGroqKey) setGroqDialogOpen(true);
+          }}
+        />
+        <IntegrationTile
+          compact
+          icon={<AiProviderIcon provider="nvidia" />}
+          title="NVIDIA NIM"
+          description="Organization BYOK key"
+          connected={Boolean(aiSummary?.hasNvidiaKey)}
+          summary={
+            active === "nvidia"
+              ? `${keySummary(Boolean(aiSummary?.hasNvidiaKey), aiSummary?.nvidiaLastFour, aiSummary?.settings?.nvidiaModel ?? undefined)} · active`
+              : keySummary(Boolean(aiSummary?.hasNvidiaKey), aiSummary?.nvidiaLastFour)
+          }
+          onClick={() => {
+            if (onSaveNvidiaKey) setNvidiaDialogOpen(true);
+          }}
+        />
+        <IntegrationTile
+          compact
           icon={<AiProviderIcon provider="bedrock" />}
           title="AWS Bedrock"
           description="Organization BYOK credentials"
@@ -232,12 +363,18 @@ export function OrgAiProvidersPanel({
           compact
           icon={<AiProviderIcon provider="ollama" />}
           title="Ollama"
-          description="Local models"
-          connected={active === "ollama"}
+          description={
+            aiSummary?.activeProvider === "ollama" && !aiSummary?.ollama?.reachable
+              ? "Not reachable from this host"
+              : "Local models"
+          }
+          connected={Boolean(aiSummary?.ollama?.reachable)}
           summary={
-            active === "ollama"
-              ? ollamaModel || ollamaBaseUrl || "Active · configure below"
-              : "Select as active provider below"
+            aiSummary?.ollama?.reachable
+              ? active === "ollama"
+                ? `${ollamaModel || ollamaBaseUrl} · active`
+                : ollamaModel || ollamaBaseUrl
+              : "Use a public Ollama URL in production"
           }
           onClick={() => setSelectedProvider("ollama")}
         />
@@ -273,6 +410,8 @@ export function OrgAiProvidersPanel({
                   provider: selectedProvider,
                   ollamaBaseUrl,
                   ollamaModel,
+                  openrouterModel,
+                  nvidiaModel,
                 })
               }
               disabled={providerSaving}
@@ -312,6 +451,45 @@ export function OrgAiProvidersPanel({
               />
             </div>
           </div>
+        ) : null}
+
+        {selectedProvider === "openrouter" ? (
+          <div className="space-y-1.5">
+            <label htmlFor="openrouter-model" className="text-sm font-medium">
+              Model slug
+            </label>
+            <input
+              id="openrouter-model"
+              value={openrouterModel}
+              onChange={(event) => setOpenrouterModel(event.target.value)}
+              placeholder="openai/gpt-4.1-mini"
+              disabled={!canManageProvider}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+            />
+          </div>
+        ) : null}
+
+        {selectedProvider === "nvidia" ? (
+          <div className="space-y-1.5">
+            <label htmlFor="nvidia-model" className="text-sm font-medium">
+              Model ID
+            </label>
+            <input
+              id="nvidia-model"
+              value={nvidiaModel}
+              onChange={(event) => setNvidiaModel(event.target.value)}
+              placeholder="nvidia/nemotron-3.5-lightning-30b-a3b"
+              disabled={!canManageProvider}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+            />
+          </div>
+        ) : null}
+
+        {aiSummary?.activeProvider === "ollama" && !aiSummary.ollama?.reachable ? (
+          <p className="text-sm text-amber-700">
+            Ollama is selected but not reachable from this host. Switch to a cloud provider, or set a
+            public Ollama URL — localhost is not available in production.
+          </p>
         ) : null}
 
         {aiSummary?.source ? (
@@ -376,6 +554,54 @@ export function OrgAiProvidersPanel({
           saving={anthropicSaving}
           deleting={anthropicDeleting}
           config={ANTHROPIC_KEY_DIALOG}
+        />
+      ) : null}
+
+      {onSaveOpenrouterKey && onTestOpenrouterKey && onDeleteOpenrouterKey ? (
+        <SettingsProviderKeyDialog
+          open={openrouterDialogOpen}
+          onOpenChange={setOpenrouterDialogOpen}
+          hasKey={Boolean(aiSummary?.hasOpenrouterKey)}
+          lastFour={aiSummary?.openrouterLastFour ?? null}
+          onSave={onSaveOpenrouterKey}
+          onDelete={onDeleteOpenrouterKey}
+          onTest={onTestOpenrouterKey}
+          canManage={canManageProviderKeys}
+          saving={openrouterSaving}
+          deleting={openrouterDeleting}
+          config={OPENROUTER_KEY_DIALOG}
+        />
+      ) : null}
+
+      {onSaveGroqKey && onTestGroqKey && onDeleteGroqKey ? (
+        <SettingsProviderKeyDialog
+          open={groqDialogOpen}
+          onOpenChange={setGroqDialogOpen}
+          hasKey={Boolean(aiSummary?.hasGroqKey)}
+          lastFour={aiSummary?.groqLastFour ?? null}
+          onSave={onSaveGroqKey}
+          onDelete={onDeleteGroqKey}
+          onTest={onTestGroqKey}
+          canManage={canManageProviderKeys}
+          saving={groqSaving}
+          deleting={groqDeleting}
+          config={GROQ_KEY_DIALOG}
+        />
+      ) : null}
+
+      {onSaveNvidiaKey && onTestNvidiaKey && onDeleteNvidiaKey ? (
+        <SettingsProviderKeyDialog
+          open={nvidiaDialogOpen}
+          onOpenChange={setNvidiaDialogOpen}
+          hasKey={Boolean(aiSummary?.hasNvidiaKey)}
+          lastFour={aiSummary?.nvidiaLastFour ?? null}
+          onSave={onSaveNvidiaKey}
+          onDelete={onDeleteNvidiaKey}
+          onTest={onTestNvidiaKey}
+          canManage={canManageProviderKeys}
+          saving={nvidiaSaving}
+          deleting={nvidiaDeleting}
+          config={NVIDIA_KEY_DIALOG}
         />
       ) : null}
 

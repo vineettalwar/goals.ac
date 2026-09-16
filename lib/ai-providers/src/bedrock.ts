@@ -1,6 +1,11 @@
 import type { AiProviderClient, GenerateParams, GenerateResult } from "./client";
 import type { BedrockCredentialOptions } from "./config";
-import { toBedrockModelChoices, type BedrockModelChoice } from "./bedrock-models";
+import {
+  FALLBACK_BEDROCK_MODEL,
+  defaultBedrockModelId,
+  toBedrockModelChoices,
+  type BedrockModelChoice,
+} from "./bedrock-models";
 
 export const DEFAULT_BEDROCK_REGION = "us-east-1";
 
@@ -175,6 +180,48 @@ function modelIdsFromOpenAiList(body: unknown): string[] {
   return (data ?? []).map((m) => m.id?.trim()).filter((id): id is string => Boolean(id));
 }
 
+function modelIdsFromInferenceProfiles(body: unknown): string[] {
+  const summaries = (body as {
+    inferenceProfileSummaries?: Array<{ inferenceProfileId?: string; inferenceProfileArn?: string }>;
+  }).inferenceProfileSummaries;
+  return (summaries ?? [])
+    .map((s) => s.inferenceProfileId?.trim() || s.inferenceProfileArn?.trim())
+    .filter((id): id is string => Boolean(id));
+}
+
+function modelIdsFromMarketplaceEndpoints(body: unknown): string[] {
+  const endpoints = (body as {
+    marketplaceModelEndpoints?: Array<{ endpointArn?: string }>;
+  }).marketplaceModelEndpoints;
+  return (endpoints ?? [])
+    .map((e) => e.endpointArn?.trim())
+    .filter((id): id is string => Boolean(id));
+}
+
+/** Merge every catalog that answers — first-wins hid Claude/GPT/DeepSeek behind Amazon-only OpenAI lists. */
+async function mergeListedModelIds(
+  attempts: Array<{ url: string; parse: (body: unknown) => string[] }>,
+  headers: Record<string, string>,
+): Promise<string[]> {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  let lastError = "No Bedrock models listed for this API key.";
+  for (const attempt of attempts) {
+    const result = await fetchJson(attempt.url, headers);
+    if (!result.ok) {
+      lastError = result.error;
+      continue;
+    }
+    for (const id of attempt.parse(result.body)) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  if (ids.length === 0) throw new Error(lastError);
+  return ids;
+}
+
 /** List model ids available to these credentials (no hardcoded default). */
 export async function listBedrockModelIds(
   credentials?: BedrockCredentialOptions | null,
@@ -183,31 +230,36 @@ export async function listBedrockModelIds(
   if (!auth) throw new Error("No Bedrock credentials configured");
 
   if (auth.mode === "bearer") {
-    // Control plane (not bedrock-runtime /v1/models — that returns UnknownOperationException).
-    const control = await fetchJson(
-      `https://bedrock.${auth.region}.amazonaws.com/foundation-models?byOutputModality=TEXT&byInferenceType=ON_DEMAND`,
-      { Authorization: `Bearer ${auth.apiKey}` },
-    );
-    if (control.ok) {
-      const ids = modelIdsFromFoundationList(control.body);
-      if (ids.length > 0) return ids;
-    }
-
-    // Mantle OpenAI-compatible list (region-dependent).
-    const mantle = await fetchJson(`https://bedrock-mantle.${auth.region}.api.aws/v1/models`, {
+    const headers = {
       Authorization: `Bearer ${auth.apiKey}`,
-    });
-    if (mantle.ok) {
-      const ids = modelIdsFromOpenAiList(mantle.body);
-      if (ids.length > 0) return ids;
-    }
-
-    throw new Error(
-      control.ok === false
-        ? control.error
-        : mantle.ok === false
-          ? mantle.error
-          : "No Bedrock models listed for this API key.",
+      Accept: "application/json",
+    };
+    // Merge catalogs: OpenAI-compat is Amazon-heavy; Claude/GPT/DeepSeek live on
+    // inference profiles + foundation models (marketplace is not ON_DEMAND-only).
+    return mergeListedModelIds(
+      [
+        {
+          url: `https://bedrock-runtime.${auth.region}.amazonaws.com/openai/v1/models`,
+          parse: modelIdsFromOpenAiList,
+        },
+        {
+          url: `https://bedrock.${auth.region}.amazonaws.com/inference-profiles?maxResults=1000`,
+          parse: modelIdsFromInferenceProfiles,
+        },
+        {
+          url: `https://bedrock.${auth.region}.amazonaws.com/foundation-models?byOutputModality=TEXT`,
+          parse: modelIdsFromFoundationList,
+        },
+        {
+          url: `https://bedrock.${auth.region}.amazonaws.com/marketplace-model-endpoints?maxResults=1000`,
+          parse: modelIdsFromMarketplaceEndpoints,
+        },
+        {
+          url: `https://bedrock-mantle.${auth.region}.api.aws/v1/models`,
+          parse: modelIdsFromOpenAiList,
+        },
+      ],
+      headers,
     );
   }
 
@@ -223,45 +275,30 @@ export async function listBedrockChatModels(
   return toBedrockModelChoices(ids);
 }
 
-/**
- * Validate credentials without forcing a hardcoded model id.
- * Prefers a configured model + Converse; otherwise lists models via Bedrock control plane.
- */
-export async function testBedrockCredentials(
-  credentials?: BedrockCredentialOptions | null,
-): Promise<void> {
-  const configured = resolveModel(credentials?.model);
-  if (configured) {
-    const client = await BedrockClient.create(credentials);
-    await client.generate({
-      prompt: "Reply with the single word: ok",
-      maxOutputTokens: 16,
-      model: configured,
-    });
-    return;
-  }
-
-  const ids = await listBedrockModelIds(credentials);
-  if (ids.length === 0) {
-    throw new Error(
-      "Credentials accepted but no models were listed. Set BEDROCK_MODEL to a model id from the Bedrock console.",
-    );
-  }
-}
-
+/** Pick a chat model from the account list, then Nova Lite if listing fails. */
 export async function resolveBedrockModelId(
   credentials?: BedrockCredentialOptions | null,
   override?: string | null,
 ): Promise<string> {
   const configured = override?.trim() || resolveModel(credentials?.model);
   if (configured) return configured;
+  try {
+    return defaultBedrockModelId(await listBedrockChatModels(credentials));
+  } catch {
+    return FALLBACK_BEDROCK_MODEL;
+  }
+}
 
-  // Never auto-pick from ListFoundationModels — first hits are often tiny
-  // (e.g. nvidia.nemotron-nano) that truncate JSON and break content studio.
-  throw new Error(
-    "No Bedrock model configured. Choose a model in Settings → API keys " +
-      "(Amazon Nova Lite or Pro recommended for content generation).",
-  );
+/** Validate credentials with Converse on the resolved account model. */
+export async function testBedrockCredentials(
+  credentials?: BedrockCredentialOptions | null,
+): Promise<void> {
+  const client = await BedrockClient.create(credentials);
+  await client.generate({
+    prompt: "Reply with the single word: ok",
+    maxOutputTokens: 16,
+    model: await resolveBedrockModelId(credentials),
+  });
 }
 
 function buildMessages(params: GenerateParams) {

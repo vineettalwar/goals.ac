@@ -65,8 +65,8 @@ describe("resolveBedrockModelId", () => {
     ).resolves.toBe("amazon.nova-lite-v1:0");
   });
 
-  it("rejects missing model instead of auto-picking", async () => {
-    await expect(resolveBedrockModelId({ apiKey: "k" })).rejects.toThrow(/No Bedrock model configured/);
+  it("uses Nova Lite when no model is configured", async () => {
+    await expect(resolveBedrockModelId({ apiKey: "k" })).resolves.toBe("amazon.nova-lite-v1:0");
   });
 });
 
@@ -86,6 +86,32 @@ describe("toBedrockModelChoices", () => {
       "nvidia.nemotron-nano-12b-v2",
     ]);
     expect(choices[0]?.label).toBe("Amazon Nova Lite");
+  });
+
+  it("keeps Anthropic, OpenAI, and DeepSeek chat models", async () => {
+    const { toBedrockModelChoices } = await import("./bedrock-models");
+    const choices = toBedrockModelChoices([
+      "amazon.titan-embed-text-v2:0",
+      "us.anthropic.claude-sonnet-4-20250514-v1:0",
+      "openai.gpt-4o",
+      "us.deepseek.r1-v1:0",
+    ]);
+    expect(choices.map((c) => c.id)).toEqual([
+      "us.anthropic.claude-sonnet-4-20250514-v1:0",
+      "openai.gpt-4o",
+      "us.deepseek.r1-v1:0",
+    ]);
+    expect(choices.map((c) => c.label)).toEqual(["Claude Sonnet 4", "GPT-4o", "DeepSeek R1"]);
+  });
+});
+
+describe("defaultBedrockModelId", () => {
+  it("picks first choice then Nova Lite", async () => {
+    const { defaultBedrockModelId, FALLBACK_BEDROCK_MODEL } = await import("./bedrock-models");
+    expect(defaultBedrockModelId([])).toBe(FALLBACK_BEDROCK_MODEL);
+    expect(defaultBedrockModelId([{ id: "amazon.nova-pro-v1:0", label: "Amazon Nova Pro" }])).toBe(
+      "amazon.nova-pro-v1:0",
+    );
   });
 });
 

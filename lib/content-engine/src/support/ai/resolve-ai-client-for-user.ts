@@ -41,6 +41,15 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
   const usingOpenAIKey = Boolean(
     providerId === "openai" && aiProviderOptions.openai?.apiKey?.trim(),
   );
+  const usingOpenRouterKey = Boolean(
+    providerId === "openrouter" && aiProviderOptions.openrouter?.apiKey?.trim(),
+  );
+  const usingGroqKey = Boolean(
+    providerId === "groq" && aiProviderOptions.groq?.apiKey?.trim(),
+  );
+  const usingNvidiaKey = Boolean(
+    providerId === "nvidia" && aiProviderOptions.nvidia?.apiKey?.trim(),
+  );
 
   if (usingGeminiKey && userApiKey) {
     try {
@@ -101,6 +110,44 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
       const { OpenAIClient } = await import("@workspace/ai-providers/openai");
       const client = OpenAIClient.create({
         apiKey: aiProviderOptions.openai?.apiKey,
+      });
+      return { client, providerId, usingUserKey: true, source: "user-key" };
+    } catch {
+      // Fall through to platform provider below.
+    }
+  }
+
+  if (usingOpenRouterKey) {
+    try {
+      const { OpenRouterClient } = await import("@workspace/ai-providers/openrouter");
+      const client = OpenRouterClient.create({
+        apiKey: aiProviderOptions.openrouter?.apiKey,
+        model: aiProviderOptions.openrouter?.model,
+      });
+      return { client, providerId, usingUserKey: true, source: "user-key" };
+    } catch {
+      // Fall through to platform provider below.
+    }
+  }
+
+  if (usingGroqKey) {
+    try {
+      const { GroqClient } = await import("@workspace/ai-providers/groq");
+      const client = GroqClient.create({
+        apiKey: aiProviderOptions.groq?.apiKey,
+      });
+      return { client, providerId, usingUserKey: true, source: "user-key" };
+    } catch {
+      // Fall through to platform provider below.
+    }
+  }
+
+  if (usingNvidiaKey) {
+    try {
+      const { NvidiaClient } = await import("@workspace/ai-providers/nvidia");
+      const client = NvidiaClient.create({
+        apiKey: aiProviderOptions.nvidia?.apiKey,
+        model: aiProviderOptions.nvidia?.model,
       });
       return { client, providerId, usingUserKey: true, source: "user-key" };
     } catch {

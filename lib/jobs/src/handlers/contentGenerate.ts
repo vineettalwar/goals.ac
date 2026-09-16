@@ -44,7 +44,13 @@ function userUsesByok(
 ): boolean {
   if (userApiKey) return true;
   return Boolean(
-    aiProviderOptions.bedrock?.accessKeyId && aiProviderOptions.bedrock?.secretAccessKey,
+    aiProviderOptions.openai?.apiKey ||
+      aiProviderOptions.anthropic?.apiKey ||
+      aiProviderOptions.openrouter?.apiKey ||
+      aiProviderOptions.groq?.apiKey ||
+      aiProviderOptions.nvidia?.apiKey ||
+      aiProviderOptions.bedrock?.apiKey ||
+      aiProviderOptions.bedrock?.secretAccessKey,
   );
 }
 

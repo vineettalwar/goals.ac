@@ -277,13 +277,13 @@ export function SettingsApiKeyDialogs({
               <Button
                 variant="outline"
                 onClick={testBedrockCredentials}
-                disabled={bedrockTesting || !bedrockForm.apiKey.trim() || !bedrockForm.model.trim()}
+                disabled={bedrockTesting || !bedrockForm.apiKey.trim()}
               >
                 {bedrockTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test key"}
               </Button>
               <Button
                 onClick={saveBedrockCredentials}
-                disabled={bedrockSaving || !bedrockForm.apiKey.trim() || !bedrockForm.model.trim()}
+                disabled={bedrockSaving || !bedrockForm.apiKey.trim()}
               >
                 {bedrockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
               </Button>

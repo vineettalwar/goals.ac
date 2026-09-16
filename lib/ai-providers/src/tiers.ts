@@ -7,7 +7,7 @@ import type { AiProviderId } from "./config";
 
 export type AgentTier = "strategy" | "planning" | "execution" | "rapid";
 
-export type ProviderId = "gemini" | "anthropic" | "openai";
+export type ProviderId = "gemini" | "anthropic" | "openai" | "openrouter" | "groq" | "nvidia";
 
 export const TIER_MODELS: Record<ProviderId, Record<AgentTier, string>> = {
   gemini: {
@@ -28,13 +28,31 @@ export const TIER_MODELS: Record<ProviderId, Record<AgentTier, string>> = {
     execution: "gpt-4.1-mini",
     rapid: "gpt-4.1-nano",
   },
+  openrouter: {
+    strategy: "openai/gpt-4.1",
+    planning: "openai/gpt-4.1",
+    execution: "openai/gpt-4.1-mini",
+    rapid: "openai/gpt-4.1-nano",
+  },
+  groq: {
+    strategy: "openai/gpt-oss-120b",
+    planning: "openai/gpt-oss-120b",
+    execution: "openai/gpt-oss-20b",
+    rapid: "openai/gpt-oss-20b",
+  },
+  nvidia: {
+    strategy: "nvidia/nemotron-3-super-120b-a12b",
+    planning: "nvidia/nemotron-3-super-120b-a12b",
+    execution: "nvidia/nemotron-3.5-lightning-30b-a3b",
+    rapid: "nvidia/nemotron-3.5-lightning-30b-a3b",
+  },
 };
 
 export function modelForTier(provider: ProviderId, tier: AgentTier): string {
   return TIER_MODELS[provider][tier];
 }
 
-const TIER_PROVIDER_IDS = new Set<ProviderId>(["gemini", "anthropic", "openai"]);
+const TIER_PROVIDER_IDS = new Set<ProviderId>(["gemini", "anthropic", "openai", "openrouter", "groq", "nvidia"]);
 
 export function modelForProviderTier(
   providerId: AiProviderId,

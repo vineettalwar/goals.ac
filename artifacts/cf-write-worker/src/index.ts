@@ -20,6 +20,9 @@ import { handleAuthDeleteAccount } from "./auth-delete-account";
 import { handleAuthApiKeyWrite } from "./auth-api-key";
 import { handleAiProvidersSettingsWrite } from "./ai-providers-settings";
 import { handleAuthOpenaiWrite } from "./auth-openai";
+import { handleAuthOpenrouterWrite } from "./auth-openrouter";
+import { handleAuthGroqWrite } from "./auth-groq";
+import { handleAuthNvidiaWrite } from "./auth-nvidia";
 import { handleAuthAnthropicWrite } from "./auth-anthropic";
 import { handleAuthBedrockWrite } from "./auth-bedrock";
 import { handleAuthSemrushWrite } from "./auth-semrush";
@@ -132,6 +135,15 @@ export default {
 
       const openaiHandled = await handleAuthOpenaiWrite(request, path, userId);
       if (openaiHandled) return openaiHandled;
+
+      const openrouterHandled = await handleAuthOpenrouterWrite(request, path, userId);
+      if (openrouterHandled) return openrouterHandled;
+
+      const groqHandled = await handleAuthGroqWrite(request, path, userId);
+      if (groqHandled) return groqHandled;
+
+      const nvidiaHandled = await handleAuthNvidiaWrite(request, path, userId);
+      if (nvidiaHandled) return nvidiaHandled;
 
       const anthropicHandled = await handleAuthAnthropicWrite(request, path, userId);
       if (anthropicHandled) return anthropicHandled;

@@ -216,7 +216,7 @@ export async function startSearchPropertyOAuth(
       response_type: "code",
       scope: "https://www.googleapis.com/auth/webmasters.readonly",
       access_type: "offline",
-      prompt: "consent",
+      prompt: "select_account consent",
       state,
     });
 

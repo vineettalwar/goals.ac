@@ -61,10 +61,13 @@ type AiStatusResponse = {
     provider?: string | null;
     ollamaBaseUrl?: string | null;
     ollamaModel?: string | null;
+    openrouterModel?: string | null;
+    nvidiaModel?: string | null;
   };
   ollama?: {
     baseUrl?: string;
     model?: string;
+    reachable?: boolean;
   };
 };
 
@@ -76,8 +79,14 @@ function aiSummaryFromInitial(data: SettingsInitialData): SettingsAiSummary {
     geminiLastFour: data.apiKey.lastFour,
     hasOpenaiKey: data.openaiCredentials.hasKey,
     openaiLastFour: data.openaiCredentials.lastFour,
+    hasOpenrouterKey: data.openrouterCredentials.hasKey,
+    openrouterLastFour: data.openrouterCredentials.lastFour,
     hasAnthropicKey: data.anthropicCredentials.hasKey,
     anthropicLastFour: data.anthropicCredentials.lastFour,
+    hasGroqKey: data.groqCredentials.hasKey,
+    groqLastFour: data.groqCredentials.lastFour,
+    hasNvidiaKey: data.nvidiaCredentials.hasKey,
+    nvidiaLastFour: data.nvidiaCredentials.lastFour,
     hasBedrockCredentials: data.bedrockCredentials.hasCredentials,
     bedrockAccessKeyLastFour: data.bedrockCredentials.accessKeyLastFour,
     bedrockRegion: data.bedrockCredentials.region,
@@ -88,6 +97,8 @@ function aiSummaryFromInitial(data: SettingsInitialData): SettingsAiSummary {
       provider: ai?.settings?.provider ?? null,
       ollamaBaseUrl: ai?.settings?.ollamaBaseUrl ?? null,
       ollamaModel: ai?.settings?.ollamaModel ?? null,
+      openrouterModel: ai?.settings?.openrouterModel ?? null,
+      nvidiaModel: ai?.settings?.nvidiaModel ?? null,
     },
     ollama: ai?.ollama,
   };
@@ -157,6 +168,9 @@ export function useSettingsData(initialData?: SettingsInitialData) {
         usageData,
         keyData,
         openaiData,
+        openrouterData,
+        groqData,
+        nvidiaData,
         anthropicData,
         bedrockData,
         aiData,
@@ -168,6 +182,15 @@ export function useSettingsData(initialData?: SettingsInitialData) {
         fetch("/api/usage").then((r) => (r.ok ? r.json() : null)) as Promise<{ usage?: UsageSummary } | null>,
         fetch("/api/auth/api-key").then((r) => (r.ok ? r.json() : null)) as Promise<ApiKeyResponse | null>,
         fetch("/api/auth/openai-credentials").then((r) =>
+          r.ok ? r.json() : null,
+        ) as Promise<ApiKeyResponse | null>,
+        fetch("/api/auth/openrouter-credentials").then((r) =>
+          r.ok ? r.json() : null,
+        ) as Promise<ApiKeyResponse | null>,
+        fetch("/api/auth/groq-credentials").then((r) =>
+          r.ok ? r.json() : null,
+        ) as Promise<ApiKeyResponse | null>,
+        fetch("/api/auth/nvidia-credentials").then((r) =>
           r.ok ? r.json() : null,
         ) as Promise<ApiKeyResponse | null>,
         fetch("/api/auth/anthropic-credentials").then((r) =>
@@ -208,8 +231,14 @@ export function useSettingsData(initialData?: SettingsInitialData) {
         geminiLastFour: keyData?.lastFour ?? null,
         hasOpenaiKey: Boolean(openaiData?.hasKey),
         openaiLastFour: openaiData?.lastFour ?? null,
+        hasOpenrouterKey: Boolean(openrouterData?.hasKey),
+        openrouterLastFour: openrouterData?.lastFour ?? null,
         hasAnthropicKey: Boolean(anthropicData?.hasKey),
         anthropicLastFour: anthropicData?.lastFour ?? null,
+        hasGroqKey: Boolean(groqData?.hasKey),
+        groqLastFour: groqData?.lastFour ?? null,
+        hasNvidiaKey: Boolean(nvidiaData?.hasKey),
+        nvidiaLastFour: nvidiaData?.lastFour ?? null,
         hasBedrockCredentials: Boolean(bedrockData?.hasCredentials),
         bedrockAccessKeyLastFour: bedrockData?.accessKeyLastFour ?? null,
         bedrockRegion: bedrockData?.region ?? null,
@@ -220,6 +249,8 @@ export function useSettingsData(initialData?: SettingsInitialData) {
           provider: aiData?.settings?.provider ?? null,
           ollamaBaseUrl: aiData?.settings?.ollamaBaseUrl ?? null,
           ollamaModel: aiData?.settings?.ollamaModel ?? null,
+          openrouterModel: aiData?.settings?.openrouterModel ?? null,
+          nvidiaModel: aiData?.settings?.nvidiaModel ?? null,
         },
         ollama: aiData?.ollama,
       });

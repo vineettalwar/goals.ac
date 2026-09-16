@@ -14,7 +14,7 @@ import { z } from "zod";
 
 const BedrockFullBody = z.object({
   apiKey: z.string().min(16, "API key is too short"),
-  model: z.string().trim().min(1, "Choose a Bedrock model"),
+  model: z.string().optional(),
 });
 
 const BedrockModelOnlyBody = z.object({
@@ -99,7 +99,7 @@ export async function PATCH(req: Request) {
   }
 
   const apiKey = full.data.apiKey.trim();
-  const model = full.data.model.trim();
+  const model = full.data.model?.trim() || null;
 
   await db
     .update(organizationsTable)

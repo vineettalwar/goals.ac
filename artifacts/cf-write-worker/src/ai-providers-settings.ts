@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { resetAiProviderClient } from "@workspace/ai-providers";
+import { resetAiProviderClient, requireOllamaReachable } from "@workspace/ai-providers";
 import { withCors } from "@workspace/cf-edge/cors";
 import { db } from "./db";
 import {
@@ -11,9 +11,11 @@ import {
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 
 const patchBody = z.object({
-  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic"]),
+  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic", "openrouter", "groq", "nvidia"]),
   ollamaBaseUrl: z.string().trim().optional().nullable(),
   ollamaModel: z.string().trim().optional().nullable(),
+  openrouterModel: z.string().trim().optional().nullable(),
+  nvidiaModel: z.string().trim().optional().nullable(),
 });
 
 function isSuperAdmin(userRole: string | null | undefined): boolean {
@@ -76,7 +78,21 @@ export async function handleAiProvidersSettingsWrite(
     );
   }
 
-  const { provider, ollamaBaseUrl, ollamaModel } = parsed.data;
+  const { provider, ollamaBaseUrl, ollamaModel, openrouterModel, nvidiaModel } = parsed.data;
+
+  if (provider === "ollama") {
+    try {
+      await requireOllamaReachable(ollamaBaseUrl?.trim() || "http://localhost:11434");
+    } catch (err) {
+      return withCors(
+        request,
+        Response.json(
+          { error: err instanceof Error ? err.message : "Ollama is not reachable" },
+          { status: 400 },
+        ),
+      );
+    }
+  }
 
   await db
     .update(organizationsTable)
@@ -84,6 +100,8 @@ export async function handleAiProvidersSettingsWrite(
       aiProvider: provider,
       ollamaBaseUrl: provider === "ollama" ? (ollamaBaseUrl?.trim() || null) : null,
       ollamaModel: provider === "ollama" ? (ollamaModel?.trim() || null) : null,
+      openrouterModel: provider === "openrouter" ? (openrouterModel?.trim() || null) : null,
+      nvidiaModel: provider === "nvidia" ? (nvidiaModel?.trim() || null) : null,
     })
     .where(eq(organizationsTable.id, orgSettings.organizationId));
 
@@ -98,6 +116,8 @@ export async function handleAiProvidersSettingsWrite(
         provider: updated?.aiProvider ?? provider,
         ollamaBaseUrl: updated?.ollamaBaseUrl ?? null,
         ollamaModel: updated?.ollamaModel ?? null,
+        openrouterModel: updated?.openrouterModel ?? null,
+        nvidiaModel: updated?.nvidiaModel ?? null,
       },
     }),
   );

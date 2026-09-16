@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, KeyRound, Loader2, X, XCircle } from "lucide-react";
 import {
   BEDROCK_MODEL_CUSTOM,
+  defaultBedrockModelId,
   type BedrockModelChoice,
 } from "@workspace/ai-providers/bedrock-models";
 
@@ -14,17 +15,15 @@ export type BedrockCredentialsForm = {
 };
 
 export function emptyBedrockForm(model = ""): BedrockCredentialsForm {
-  return { apiKey: "", model };
+  return { apiKey: "", model: model.trim() };
 }
 
 function canSave(form: BedrockCredentialsForm, hasCredentials: boolean): boolean {
-  if (!form.model.trim()) return false;
-  // Model-only save when org already has a key (API accepts { model } without apiKey).
-  return Boolean(form.apiKey.trim()) || hasCredentials;
+  return Boolean(form.apiKey.trim()) || (hasCredentials && Boolean(form.model.trim()));
 }
 
 function canTest(form: BedrockCredentialsForm): boolean {
-  return Boolean(form.apiKey.trim() && form.model.trim());
+  return Boolean(form.apiKey.trim());
 }
 
 export function SettingsBedrockDialog({
@@ -62,10 +61,9 @@ export function SettingsBedrockDialog({
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
 
-  const knownIds = useMemo(() => new Set(accountModels.map((m) => m.id)), [accountModels]);
-  const showCustom =
-    forceCustomModel ||
-    Boolean(form.model && !knownIds.has(form.model));
+  const pickerModels = accountModels;
+  const knownIds = useMemo(() => new Set(pickerModels.map((m) => m.id)), [pickerModels]);
+  const showCustom = forceCustomModel || Boolean(form.model && !knownIds.has(form.model));
   const selectValue = showCustom ? BEDROCK_MODEL_CUSTOM : form.model;
 
   useEffect(() => {
@@ -112,6 +110,11 @@ export function SettingsBedrockDialog({
         }
         const models = data.models ?? [];
         setAccountModels(models);
+        setForm((prev) => {
+          if (prev.model.trim()) return prev;
+          const picked = defaultBedrockModelId(models);
+          return models.length > 0 ? { ...prev, model: picked } : prev;
+        });
       } catch {
         if (!cancelled) {
           setAccountModels([]);
@@ -219,8 +222,8 @@ export function SettingsBedrockDialog({
             ) : null}
 
             <p className="text-xs text-muted-foreground">
-              Paste a long-term Bedrock API key. The model list is loaded from models enabled for
-              that AWS account.
+              Paste a long-term Bedrock API key. Chat and studio pick a model from this account when
+              you generate. Override here only if you want a fixed default.
             </p>
 
             <div className="space-y-1.5">
@@ -257,25 +260,24 @@ export function SettingsBedrockDialog({
                   setForceCustomModel(false);
                   updateForm({ model: value });
                 }}
-                disabled={modelsLoading}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">
-                  {modelsLoading
-                    ? "Loading models…"
-                    : accountModels.length === 0
-                      ? "Paste API key to load models"
-                      : "Choose a Bedrock model"}
+                  {modelsLoading ? "Loading models…" : "Pick automatically when generating"}
                 </option>
-                {accountModels.map((choice) => (
+                {pickerModels.map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.label}
                   </option>
                 ))}
                 <option value={BEDROCK_MODEL_CUSTOM}>Custom model id…</option>
               </select>
-              {modelsError ? (
-                <p className="text-xs text-muted-foreground">{modelsError}</p>
+              {modelsLoading ? (
+                <p className="text-xs text-muted-foreground">Loading account models…</p>
+              ) : modelsError ? (
+                <p className="text-xs text-muted-foreground">
+                  Could not list models. Chat will pick one when you generate.
+                </p>
               ) : null}
               {showCustom ? (
                 <input

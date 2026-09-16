@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { CheckCircle2 as CheckIcon, XCircle } from "lucide-react";
 import { useBedrockAccountModels } from "@/hooks/use-bedrock-account-models";
-import { BEDROCK_MODEL_CUSTOM } from "@workspace/ai-providers/bedrock-models";
+import { BEDROCK_MODEL_CUSTOM, FALLBACK_BEDROCK_MODEL } from "@workspace/ai-providers/bedrock-models";
 import type { AiProviderStatus } from "@/components/settings/settings-types";
 
 interface BedrockSectionProps {
@@ -46,7 +46,10 @@ export function SettingsAiBedrockSection({
   const [modelDraft, setModelDraft] = useState(initialModel);
   const [modelSaving, setModelSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<{ apiKey: string; model: string }>({ apiKey: "", model: "" });
+  const [form, setForm] = useState<{ apiKey: string; model: string }>({
+    apiKey: "",
+    model: FALLBACK_BEDROCK_MODEL,
+  });
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -78,9 +81,10 @@ export function SettingsAiBedrockSection({
   }
 
   async function testCredentials() {
-    const payload = { apiKey: form.apiKey.trim(), model: form.model.trim() };
-    if (!payload.apiKey) return;
-    setTesting(true);
+    const payload = {
+      apiKey: form.apiKey.trim(),
+      ...(form.model.trim() ? { model: form.model.trim() } : {}),
+    };
     setTestResult(null);
     const res = await fetch("/api/auth/bedrock-credentials/test", {
       method: "POST",
@@ -92,7 +96,10 @@ export function SettingsAiBedrockSection({
   }
 
   async function saveCredentials() {
-    const payload = { apiKey: form.apiKey.trim(), model: form.model.trim() };
+    const payload = {
+      apiKey: form.apiKey.trim(),
+      model: form.model.trim() || FALLBACK_BEDROCK_MODEL,
+    };
     if (!payload.apiKey) return;
     setSaving(true);
     const res = await fetch("/api/auth/bedrock-credentials", {
@@ -327,13 +334,13 @@ export function SettingsAiBedrockSection({
               <Button
                 variant="outline"
                 onClick={testCredentials}
-                disabled={testing || !form.apiKey.trim() || !form.model.trim()}
+                disabled={testing || !form.apiKey.trim()}
               >
                 {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test key"}
               </Button>
               <Button
                 onClick={saveCredentials}
-                disabled={saving || !form.apiKey.trim() || !form.model.trim()}
+                disabled={saving || !form.apiKey.trim()}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
               </Button>

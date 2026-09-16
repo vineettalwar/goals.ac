@@ -10,6 +10,11 @@ export interface OrgAiSettings {
   encryptedGeminiKey: string | null;
   encryptedOpenaiApiKey: string | null;
   encryptedAnthropicApiKey: string | null;
+  encryptedOpenrouterApiKey: string | null;
+  openrouterModel: string | null;
+  encryptedGroqApiKey: string | null;
+  encryptedNvidiaApiKey: string | null;
+  nvidiaModel: string | null;
   encryptedBedrockAccessKeyId: string | null;
   encryptedBedrockSecretAccessKey: string | null;
   encryptedBedrockSessionToken: string | null;
@@ -22,13 +27,13 @@ export interface OrgAiSettings {
   semrushDatabase: string | null;
 }
 
-const SELECTABLE_PROVIDERS = new Set(["gemini", "bedrock", "ollama", "openai", "anthropic"]);
+const SELECTABLE_PROVIDERS = new Set(["gemini", "bedrock", "ollama", "openai", "anthropic", "openrouter", "groq", "nvidia"]);
 
 function normalizeProvider(
   provider: string | null | undefined,
-): "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | null {
+): "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia" | null {
   if (provider && SELECTABLE_PROVIDERS.has(provider)) {
-    return provider as "gemini" | "bedrock" | "ollama" | "openai" | "anthropic";
+    return provider as "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia";
   }
   return null;
 }
@@ -43,6 +48,39 @@ export function hasOrgAnthropicCredentials(
   settings: Pick<OrgAiSettings, "encryptedAnthropicApiKey"> | null | undefined,
 ): boolean {
   return Boolean(settings?.encryptedAnthropicApiKey);
+}
+
+export function hasOrgOpenRouterCredentials(
+  settings: Pick<OrgAiSettings, "encryptedOpenrouterApiKey"> | null | undefined,
+): boolean {
+  return Boolean(settings?.encryptedOpenrouterApiKey);
+}
+
+export function hasOrgGroqCredentials(
+  settings: Pick<OrgAiSettings, "encryptedGroqApiKey"> | null | undefined,
+): boolean {
+  return Boolean(settings?.encryptedGroqApiKey);
+}
+
+export function hasOrgNvidiaCredentials(
+  settings: Pick<OrgAiSettings, "encryptedNvidiaApiKey"> | null | undefined,
+): boolean {
+  return Boolean(settings?.encryptedNvidiaApiKey);
+}
+
+/** True when the org has any LLM BYOK credential that should skip platform article quota. */
+export function hasOrgLlmByokCredentials(
+  settings: OrgAiSettings | null | undefined,
+): boolean {
+  return Boolean(
+    settings?.encryptedGeminiKey ||
+      hasOrgOpenAICredentials(settings) ||
+      hasOrgAnthropicCredentials(settings) ||
+      hasOrgOpenRouterCredentials(settings) ||
+      hasOrgGroqCredentials(settings) ||
+      hasOrgNvidiaCredentials(settings) ||
+      hasOrgBedrockCredentials(settings),
+  );
 }
 
 export function hasOrgBedrockCredentials(
@@ -80,6 +118,11 @@ export async function getOrgAiSettings(organizationId: number): Promise<OrgAiSet
       encryptedGeminiKey: organizationsTable.encryptedGeminiKey,
       encryptedOpenaiApiKey: organizationsTable.encryptedOpenaiApiKey,
       encryptedAnthropicApiKey: organizationsTable.encryptedAnthropicApiKey,
+      encryptedOpenrouterApiKey: organizationsTable.encryptedOpenrouterApiKey,
+      openrouterModel: organizationsTable.openrouterModel,
+      encryptedGroqApiKey: organizationsTable.encryptedGroqApiKey,
+      encryptedNvidiaApiKey: organizationsTable.encryptedNvidiaApiKey,
+      nvidiaModel: organizationsTable.nvidiaModel,
       encryptedBedrockAccessKeyId: organizationsTable.encryptedBedrockAccessKeyId,
       encryptedBedrockSecretAccessKey: organizationsTable.encryptedBedrockSecretAccessKey,
       encryptedBedrockSessionToken: organizationsTable.encryptedBedrockSessionToken,
@@ -173,6 +216,39 @@ export async function getDecryptedOrgAnthropicKey(organizationId: number): Promi
   }
 }
 
+export async function getDecryptedOrgOpenRouterKey(organizationId: number): Promise<string | null> {
+  try {
+    const settings = await getOrgAiSettings(organizationId);
+    if (!settings?.encryptedOpenrouterApiKey) return null;
+    return decryptSecret(settings.encryptedOpenrouterApiKey);
+  } catch (err) {
+    logger.warn({ err, organizationId }, "Failed to decrypt org OpenRouter key");
+    return null;
+  }
+}
+
+export async function getDecryptedOrgGroqKey(organizationId: number): Promise<string | null> {
+  try {
+    const settings = await getOrgAiSettings(organizationId);
+    if (!settings?.encryptedGroqApiKey) return null;
+    return decryptSecret(settings.encryptedGroqApiKey);
+  } catch (err) {
+    logger.warn({ err, organizationId }, "Failed to decrypt org Groq key");
+    return null;
+  }
+}
+
+export async function getDecryptedOrgNvidiaKey(organizationId: number): Promise<string | null> {
+  try {
+    const settings = await getOrgAiSettings(organizationId);
+    if (!settings?.encryptedNvidiaApiKey) return null;
+    return decryptSecret(settings.encryptedNvidiaApiKey);
+  } catch (err) {
+    logger.warn({ err, organizationId }, "Failed to decrypt org NVIDIA key");
+    return null;
+  }
+}
+
 async function getLegacyUserGeminiKey(userId: number): Promise<string | null> {
   try {
     const [user] = await db
@@ -210,6 +286,24 @@ export async function getDecryptedAnthropicKeyForUser(userId: number): Promise<s
   return getDecryptedOrgAnthropicKey(organizationId);
 }
 
+export async function getDecryptedOpenRouterKeyForUser(userId: number): Promise<string | null> {
+  const organizationId = await resolveOrganizationIdForUser(userId);
+  if (!organizationId) return null;
+  return getDecryptedOrgOpenRouterKey(organizationId);
+}
+
+export async function getDecryptedGroqKeyForUser(userId: number): Promise<string | null> {
+  const organizationId = await resolveOrganizationIdForUser(userId);
+  if (!organizationId) return null;
+  return getDecryptedOrgGroqKey(organizationId);
+}
+
+export async function getDecryptedNvidiaKeyForUser(userId: number): Promise<string | null> {
+  const organizationId = await resolveOrganizationIdForUser(userId);
+  if (!organizationId) return null;
+  return getDecryptedOrgNvidiaKey(organizationId);
+}
+
 export async function getDecryptedBedrockCredentialsForUser(
   userId: number,
 ): Promise<BedrockCredentialOptions | null> {
@@ -244,7 +338,10 @@ export async function getDecryptedSemrushCredentialsForUser(
 }
 
 export function toAiProviderOptionsFromOrg(
-  settings: Pick<OrgAiSettings, "aiProvider" | "ollamaBaseUrl" | "ollamaModel" | "bedrockRegion" | "bedrockModel"> | null | undefined,
+  settings: Pick<
+    OrgAiSettings,
+    "aiProvider" | "ollamaBaseUrl" | "ollamaModel" | "bedrockRegion" | "bedrockModel" | "openrouterModel" | "nvidiaModel"
+  > | null | undefined,
 ): AiProviderOptions {
   return {
     providerId: normalizeProvider(settings?.aiProvider),
@@ -255,6 +352,12 @@ export function toAiProviderOptionsFromOrg(
           region: settings?.bedrockRegion,
           model: settings?.bedrockModel,
         }
+      : undefined,
+    openrouter: settings?.openrouterModel
+      ? { model: settings.openrouterModel }
+      : undefined,
+    nvidia: settings?.nvidiaModel
+      ? { model: settings.nvidiaModel }
       : undefined,
   };
 }
@@ -275,6 +378,24 @@ export async function getAiProviderOptionsForUser(userId: number): Promise<AiPro
       const anthropicKey = await getDecryptedOrgAnthropicKey(orgSettings.organizationId);
       if (anthropicKey) {
         options.anthropic = { apiKey: anthropicKey };
+      }
+      const openrouterKey = await getDecryptedOrgOpenRouterKey(orgSettings.organizationId);
+      if (openrouterKey) {
+        options.openrouter = {
+          apiKey: openrouterKey,
+          model: orgSettings.openrouterModel,
+        };
+      }
+      const groqKey = await getDecryptedOrgGroqKey(orgSettings.organizationId);
+      if (groqKey) {
+        options.groq = { apiKey: groqKey };
+      }
+      const nvidiaKey = await getDecryptedOrgNvidiaKey(orgSettings.organizationId);
+      if (nvidiaKey) {
+        options.nvidia = {
+          apiKey: nvidiaKey,
+          model: orgSettings.nvidiaModel,
+        };
       }
       return options;
     }

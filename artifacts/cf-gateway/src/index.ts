@@ -70,6 +70,8 @@ function isReadPath(path: string, method: string): boolean {
     if (path === "/api/platform/stock-images/status") return true;
     if (path === "/api/auth/api-key") return true;
     if (path === "/api/auth/openai-credentials") return true;
+    if (path === "/api/auth/openrouter-credentials") return true;
+    if (path === "/api/auth/groq-credentials") return true;
     if (path === "/api/auth/anthropic-credentials") return true;
     if (path === "/api/auth/bedrock-credentials") return true;
     if (path === "/api/auth/semrush-credentials") return true;
@@ -285,6 +287,10 @@ function isWritePath(path: string, method: string): boolean {
   if (path === "/api/ai-providers/settings" && method === "PATCH") return true;
   if (path === "/api/auth/openai-credentials" && (method === "PATCH" || method === "DELETE")) return true;
   if (path === "/api/auth/openai-credentials/test" && method === "POST") return true;
+  if (path === "/api/auth/openrouter-credentials" && (method === "PATCH" || method === "DELETE")) return true;
+  if (path === "/api/auth/openrouter-credentials/test" && method === "POST") return true;
+  if (path === "/api/auth/groq-credentials" && (method === "PATCH" || method === "DELETE")) return true;
+  if (path === "/api/auth/groq-credentials/test" && method === "POST") return true;
   if (path === "/api/auth/anthropic-credentials" && (method === "PATCH" || method === "DELETE")) return true;
   if (path === "/api/auth/anthropic-credentials/test" && method === "POST") return true;
   if (path === "/api/auth/bedrock-credentials" && (method === "PATCH" || method === "DELETE")) return true;

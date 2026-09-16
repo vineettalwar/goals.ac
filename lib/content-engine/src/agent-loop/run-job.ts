@@ -9,7 +9,8 @@ import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
 import { runAgentLoop } from "./loop";
 import { createFirstPartyTools } from "./tools";
 import { dbTrajectorySink, loadAgentRun } from "./persist";
-import { detectLoopCredentials, loopMetaFromRun } from "./generate-via-loop";
+import { detectLoopCredentials, loopMetaFromRun, hybridPlannerForUser } from "./generate-via-loop";
+import { defaultEmployeePlanner } from "./planner";
 import type { AgentGoal, AgentPolicy, AgentToolResult, RunAgentLoopResult, TrajectorySink } from "./types";
 
 async function generateDraftForLoop(args: {
@@ -92,6 +93,14 @@ export async function executeStoredAgentRun(input: {
 
   const prior = input.runId ? await loadAgentRun(input.runId) : null;
   const resume = Boolean(input.resumeApproved && prior);
+  const policy = resume
+    ? {
+        allowLivePublish: true,
+        approveFirstForLivePublish: false,
+        plannerMode: "deterministic" as const,
+        maxCredits: prior?.policy.maxCredits ?? 20,
+      }
+    : { allowLivePublish: false, approveFirstForLivePublish: true, plannerMode: "deterministic" as const, ...input.policy };
 
   const result = await runAgentLoop({
     runId: input.runId,
@@ -99,14 +108,8 @@ export async function executeStoredAgentRun(input: {
     tools,
     credentials,
     stepBudget: input.stepBudget ?? 10,
-    policy: resume
-      ? {
-          allowLivePublish: true,
-          approveFirstForLivePublish: false,
-          plannerMode: "deterministic",
-          maxCredits: prior?.policy.maxCredits ?? 20,
-        }
-      : { allowLivePublish: false, approveFirstForLivePublish: true, plannerMode: "deterministic", ...input.policy },
+    policy,
+    planner: policy.plannerMode === "hybrid" ? hybridPlannerForUser(input.userId) : defaultEmployeePlanner,
     sink,
     userId: input.userId,
     resumeFrom: resume && prior ? prior : undefined,

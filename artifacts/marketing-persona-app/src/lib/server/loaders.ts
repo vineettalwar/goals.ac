@@ -12,7 +12,7 @@ import {
   decryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/publishing/cms-integrations";
-import { getOrgAiSettingsForUser, hasOrgAnthropicCredentials, hasOrgBedrockCredentials, hasOrgOpenAICredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
+import { getOrgAiSettingsForUser, hasOrgAnthropicCredentials, hasOrgBedrockCredentials, hasOrgOpenAICredentials, hasOrgOpenRouterCredentials, hasOrgGroqCredentials, hasOrgNvidiaCredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/billing/usage";
 import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
@@ -160,6 +160,9 @@ export interface SettingsInitialData {
   } | null;
   apiKey: { hasKey: boolean; lastFour: string | null };
   openaiCredentials: { hasKey: boolean; lastFour: string | null };
+  openrouterCredentials: { hasKey: boolean; lastFour: string | null };
+  groqCredentials: { hasKey: boolean; lastFour: string | null };
+  nvidiaCredentials: { hasKey: boolean; lastFour: string | null };
   anthropicCredentials: { hasKey: boolean; lastFour: string | null };
   bedrockCredentials: {
     hasCredentials: boolean;
@@ -213,6 +216,36 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
     }
   }
 
+  const hasOpenRouterKey = hasOrgOpenRouterCredentials(orgSettings);
+  let openrouterLastFour: string | null = null;
+  if (orgSettings?.encryptedOpenrouterApiKey) {
+    try {
+      openrouterLastFour = decryptSecret(orgSettings.encryptedOpenrouterApiKey).slice(-4);
+    } catch {
+      openrouterLastFour = "••••";
+    }
+  }
+
+  const hasGroqKey = hasOrgGroqCredentials(orgSettings);
+  let groqLastFour: string | null = null;
+  if (orgSettings?.encryptedGroqApiKey) {
+    try {
+      groqLastFour = decryptSecret(orgSettings.encryptedGroqApiKey).slice(-4);
+    } catch {
+      groqLastFour = "••••";
+    }
+  }
+
+  const hasNvidiaKey = hasOrgNvidiaCredentials(orgSettings);
+  let nvidiaLastFour: string | null = null;
+  if (orgSettings?.encryptedNvidiaApiKey) {
+    try {
+      nvidiaLastFour = decryptSecret(orgSettings.encryptedNvidiaApiKey).slice(-4);
+    } catch {
+      nvidiaLastFour = "••••";
+    }
+  }
+
   const hasAnthropicKey = hasOrgAnthropicCredentials(orgSettings);
   let anthropicLastFour: string | null = null;
   if (orgSettings?.encryptedAnthropicApiKey) {
@@ -254,6 +287,8 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
         aiProvider: orgSettings.aiProvider,
         ollamaBaseUrl: orgSettings.ollamaBaseUrl,
         ollamaModel: orgSettings.ollamaModel,
+        openrouterModel: orgSettings.openrouterModel,
+        nvidiaModel: orgSettings.nvidiaModel,
       }
     : undefined;
   const aiStatusPayload = buildAiProviderStatus(statusInput);
@@ -262,6 +297,9 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
     hasUserGeminiKey: hasKey,
     hasOrgBedrockKey: hasBedrockCredentials,
     hasOrgOpenAIKey: hasOpenAIKey,
+    hasOrgOpenRouterKey: hasOpenRouterKey,
+    hasOrgGroqKey: hasGroqKey,
+    hasOrgNvidiaKey: hasNvidiaKey,
     hasOrgAnthropicKey: hasAnthropicKey,
     orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
     orgBedrockModel: orgSettings?.bedrockModel ?? null,
@@ -281,6 +319,9 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
       : null,
     apiKey: { hasKey, lastFour },
     openaiCredentials: { hasKey: hasOpenAIKey, lastFour: openaiLastFour },
+    openrouterCredentials: { hasKey: hasOpenRouterKey, lastFour: openrouterLastFour },
+    groqCredentials: { hasKey: hasGroqKey, lastFour: groqLastFour },
+    nvidiaCredentials: { hasKey: hasNvidiaKey, lastFour: nvidiaLastFour },
     anthropicCredentials: { hasKey: hasAnthropicKey, lastFour: anthropicLastFour },
     bedrockCredentials: {
       hasCredentials: hasBedrockCredentials,

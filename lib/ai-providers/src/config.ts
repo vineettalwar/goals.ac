@@ -1,4 +1,4 @@
-export type AiProviderId = "gemini" | "bedrock" | "ollama" | "anthropic" | "openai";
+export type AiProviderId = "gemini" | "bedrock" | "ollama" | "anthropic" | "openai" | "openrouter" | "groq" | "nvidia";
 
 export interface BedrockCredentialOptions {
   /** Bedrock API key (bearer token). Prefer this over IAM access keys. */
@@ -14,8 +14,22 @@ export interface OpenAICredentialOptions {
   apiKey?: string | null;
 }
 
+export interface OpenRouterCredentialOptions {
+  apiKey?: string | null;
+  model?: string | null;
+}
+
 export interface AnthropicCredentialOptions {
   apiKey?: string | null;
+}
+
+export interface GroqCredentialOptions {
+  apiKey?: string | null;
+}
+
+export interface NvidiaCredentialOptions {
+  apiKey?: string | null;
+  model?: string | null;
 }
 
 export interface AiProviderOptions {
@@ -24,7 +38,10 @@ export interface AiProviderOptions {
   ollamaModel?: string | null;
   bedrock?: BedrockCredentialOptions | null;
   openai?: OpenAICredentialOptions | null;
+  openrouter?: OpenRouterCredentialOptions | null;
   anthropic?: AnthropicCredentialOptions | null;
+  groq?: GroqCredentialOptions | null;
+  nvidia?: NvidiaCredentialOptions | null;
 }
 
 export interface ResolvedOllamaConfig {
@@ -43,7 +60,10 @@ function normalizeProviderId(value: string | null | undefined): AiProviderId | n
     value === "bedrock" ||
     value === "ollama" ||
     value === "anthropic" ||
-    value === "openai"
+    value === "openai" ||
+    value === "openrouter" ||
+    value === "groq" ||
+    value === "nvidia"
   ) {
     return value;
   }
@@ -81,6 +101,15 @@ export function resolveProviderId(options?: AiProviderOptions): AiProviderId {
   if (env("OPENAI_API_KEY")) {
     return "openai";
   }
+  if (env("OPENROUTER_API_KEY")) {
+    return "openrouter";
+  }
+  if (env("GROQ_API_KEY")) {
+    return "groq";
+  }
+  if (env("NVIDIA_API_KEY")) {
+    return "nvidia";
+  }
   if (isBedrockEnvConfigured()) {
     return "bedrock";
   }
@@ -95,17 +124,30 @@ export function resolveOllamaBaseUrl(options?: AiProviderOptions): string {
   );
 }
 
+function isPrivateOrLocalHostname(host: string): boolean {
+  const hostname = host.replace(/^\[|\]$/g, "").toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname === "::1" ||
+    hostname === "0.0.0.0" ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal")
+  ) {
+    return true;
+  }
+  return (
+    /^127\./.test(hostname) ||
+    /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+    /^169\.254\./.test(hostname)
+  );
+}
+
 /** Laptop / LAN Ollama hosts that Cloudflare production cannot dial. */
 export function isLoopbackOllamaUrl(baseUrl: string): boolean {
   try {
-    const host = new URL(baseUrl).hostname.toLowerCase();
-    return (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "::1" ||
-      host === "0.0.0.0" ||
-      host.endsWith(".local")
-    );
+    return isPrivateOrLocalHostname(new URL(baseUrl).hostname);
   } catch {
     return true;
   }
@@ -130,6 +172,40 @@ export function assertOllamaReachableHere(
   );
 }
 
+function ollamaTagsUrl(baseUrl: string): string {
+  return `${baseUrl.replace(/\/+$/, "")}/api/tags`;
+}
+
+/** Live `/api/tags` check. Loopback URLs are unreachable on Cloudflare without fetching. */
+export async function probeOllamaReachable(
+  baseUrl: string,
+  remoteRuntime = isCloudflareWorkerRuntime(),
+): Promise<boolean> {
+  if (!baseUrl.trim() || (isLoopbackOllamaUrl(baseUrl) && remoteRuntime)) return false;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const resp = await fetch(ollamaTagsUrl(baseUrl), { signal: controller.signal });
+    clearTimeout(timeout);
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Throws when Ollama cannot serve this runtime (loopback on Workers, or dead `/api/tags`). */
+export async function requireOllamaReachable(
+  baseUrl: string,
+  remoteRuntime = isCloudflareWorkerRuntime(),
+): Promise<void> {
+  const trimmed = baseUrl.trim() || "http://localhost:11434";
+  assertOllamaReachableHere(trimmed, remoteRuntime);
+  if (await probeOllamaReachable(trimmed, remoteRuntime)) return;
+  throw new Error(
+    `Ollama at ${trimmed} did not respond. Confirm the URL is reachable from this host.`,
+  );
+}
+
 /** Ordered model candidates: per-user setting, then OLLAMA_MODEL env. */
 export function resolveOllamaModelCandidates(options?: AiProviderOptions): string[] {
   const candidates: string[] = [];
@@ -141,10 +217,11 @@ export function resolveOllamaModelCandidates(options?: AiProviderOptions): strin
 }
 
 export async function listOllamaModels(baseUrl: string): Promise<string[]> {
+  if (isLoopbackOllamaUrl(baseUrl) && isCloudflareWorkerRuntime()) return [];
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const resp = await fetch(`${baseUrl}/api/tags`, { signal: controller.signal });
+    const resp = await fetch(ollamaTagsUrl(baseUrl), { signal: controller.signal });
     clearTimeout(timeout);
     if (!resp.ok) return [];
     const data = (await resp.json()) as { models?: { name: string }[] };

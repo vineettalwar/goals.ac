@@ -155,6 +155,29 @@ async function buildClient(
         apiKey: options?.openai?.apiKey,
       });
     }
+
+    case "openrouter": {
+      const { OpenRouterClient } = await import("./openrouter");
+      return OpenRouterClient.create({
+        apiKey: options?.openrouter?.apiKey,
+        model: options?.openrouter?.model,
+      });
+    }
+
+    case "groq": {
+      const { GroqClient } = await import("./groq");
+      return GroqClient.create({
+        apiKey: options?.groq?.apiKey,
+      });
+    }
+
+    case "nvidia": {
+      const { NvidiaClient } = await import("./nvidia");
+      return NvidiaClient.create({
+        apiKey: options?.nvidia?.apiKey,
+        model: options?.nvidia?.model,
+      });
+    }
   }
 }
 
@@ -177,7 +200,13 @@ export async function getAiProviderClient(options?: AiProviderOptions): Promise<
         ? `bedrock:${options.bedrock.apiKey?.slice(-8) ?? options.bedrock.accessKeyId ?? options.bedrock.secretAccessKey?.slice(-8) ?? ""}:${options.bedrock.region ?? ""}:${options.bedrock.model ?? ""}`
         : id === "openai" && options?.openai?.apiKey
           ? `openai:${options.openai.apiKey.slice(-8)}`
-          : id === "anthropic" && options?.anthropic?.apiKey
+          : id === "openrouter" && (options?.openrouter?.apiKey || options?.openrouter?.model)
+            ? `openrouter:${options.openrouter.apiKey?.slice(-8) ?? ""}:${options.openrouter.model ?? ""}`
+            : id === "groq" && options?.groq?.apiKey
+              ? `groq:${options.groq.apiKey.slice(-8)}`
+            : id === "nvidia" && (options?.nvidia?.apiKey || options?.nvidia?.model)
+              ? `nvidia:${options.nvidia.apiKey?.slice(-8) ?? ""}:${options.nvidia.model ?? ""}`
+            : id === "anthropic" && options?.anthropic?.apiKey
             ? `anthropic:${options.anthropic.apiKey.slice(-8)}`
             : buildAiProviderCacheKey({ ...options, providerId: id });
 

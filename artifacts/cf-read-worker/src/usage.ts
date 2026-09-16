@@ -8,7 +8,7 @@ import {
 } from "@workspace/db/schema-sqlite";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { normalizePlanId, type PlanId } from "@workspace/billing/plans";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
+import { getOrgAiSettingsForUser, hasOrgLlmByokCredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { resolvePlanArticleQuota } from "./plan-quotas";
 
 const ARTICLE_QUOTA_EVENT_TYPES = [
@@ -99,7 +99,7 @@ export async function getUsageSummaryForUser(userId: number): Promise<UsageSumma
   ]);
 
   const plan = normalizePlanId((membership?.plan ?? user?.plan) as string | null | undefined);
-  const usesByok = Boolean(orgSettings?.encryptedGeminiKey);
+  const usesByok = hasOrgLlmByokCredentials(orgSettings);
   const [quota, articlesThisMonth, byokSpendThisMonthUsd] = await Promise.all([
     resolvePlanArticleQuota(plan),
     getMonthlyArticleCountForUser(userId),

@@ -1,4 +1,5 @@
 import { trajectoryHasVerifiedEvidence, type AgentGoal, type TrajectoryStep } from "./types";
+import { chatCapabilityPromptList } from "./chat-catalog";
 
 export const CHAT_AGENT_LOOP_CAPS = { stepBudget: 8, maxCredits: 12 } as const;
 
@@ -13,6 +14,23 @@ export const TOOL_CHIP_LABELS: Record<string, string> = {
   upsert_action_queue: "Updated Action Queue",
   generate_draft: "Drafted piece",
   publish_live: "Live publish gated",
+  suggest_ctr_title: "Suggested CTR titles",
+  suggest_internal_links: "Suggested internal links",
+  strategy_overview: "Loaded strategy",
+  calendar_overview: "Loaded calendar",
+  performance_overview: "Loaded performance",
+  visibility_overview: "Loaded visibility",
+  geo_last_audit: "Loaded GEO audit",
+  social_queue_status: "Loaded social queue",
+  autopilot_status: "Loaded Autopilot",
+  integrations_health: "Checked integrations",
+  generate_roadmap: "Generated roadmap",
+  generate_topical_map: "Generated topical map",
+  run_geo_audit: "Ran GEO audit",
+  run_visibility_check: "Queued visibility check",
+  start_daily_five: "Started Daily Five",
+  draft_social: "Drafted social",
+  brand_rescan: "Queued brand rescan",
 };
 
 export type SeoChatCard =
@@ -26,7 +44,8 @@ export type SeoChatCard =
     }
   | { kind: "draft_preview"; title: string; excerpt: string; contentPieceId: number }
   | { kind: "readiness"; ok: boolean; label: string; blockers: string[]; contentPieceId?: number }
-  | { kind: "publish_gate"; runId: number; contentPieceId?: number | null };
+  | { kind: "publish_gate"; runId: number; contentPieceId?: number | null }
+  | { kind: "nav_link"; title: string; href: string; reason: string };
 
 export type SeoChatChip = { tool: string; label: string; ok?: boolean };
 
@@ -92,12 +111,88 @@ export function parseChatIntent(text: string, opts?: { contentPieceId?: number }
     return { kind: "publish_check", contentPieceId: opts?.contentPieceId };
   }
 
+  if (/\bctr\b/.test(lower) && /\b(title|meta|rewrite|suggest)\b/.test(lower) && !/\bgaps?\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "ctr_title", keyword: keywordFrom(raw) ?? draftKeyword(raw), targetUrl: url };
+  }
+
   if (/\bctr(\s+gap)?s?\b|\blow ctr\b/.test(lower) || /\bwhat'?s slipping\b|\bslipping\b|\bposition slip\b/.test(lower)) {
     return { kind: "opportunity_scan" };
   }
 
+  if (/\binternal links?\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "internal_link", keyword: keywordFrom(raw), targetUrl: url };
+  }
+
+  if (/\bbacklinks?\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "backlinks", keyword: keywordFrom(raw) };
+  }
+
+  if (/\b(publish )?readiness\b|\bready to publish\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "readiness", contentPieceId: opts?.contentPieceId };
+  }
+
   if (/\badd to (the\s+)?action queue\b|\benqueue\b/.test(lower)) {
     return { kind: "chat_turn", actionType: "enqueue", keyword: keywordFrom(raw) };
+  }
+
+  if (/\b(generate|create|build|write)\b.{0,24}\b(roadmap|plan)\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "generate_roadmap" };
+  }
+  if (/\b(show|open|load)\b.{0,24}\b(roadmap|strategy)\b/.test(lower) || /\bshow the roadmap\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "strategy_overview" };
+  }
+
+  if (/\b(generate|create|build)\b.{0,24}\btopical map\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "generate_topical_map" };
+  }
+
+  if (/\bcalendar\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "calendar_overview" };
+  }
+
+  if (/\bperformance\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "performance_overview" };
+  }
+
+  if (/\b(run|check|refresh)\b.{0,24}\b(ai )?visibility\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "run_visibility_check" };
+  }
+  if (/\b(ai )?visibility\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "visibility_overview" };
+  }
+
+  if (/\b(run|start)\b.{0,20}\bgeo\b/.test(lower) || /\bgeo audit for\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "run_geo_audit", targetUrl: url };
+  }
+  if (/\bgeo\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "geo_last_audit", targetUrl: url };
+  }
+
+  if (/\bdraft\b.{0,20}\b(linkedin|twitter|instagram|facebook|bluesky|mastodon|social)\b/.test(lower) || /\b(linkedin|twitter) post\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "draft_social", keyword: keywordFrom(raw) ?? draftKeyword(raw) };
+  }
+  if (/\bsocial( queue)?\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "social_queue_status" };
+  }
+
+  if (/\bautopilot\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "autopilot_status" };
+  }
+
+  if (/\bintegrations?\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "integrations_health" };
+  }
+
+  if (/\bdaily five\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "start_daily_five", keyword: dailyFiveKeywords(raw) };
+  }
+
+  if (/\b(re)?scan (the )?brand\b|\bbrand (re)?scan\b/.test(lower)) {
+    return { kind: "chat_turn", actionType: "brand_rescan" };
+  }
+
+  if (/\bcompetitors?\b/.test(lower) && !wantsStudioDraft(lower)) {
+    return { kind: "chat_turn", actionType: "competitor_overview" };
   }
 
   const keyword = draftKeyword(raw);
@@ -129,6 +224,13 @@ function draftKeyword(text: string): string | undefined {
   const about = text.match(/\b(?:draft|write|brief|create|make|generate)\b.{0,48}\b(?:about|for|on)\s+(.+)$/i);
   const topic = stripTopic(brief?.[1] ?? about?.[1] ?? "");
   return topic || keywordFrom(text);
+}
+
+function dailyFiveKeywords(text: string): string | undefined {
+  const match = text.match(/\bdaily five(?:\s+for)?\s*[:—-]?\s*(.+)$/i);
+  const topic = stripTopic(match?.[1] ?? "");
+  if (!topic || /^\[keyword\]$/i.test(topic)) return undefined;
+  return topic;
 }
 
 export function keywordFrom(text: string): string | undefined {
@@ -253,5 +355,5 @@ export function composeGroundedReply(input: {
 }
 
 export function suggestionPrompts(keyword = "[keyword]", url = "[url]") {
-  return ["What's slipping?", "CTR gaps", `Brief for ${keyword}`, `Relaunch risk for ${url}`];
+  return chatCapabilityPromptList("full", keyword, url);
 }

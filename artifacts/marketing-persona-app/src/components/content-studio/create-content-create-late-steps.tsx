@@ -216,9 +216,10 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                         autoComplete="off"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Overrides the org default for this generation.
+                        Optional. Leave blank and we pick a chat model from this AWS account for
+                        this run.
                         {canManageBedrockModel
-                          ? " Check the box below to also save it as the org default."
+                          ? " Fill it in and check the box below to pin it as the org default."
                           : ""}
                       </p>
                       {canManageBedrockModel ? (

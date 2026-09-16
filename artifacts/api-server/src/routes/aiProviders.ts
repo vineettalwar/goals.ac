@@ -13,6 +13,8 @@ import {
   resetAiProviderClient,
   resolveOllamaConfigAsync,
   resolveProviderId,
+  probeOllamaReachable,
+  requireOllamaReachable,
 } from "@workspace/ai-providers";
 
 const router = Router();
@@ -23,18 +25,22 @@ function env(key: string): string | undefined {
 }
 
 const PatchBody = z.object({
-  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic"]),
+  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic", "openrouter", "groq", "nvidia"]),
   ollamaBaseUrl: z.string().trim().optional().nullable(),
   ollamaModel: z.string().trim().optional().nullable(),
+  openrouterModel: z.string().trim().optional().nullable(),
+  nvidiaModel: z.string().trim().optional().nullable(),
 });
 
 async function buildStatusPayload(userId: number) {
   const orgSettings = await getOrgAiSettingsForUser(userId);
   const aiProviderOptions = orgSettings
     ? {
-        providerId: orgSettings.aiProvider as "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | null,
+        providerId: orgSettings.aiProvider as "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia" | null,
         ollamaBaseUrl: orgSettings.ollamaBaseUrl,
         ollamaModel: orgSettings.ollamaModel,
+        openrouter: orgSettings.openrouterModel ? { model: orgSettings.openrouterModel } : undefined,
+        nvidia: orgSettings.nvidiaModel ? { model: orgSettings.nvidiaModel } : undefined,
       }
     : undefined;
 
@@ -43,6 +49,9 @@ async function buildStatusPayload(userId: number) {
     !!(env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY")) ||
     Boolean(orgSettings?.encryptedGeminiKey);
   const openaiConfigured = !!env("OPENAI_API_KEY") || Boolean(orgSettings?.encryptedOpenaiApiKey);
+  const openrouterConfigured = !!env("OPENROUTER_API_KEY") || Boolean(orgSettings?.encryptedOpenrouterApiKey);
+  const groqConfigured = !!env("GROQ_API_KEY") || Boolean(orgSettings?.encryptedGroqApiKey);
+  const nvidiaConfigured = !!env("NVIDIA_API_KEY") || Boolean(orgSettings?.encryptedNvidiaApiKey);
   const anthropicConfigured = !!env("ANTHROPIC_API_KEY") || Boolean(orgSettings?.encryptedAnthropicApiKey);
   const bedrockConfigured = isBedrockEnvConfigured() || hasOrgBedrockCredentials(orgSettings);
 
@@ -52,18 +61,10 @@ async function buildStatusPayload(userId: number) {
   let ollamaModel = orgSettings?.ollamaModel?.trim() || env("OLLAMA_MODEL") || "";
 
   if (activeProvider === "ollama" || orgSettings?.ollamaBaseUrl || env("OLLAMA_BASE_URL")) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      const resp = await fetch(`${ollamaBaseUrl}/api/tags`, { signal: controller.signal });
-      clearTimeout(timeout);
-      ollamaReachable = resp.ok;
-      if (ollamaReachable) {
-        const resolved = await resolveOllamaConfigAsync(aiProviderOptions);
-        ollamaModel = resolved.model;
-      }
-    } catch {
-      ollamaReachable = false;
+    ollamaReachable = await probeOllamaReachable(ollamaBaseUrl);
+    if (ollamaReachable) {
+      const resolved = await resolveOllamaConfigAsync(aiProviderOptions);
+      ollamaModel = resolved.model;
     }
   }
 
@@ -72,11 +73,17 @@ async function buildStatusPayload(userId: number) {
       ? geminiConfigured
       : activeProvider === "openai"
         ? openaiConfigured
+        : activeProvider === "openrouter"
+          ? openrouterConfigured
+          : activeProvider === "groq"
+            ? groqConfigured
+          : activeProvider === "nvidia"
+            ? nvidiaConfigured
         : activeProvider === "anthropic"
           ? anthropicConfigured
           : activeProvider === "bedrock"
             ? bedrockConfigured
-            : ollamaReachable || activeProvider === "ollama";
+            : ollamaReachable;
 
   return {
     activeProvider,
@@ -86,6 +93,8 @@ async function buildStatusPayload(userId: number) {
       provider: orgSettings?.aiProvider ?? null,
       ollamaBaseUrl: orgSettings?.ollamaBaseUrl ?? null,
       ollamaModel: orgSettings?.ollamaModel ?? null,
+      openrouterModel: orgSettings?.openrouterModel ?? null,
+      nvidiaModel: orgSettings?.nvidiaModel ?? null,
     },
     gemini: {
       configured: geminiConfigured,
@@ -94,6 +103,20 @@ async function buildStatusPayload(userId: number) {
     openai: {
       configured: openaiConfigured,
       source: orgSettings?.encryptedOpenaiApiKey ? "org-key" : env("OPENAI_API_KEY") ? "env" : null,
+    },
+    openrouter: {
+      configured: openrouterConfigured,
+      source: orgSettings?.encryptedOpenrouterApiKey ? "org-key" : env("OPENROUTER_API_KEY") ? "env" : null,
+      model: orgSettings?.openrouterModel ?? env("OPENROUTER_MODEL") ?? null,
+    },
+    groq: {
+      configured: groqConfigured,
+      source: orgSettings?.encryptedGroqApiKey ? "org-key" : env("GROQ_API_KEY") ? "env" : null,
+    },
+    nvidia: {
+      configured: nvidiaConfigured,
+      source: orgSettings?.encryptedNvidiaApiKey ? "org-key" : env("NVIDIA_API_KEY") ? "env" : null,
+      model: orgSettings?.nvidiaModel ?? env("NVIDIA_MODEL") ?? null,
     },
     anthropic: {
       configured: anthropicConfigured,
@@ -139,7 +162,18 @@ router.patch("/ai-providers/settings", requireSiteAdmin, async (req, res) => {
     return;
   }
 
-  const { provider, ollamaBaseUrl, ollamaModel } = parsed.data;
+  const { provider, ollamaBaseUrl, ollamaModel, openrouterModel, nvidiaModel } = parsed.data;
+
+  if (provider === "ollama") {
+    try {
+      await requireOllamaReachable(ollamaBaseUrl?.trim() || "http://localhost:11434");
+    } catch (err) {
+      res.status(400).json({
+        error: err instanceof Error ? err.message : "Ollama is not reachable",
+      });
+      return;
+    }
+  }
 
   await db
     .update(organizationsTable)
@@ -147,6 +181,8 @@ router.patch("/ai-providers/settings", requireSiteAdmin, async (req, res) => {
       aiProvider: provider,
       ollamaBaseUrl: provider === "ollama" ? (ollamaBaseUrl?.trim() || null) : null,
       ollamaModel: provider === "ollama" ? (ollamaModel?.trim() || null) : null,
+      openrouterModel: provider === "openrouter" ? (openrouterModel?.trim() || null) : null,
+      nvidiaModel: provider === "nvidia" ? (nvidiaModel?.trim() || null) : null,
     })
     .where(eq(organizationsTable.id, orgSettings.organizationId));
 

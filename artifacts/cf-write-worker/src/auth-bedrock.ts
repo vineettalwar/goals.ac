@@ -12,7 +12,7 @@ import { encryptSecret } from "@workspace/security/encryption";
 
 const bedrockCredentialsBody = z.object({
   apiKey: z.string().min(16, "API key is too short"),
-  model: z.string().trim().min(1, "Choose a Bedrock model"),
+  model: z.string().optional(),
 });
 
 const bedrockModelOnlyBody = z.object({
@@ -114,7 +114,7 @@ export async function handleAuthBedrockWrite(
       const { testBedrockCredentials } = await import("@workspace/ai-providers/bedrock");
       await testBedrockCredentials({
         apiKey: parsed.data.apiKey.trim(),
-        model: parsed.data.model.trim(),
+        model: parsed.data.model?.trim() || undefined,
       });
       return withCors(request, Response.json({ ok: true }));
     } catch (err) {
@@ -163,7 +163,7 @@ export async function handleAuthBedrockWrite(
     }
 
     const apiKey = full.data.apiKey.trim();
-    const model = full.data.model.trim();
+    const model = full.data.model?.trim() || null;
 
     await db
       .update(organizationsTable)

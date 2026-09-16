@@ -54,10 +54,7 @@ export const projectChatMemoryTable = sqliteTable(
       .references(() => websiteProjectsTable.id, { onDelete: "cascade" }),
     brandVoiceNotes: text("brand_voice_notes").notNull().default(""),
     bannedClaims: text("banned_claims").notNull().default(""),
-    lastDecisions: text("last_decisions", { mode: "json" })
-      .$type<Array<{ at: string; text: string }>>()
-      .notNull()
-      .default([]),
+    lastDecisions: text("last_decisions", { mode: "json" }).$type<Array<{ at: string; text: string }>>().notNull().default([]),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (t) => [uniqueIndex("project_chat_memory_project_uidx").on(t.websiteProjectId)],

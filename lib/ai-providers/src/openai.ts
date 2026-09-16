@@ -34,6 +34,76 @@ export function isOpenAIUserKeyError(err: unknown): boolean {
   );
 }
 
+export type OpenAICompatibleGenerateOptions = {
+  apiKey: string;
+  defaultModel: string;
+  baseUrl: string;
+  extraHeaders?: Record<string, string>;
+  errorLabel: string;
+  /** NIM and similar hosts often reject OpenAI json_object mode. */
+  skipJsonResponseFormat?: boolean;
+};
+
+export async function generateOpenAICompatibleChat(
+  options: OpenAICompatibleGenerateOptions,
+  params: GenerateParams,
+): Promise<GenerateResult> {
+  const messages: Array<{ role: string; content: string }> = [];
+  if (params.systemInstruction) {
+    messages.push({ role: "system", content: params.systemInstruction });
+  }
+  messages.push({ role: "user", content: params.prompt });
+
+  const body: Record<string, unknown> = {
+    model: params.model ?? options.defaultModel,
+    messages,
+  };
+  if (params.temperature !== undefined) {
+    body.temperature = params.temperature;
+  }
+  if (params.maxOutputTokens !== undefined) {
+    body.max_tokens = params.maxOutputTokens;
+  }
+  if (params.responseMimeType === "application/json" && !options.skipJsonResponseFormat) {
+    body.response_format = { type: "json_object" };
+  }
+
+  const url = `${options.baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${options.apiKey}`,
+      ...options.extraHeaders,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    const err = new Error(`${options.errorLabel} API error (${response.status}): ${errText.slice(0, 400)}`);
+    (err as Error & { status?: number }).status = response.status;
+    throw err;
+  }
+
+  const data = (await response.json()) as OpenAIChatCompletionResponse;
+  const text = data.choices?.[0]?.message?.content ?? "";
+  const promptTokens = data.usage?.prompt_tokens;
+  const outputTokens = data.usage?.completion_tokens;
+
+  return {
+    text,
+    usage:
+      promptTokens != null || outputTokens != null
+        ? {
+            promptTokens,
+            outputTokens,
+            totalTokens: data.usage?.total_tokens ?? (promptTokens ?? 0) + (outputTokens ?? 0),
+          }
+        : undefined,
+  };
+}
+
 export class OpenAIClient implements AiProviderClient {
   id = "openai" as const;
 
@@ -53,58 +123,15 @@ export class OpenAIClient implements AiProviderClient {
     return new OpenAIClient(apiKey, model);
   }
 
-  async generate(params: GenerateParams): Promise<GenerateResult> {
-    const messages: Array<{ role: string; content: string }> = [];
-    if (params.systemInstruction) {
-      messages.push({ role: "system", content: params.systemInstruction });
-    }
-    messages.push({ role: "user", content: params.prompt });
-
-    const body: Record<string, unknown> = {
-      model: params.model ?? this.defaultModel,
-      messages,
-    };
-    if (params.temperature !== undefined) {
-      body.temperature = params.temperature;
-    }
-    if (params.maxOutputTokens !== undefined) {
-      body.max_tokens = params.maxOutputTokens;
-    }
-    if (params.responseMimeType === "application/json") {
-      body.response_format = { type: "json_object" };
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${this.apiKey}`,
+  generate(params: GenerateParams): Promise<GenerateResult> {
+    return generateOpenAICompatibleChat(
+      {
+        apiKey: this.apiKey,
+        defaultModel: this.defaultModel,
+        baseUrl: "https://api.openai.com/v1",
+        errorLabel: "OpenAI",
       },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => "");
-      const err = new Error(`OpenAI API error (${response.status}): ${errText.slice(0, 400)}`);
-      (err as Error & { status?: number }).status = response.status;
-      throw err;
-    }
-
-    const data = (await response.json()) as OpenAIChatCompletionResponse;
-    const text = data.choices?.[0]?.message?.content ?? "";
-    const promptTokens = data.usage?.prompt_tokens;
-    const outputTokens = data.usage?.completion_tokens;
-
-    return {
-      text,
-      usage:
-        promptTokens != null || outputTokens != null
-          ? {
-              promptTokens,
-              outputTokens,
-              totalTokens: data.usage?.total_tokens ?? (promptTokens ?? 0) + (outputTokens ?? 0),
-            }
-          : undefined,
-    };
+      params,
+    );
   }
 }

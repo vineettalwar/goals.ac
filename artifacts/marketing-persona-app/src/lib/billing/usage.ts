@@ -1,7 +1,7 @@
 import { db, countAsInt } from "@workspace/db";
 import { usageEventsTable, usersTable, companiesTable, websiteProjectsTable, organizationsTable, organizationMembersTable } from "@workspace/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
+import { getOrgAiSettingsForUser, hasOrgLlmByokCredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   checkCountQuota,
   normalizePlanId,
@@ -217,7 +217,7 @@ export async function getUsageSummaryForUser(userId: number): Promise<UsageSumma
   ]);
 
   const plan = normalizePlanId(membership?.plan ?? user?.plan);
-  const usesByok = Boolean(orgSettings?.encryptedGeminiKey);
+  const usesByok = hasOrgLlmByokCredentials(orgSettings);
   const [quota, articlesThisMonth, byokSpendThisMonthUsd] = await Promise.all([
     resolvePlanArticleQuota(plan),
     getMonthlyArticleCountForUser(userId),
@@ -246,6 +246,10 @@ export async function getCompanyOwnerPlanInfo(
       plan: usersTable.plan,
       orgPlan: organizationsTable.plan,
       orgGeminiKey: organizationsTable.encryptedGeminiKey,
+      orgOpenaiKey: organizationsTable.encryptedOpenaiApiKey,
+      orgAnthropicKey: organizationsTable.encryptedAnthropicApiKey,
+      orgOpenrouterKey: organizationsTable.encryptedOpenrouterApiKey,
+      orgBedrockSecret: organizationsTable.encryptedBedrockSecretAccessKey,
       userGeminiKey: usersTable.encryptedGeminiKey,
     })
     .from(companiesTable)
@@ -259,6 +263,13 @@ export async function getCompanyOwnerPlanInfo(
   return {
     userId: row.userId,
     plan: (row.orgPlan as PlanId) ?? (row.plan as PlanId) ?? "starter",
-    usesByok: Boolean(row.orgGeminiKey ?? row.userGeminiKey),
+    usesByok: Boolean(
+      row.orgGeminiKey ??
+        row.userGeminiKey ??
+        row.orgOpenaiKey ??
+        row.orgAnthropicKey ??
+        row.orgOpenrouterKey ??
+        row.orgBedrockSecret,
+    ),
   };
 }

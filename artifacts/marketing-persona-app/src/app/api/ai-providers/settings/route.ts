@@ -3,16 +3,18 @@ import { z } from "zod";
 import { db } from "@workspace/db";
 import { organizationsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { resetAiProviderClient } from "@workspace/ai-providers";
+import { resetAiProviderClient, requireOllamaReachable } from "@workspace/ai-providers";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { buildAiProviderStatus, enrichOllamaStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
 
 const PatchBody = z.object({
-  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic"]),
+  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic", "openrouter", "groq", "nvidia"]),
   ollamaBaseUrl: z.string().trim().optional().nullable(),
   ollamaModel: z.string().trim().optional().nullable(),
+  openrouterModel: z.string().trim().optional().nullable(),
+  nvidiaModel: z.string().trim().optional().nullable(),
 });
 
 function toStatusInput(
@@ -23,6 +25,8 @@ function toStatusInput(
         aiProvider: settings.aiProvider,
         ollamaBaseUrl: settings.ollamaBaseUrl,
         ollamaModel: settings.ollamaModel,
+        openrouterModel: settings.openrouterModel,
+        nvidiaModel: settings.nvidiaModel,
       }
     : undefined;
 }
@@ -56,7 +60,18 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { provider, ollamaBaseUrl, ollamaModel } = parsed.data;
+  const { provider, ollamaBaseUrl, ollamaModel, openrouterModel, nvidiaModel } = parsed.data;
+
+  if (provider === "ollama") {
+    try {
+      await requireOllamaReachable(ollamaBaseUrl?.trim() || "http://localhost:11434");
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Ollama is not reachable" },
+        { status: 400 },
+      );
+    }
+  }
 
   await db
     .update(organizationsTable)
@@ -64,6 +79,8 @@ export async function PATCH(req: Request) {
       aiProvider: provider,
       ollamaBaseUrl: provider === "ollama" ? (ollamaBaseUrl?.trim() || null) : null,
       ollamaModel: provider === "ollama" ? (ollamaModel?.trim() || null) : null,
+      openrouterModel: provider === "openrouter" ? (openrouterModel?.trim() || null) : null,
+      nvidiaModel: provider === "nvidia" ? (nvidiaModel?.trim() || null) : null,
     })
     .where(eq(organizationsTable.id, orgSettings.organizationId));
 

@@ -14,6 +14,8 @@ export interface AiProviderStatus {
     provider: string | null;
     ollamaBaseUrl: string | null;
     ollamaModel: string | null;
+    openrouterModel?: string | null;
+    nvidiaModel?: string | null;
   };
   envFallback: {
     provider: string | null;
@@ -27,5 +29,9 @@ export interface AiProviderStatus {
     model: string | null;
     source: string | null;
   };
+  openai: { configured: boolean; source: string | null };
+  openrouter?: { configured: boolean; source: string | null; model?: string | null };
+  groq?: { configured: boolean; source: string | null };
+  nvidia?: { configured: boolean; source: string | null; model?: string | null };
   ollama: { configured: boolean; baseUrl: string; model: string; reachable: boolean };
 }

@@ -230,6 +230,19 @@ function SidebarPanel({
               />
             );
           })}
+          {onToggleTheme ? (
+            <li>
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="flex w-full items-center gap-2.5 rounded-sm px-3 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-secondary hover:text-foreground"
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </button>
+            </li>
+          ) : null}
         </ul>
       </div>
 
@@ -250,16 +263,6 @@ function SidebarPanel({
             <p className="truncate text-xs font-medium">{userName}</p>
             <p className="truncate text-[11px] text-muted-foreground">{userEmail}</p>
           </div>
-          {onToggleTheme ? (
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </button>
-          ) : null}
           {onSignOut ? (
             <button
               type="button"

@@ -15,6 +15,9 @@
     "./ollama": "./src/ollama.ts",
     "./anthropic": "./src/anthropic.ts",
     "./openai": "./src/openai.ts",
+    "./openrouter": "./src/openrouter.ts",
+    "./groq": "./src/groq.ts",
+    "./nvidia": "./src/nvidia.ts",
     "./embed": "./src/embed.ts"
   },
   "dependencies": {

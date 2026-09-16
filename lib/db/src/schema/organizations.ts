@@ -31,7 +31,12 @@ export const organizationsTable = pgTable("organizations", {
   bedrockModel: text("bedrock_model"),
   encryptedOpenaiApiKey: text("encrypted_openai_api_key"),
   encryptedAnthropicApiKey: text("encrypted_anthropic_api_key"),
-  /** gemini | bedrock | ollama | openai | anthropic — in-app preference; env AI_PROVIDER is fallback */
+  encryptedOpenrouterApiKey: text("encrypted_openrouter_api_key"),
+  openrouterModel: text("openrouter_model"),
+  encryptedGroqApiKey: text("encrypted_groq_api_key"),
+  encryptedNvidiaApiKey: text("encrypted_nvidia_api_key"),
+  nvidiaModel: text("nvidia_model"),
+  /** gemini | bedrock | ollama | openai | anthropic | openrouter | groq | nvidia — in-app preference; env AI_PROVIDER is fallback */
   aiProvider: text("ai_provider"),
   ollamaBaseUrl: text("ollama_base_url"),
   ollamaModel: text("ollama_model"),

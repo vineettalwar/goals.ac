@@ -5,6 +5,9 @@ import {
   hasOrgBedrockCredentials,
   hasOrgAnthropicCredentials,
   hasOrgOpenAICredentials,
+  hasOrgOpenRouterCredentials,
+  hasOrgGroqCredentials,
+  hasOrgNvidiaCredentials,
 } from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   isOrgGrantedPlatformBedrock,
@@ -25,6 +28,8 @@ function toStatusInput(
         aiProvider: settings.aiProvider,
         ollamaBaseUrl: settings.ollamaBaseUrl,
         ollamaModel: settings.ollamaModel,
+        openrouterModel: settings.openrouterModel,
+        nvidiaModel: settings.nvidiaModel,
       }
     : undefined;
 }
@@ -52,6 +57,9 @@ export async function GET() {
       platformBedrockConfigured: Boolean(platformBedrock),
       hasOrgAnthropicKey: hasOrgAnthropicCredentials(orgSettings),
       hasOrgOpenAIKey: hasOrgOpenAICredentials(orgSettings),
+      hasOrgOpenRouterKey: hasOrgOpenRouterCredentials(orgSettings),
+      hasOrgGroqKey: hasOrgGroqCredentials(orgSettings),
+      hasOrgNvidiaKey: hasOrgNvidiaCredentials(orgSettings),
       orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
       orgBedrockModel: orgSettings?.bedrockModel ?? null,
       platformBedrockRegion: platformBedrock?.region ?? null,

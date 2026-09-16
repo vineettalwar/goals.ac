@@ -20,7 +20,11 @@ const BEDROCK_MODEL_LABELS: Record<string, string> = {
   "mistral.mistral-small-2402-v1:0": "Mistral Small",
   "openai.gpt-oss-120b-1:0": "GPT-OSS 120B",
   "openai.gpt-oss-20b-1:0": "GPT-OSS 20B",
+  "openai.gpt-4o": "GPT-4o",
+  "openai.gpt-4o-mini": "GPT-4o mini",
   "deepseek.v3.2": "DeepSeek V3.2",
+  "deepseek.r1-v1:0": "DeepSeek R1",
+  "us.deepseek.r1-v1:0": "DeepSeek R1",
 };
 
 /** @deprecated Prefer account-listed models from listBedrockChatModels. Kept for label fallbacks. */
@@ -38,11 +42,30 @@ export type BedrockModelChoiceId = (typeof BEDROCK_MODEL_CHOICES)[number]["id"];
 
 export const BEDROCK_MODEL_CUSTOM = "__custom__";
 
+/** Used when the user pastes a key and does not pick a model. */
+export const FALLBACK_BEDROCK_MODEL = "amazon.nova-lite-v1:0";
+
 export type BedrockModelChoice = { id: string; label: string };
+
+export function withBedrockModel(model?: string | null): string {
+  const trimmed = model?.trim();
+  return trimmed || FALLBACK_BEDROCK_MODEL;
+}
+
+/** First ranked chat model from the account list, else Nova Lite. */
+export function defaultBedrockModelId(choices: BedrockModelChoice[]): string {
+  return choices[0]?.id ?? FALLBACK_BEDROCK_MODEL;
+}
 
 export function bedrockModelChoiceLabel(modelId: string | null | undefined): string | null {
   if (!modelId) return null;
-  return BEDROCK_MODEL_LABELS[modelId] ?? modelId;
+  if (BEDROCK_MODEL_LABELS[modelId]) return BEDROCK_MODEL_LABELS[modelId];
+  const lower = modelId.toLowerCase();
+  if (lower.includes("claude")) return modelId.replace(/^.*claude[-.]/i, "Claude ").replace(/-/g, " ");
+  if (lower.includes("deepseek")) return modelId.replace(/^.*deepseek[-.]/i, "DeepSeek ").replace(/-/g, " ");
+  if (lower.includes("gpt-oss")) return modelId.replace(/^.*gpt-oss[-.]/i, "GPT-OSS ").replace(/-/g, " ");
+  if (lower.includes("gpt")) return modelId.replace(/^.*gpt[-.]/i, "GPT ").replace(/-/g, " ");
+  return modelId;
 }
 
 /** Drop non-chat / specialty models from a foundation-model list. */
@@ -64,10 +87,10 @@ export function sortBedrockChatModelIds(ids: string[]): string[] {
     if (lower.includes("nova-micro")) return 2;
     if (lower.includes("nova")) return 3;
     if (lower.includes("claude")) return 4;
-    if (lower.includes("llama3-70b") || lower.includes("llama-3-70")) return 5;
-    if (lower.includes("mistral-large")) return 6;
-    if (lower.includes("gpt-oss-120")) return 7;
-    if (lower.includes("deepseek")) return 8;
+    if (lower.includes("gpt-4") || lower.includes("chatgpt") || lower.includes("gpt-oss")) return 5;
+    if (lower.includes("deepseek")) return 6;
+    if (lower.includes("llama3-70b") || lower.includes("llama-3-70")) return 7;
+    if (lower.includes("mistral-large")) return 8;
     return 50;
   };
   return [...ids].sort((a, b) => {

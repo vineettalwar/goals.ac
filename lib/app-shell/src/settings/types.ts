@@ -9,7 +9,7 @@ export type UsageSummary = {
   byokSpendThisMonthUsd: number;
 };
 
-export type AiProviderChoice = "gemini" | "openai" | "anthropic" | "bedrock" | "ollama";
+export type AiProviderChoice = "gemini" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia" | "bedrock" | "ollama";
 
 export type SettingsAiSummary = {
   activeProvider: string;
@@ -19,6 +19,12 @@ export type SettingsAiSummary = {
   openaiLastFour: string | null;
   hasAnthropicKey: boolean;
   anthropicLastFour: string | null;
+  hasOpenrouterKey: boolean;
+  openrouterLastFour: string | null;
+  hasGroqKey: boolean;
+  groqLastFour: string | null;
+  hasNvidiaKey: boolean;
+  nvidiaLastFour: string | null;
   hasBedrockCredentials: boolean;
   bedrockAccessKeyLastFour: string | null;
   bedrockRegion: string | null;
@@ -29,10 +35,13 @@ export type SettingsAiSummary = {
     provider: string | null;
     ollamaBaseUrl: string | null;
     ollamaModel: string | null;
+    openrouterModel: string | null;
+    nvidiaModel: string | null;
   };
   ollama?: {
     baseUrl?: string;
     model?: string;
+    reachable?: boolean;
   };
 };
 

@@ -111,7 +111,7 @@ export function PropertyPicker({
         <Label htmlFor="ga4-property" className="text-xs">
           GA4 property
         </Label>
-        <Select value={selected} onValueChange={setSelected}>
+        <Select value={selected} onValueChange={setSelected} modal={false}>
           <SelectTrigger id="ga4-property" className="h-9 text-xs">
             <SelectValue placeholder="Select a property" />
           </SelectTrigger>
@@ -134,7 +134,7 @@ export function PropertyPicker({
           </p>
         ) : null}
       </div>
-      <Button size="sm" onClick={onSave} disabled={!selected || saving}>
+      <Button type="button" size="sm" onClick={onSave} disabled={!selected || saving}>
         {saving ? <Spinner size="sm" /> : null}
         {saving ? "Saving…" : "Use this property"}
       </Button>

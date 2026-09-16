@@ -12,6 +12,7 @@ describe("ai-providers openai", () => {
     delete process.env.GEMINI_API_KEY;
     delete process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
     process.env.OPENAI_API_KEY = "test-key";
 
     expect(resolveProviderId()).toBe("openai");

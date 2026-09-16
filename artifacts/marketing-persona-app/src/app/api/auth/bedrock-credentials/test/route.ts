@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const BedrockTestBody = z.object({
   apiKey: z.string().min(16, "API key is too short"),
-  model: z.string().trim().min(1, "Choose a Bedrock model"),
+  model: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const { testBedrockCredentials } = await import("@workspace/ai-providers/bedrock");
     await testBedrockCredentials({
       apiKey: parsed.data.apiKey.trim(),
-      model: parsed.data.model.trim(),
+      model: parsed.data.model?.trim() || undefined,
     });
     return NextResponse.json({ ok: true });
   } catch (err) {

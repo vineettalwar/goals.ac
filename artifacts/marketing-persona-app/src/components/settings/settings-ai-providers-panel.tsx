@@ -18,6 +18,9 @@ import { DeeplByokPanel } from "@/components/settings/deepl-byok-panel";
 import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
 import { SettingsAiGeminiSection } from "@/components/settings/settings-ai-gemini-section";
 import { SettingsAiOpenAISection } from "@/components/settings/settings-ai-openai-section";
+import { SettingsAiOpenRouterSection } from "@/components/settings/settings-ai-openrouter-section";
+import { SettingsAiGroqSection } from "@/components/settings/settings-ai-groq-section";
+import { SettingsAiNvidiaSection } from "@/components/settings/settings-ai-nvidia-section";
 import { SettingsAiAnthropicSection } from "@/components/settings/settings-ai-anthropic-section";
 import { SettingsAiBedrockSection } from "@/components/settings/settings-ai-bedrock-section";
 import { SettingsAiSemrushSection } from "@/components/settings/settings-ai-semrush-section";
@@ -25,13 +28,16 @@ import { useActiveProject } from "@/context/use-active-project";
 import type { AiProviderStatus } from "@/components/settings/settings-types";
 import type { SettingsInitialData } from "@/lib/server/loaders";
 
-type AiProviderChoice = "gemini" | "bedrock" | "ollama" | "openai" | "anthropic";
+type AiProviderChoice = "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia";
 
 function normalizeProviderChoice(value: string | null | undefined): AiProviderChoice {
   if (value === "bedrock") return "bedrock";
   if (value === "ollama") return "ollama";
   if (value === "openai") return "openai";
   if (value === "anthropic") return "anthropic";
+  if (value === "openrouter") return "openrouter";
+  if (value === "groq") return "groq";
+  if (value === "nvidia") return "nvidia";
   return "gemini";
 }
 
@@ -59,6 +65,12 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
       initialData?.aiStatus?.envFallback?.ollamaModel ??
       "",
   );
+  const [openrouterModel, setOpenrouterModel] = useState(
+    initialData?.aiStatus?.settings?.openrouterModel ?? "",
+  );
+  const [nvidiaModel, setNvidiaModel] = useState(
+    initialData?.aiStatus?.settings?.nvidiaModel ?? "",
+  );
   const [providerSaving, setProviderSaving] = useState(false);
 
   useEffect(() => {
@@ -71,6 +83,8 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
         setSelectedProvider(normalizeProviderChoice(aiData.settings?.provider ?? aiData.activeProvider));
         setOllamaBaseUrl(aiData.settings?.ollamaBaseUrl ?? aiData.envFallback?.ollamaBaseUrl ?? "http://localhost:11434");
         setOllamaModel(aiData.settings?.ollamaModel ?? aiData.envFallback?.ollamaModel ?? "");
+        setOpenrouterModel(aiData.settings?.openrouterModel ?? "");
+        setNvidiaModel(aiData.settings?.nvidiaModel ?? "");
       });
   }, [initialData]);
 
@@ -83,10 +97,16 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
         provider: selectedProvider,
         ollamaBaseUrl: selectedProvider === "ollama" ? ollamaBaseUrl : null,
         ollamaModel: selectedProvider === "ollama" ? ollamaModel : null,
+        openrouterModel: selectedProvider === "openrouter" ? openrouterModel : null,
+        nvidiaModel: selectedProvider === "nvidia" ? nvidiaModel : null,
       }),
     });
     setProviderSaving(false);
-    if (!res.ok) { toast.error("Failed to save AI provider"); return; }
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      toast.error(data?.error || "Failed to save AI provider");
+      return;
+    }
     setAiStatus(await res.json());
     toast.success("AI provider updated");
   }
@@ -122,6 +142,9 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
                   <SelectItem value="gemini">Google Gemini</SelectItem>
                   <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
                   <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                  <SelectItem value="groq">Groq</SelectItem>
+                  <SelectItem value="nvidia">NVIDIA NIM</SelectItem>
                   <SelectItem value="bedrock">AWS Bedrock</SelectItem>
                   <SelectItem value="ollama">Ollama (local)</SelectItem>
                 </SelectContent>
@@ -150,6 +173,32 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
                     disabled={!canManage}
                   />
                 </div>
+              </div>
+            )}
+
+            {selectedProvider === "openrouter" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="openrouter-model">OpenRouter model</Label>
+                <Input
+                  id="openrouter-model"
+                  value={openrouterModel}
+                  onChange={(e) => setOpenrouterModel(e.target.value)}
+                  placeholder="openai/gpt-4.1-mini"
+                  disabled={!canManage}
+                />
+              </div>
+            )}
+
+            {selectedProvider === "nvidia" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="nvidia-model">NVIDIA model</Label>
+                <Input
+                  id="nvidia-model"
+                  value={nvidiaModel}
+                  onChange={(e) => setNvidiaModel(e.target.value)}
+                  placeholder="nvidia/nemotron-3.5-lightning-30b-a3b"
+                  disabled={!canManage}
+                />
               </div>
             )}
 
@@ -201,6 +250,24 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
         canManage={canManage}
         initialHasKey={initialData?.anthropicCredentials?.hasKey}
         initialLastFour={initialData?.anthropicCredentials?.lastFour}
+        onAiStatusChange={setAiStatus}
+      />
+      <SettingsAiOpenRouterSection
+        canManage={canManage}
+        initialHasKey={initialData?.openrouterCredentials?.hasKey}
+        initialLastFour={initialData?.openrouterCredentials?.lastFour}
+        onAiStatusChange={setAiStatus}
+      />
+      <SettingsAiGroqSection
+        canManage={canManage}
+        initialHasKey={initialData?.groqCredentials?.hasKey}
+        initialLastFour={initialData?.groqCredentials?.lastFour}
+        onAiStatusChange={setAiStatus}
+      />
+      <SettingsAiNvidiaSection
+        canManage={canManage}
+        initialHasKey={initialData?.nvidiaCredentials?.hasKey}
+        initialLastFour={initialData?.nvidiaCredentials?.lastFour}
         onAiStatusChange={setAiStatus}
       />
       <SettingsAiBedrockSection

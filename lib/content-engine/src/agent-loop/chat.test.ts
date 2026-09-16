@@ -10,9 +10,30 @@ import {
 import type { AgentTool } from "./types";
 
 describe("parseChatIntent", () => {
-  it("maps slipping and CTR prompts to opportunity_scan", () => {
-    expect(parseChatIntent("What's slipping?").kind).toBe("opportunity_scan");
+  it("maps CTR title rewrites without treating them as CTR gaps", () => {
+    expect(parseChatIntent("Suggest CTR titles for payroll")).toEqual({
+      kind: "chat_turn",
+      actionType: "ctr_title",
+      keyword: "payroll",
+      targetUrl: undefined,
+    });
     expect(parseChatIntent("CTR gaps").kind).toBe("opportunity_scan");
+  });
+
+  it("maps unused-belt and platform verbs onto chat_turn action types", () => {
+    expect(parseChatIntent("Check backlinks")).toMatchObject({ kind: "chat_turn", actionType: "backlinks" });
+    expect(parseChatIntent("Add internal links")).toMatchObject({ kind: "chat_turn", actionType: "internal_link" });
+    expect(parseChatIntent("Show the roadmap")).toMatchObject({ kind: "chat_turn", actionType: "strategy_overview" });
+    expect(parseChatIntent("Generate a topical map")).toMatchObject({ kind: "chat_turn", actionType: "generate_topical_map" });
+    expect(parseChatIntent("Start Daily Five for payroll, billing")).toMatchObject({
+      kind: "chat_turn",
+      actionType: "start_daily_five",
+    });
+    expect(parseChatIntent("Draft a LinkedIn post about payroll")).toMatchObject({
+      kind: "chat_turn",
+      actionType: "draft_social",
+    });
+    expect(parseChatIntent("Autopilot status")).toMatchObject({ kind: "chat_turn", actionType: "autopilot_status" });
   });
 
   it("maps brief/draft prompts to research_then_draft with a keyword", () => {
@@ -101,7 +122,7 @@ describe("composeGroundedReply", () => {
 });
 
 describe("chat_turn planner wiring", () => {
-  it("runs first-party tools and does not draft unless asked", async () => {
+  it("loads site context and does not dump research or draft unless asked", async () => {
     let drafted = 0;
     const tools: AgentTool[] = [
       {
@@ -170,11 +191,54 @@ describe("chat_turn planner wiring", () => {
       stepBudget: 8,
       sink,
     });
-    expect(result.trajectory.some((step) => step.tool === "gsc_query")).toBe(true);
     expect(result.trajectory.some((step) => step.tool === "site_context")).toBe(true);
+    expect(result.trajectory.some((step) => step.tool === "gsc_query")).toBe(false);
     expect(drafted).toBe(0);
     expect(chipLabel("gsc_query")).toBe("Queried GSC");
     expect(result.status).toBe("completed");
+  });
+
+  it("runs CTR title after site context when that action is requested", async () => {
+    let titles = 0;
+    const tools: AgentTool[] = [
+      {
+        name: "site_context",
+        description: "site",
+        risk: "read",
+        creditCost: 1,
+        execute: async () => ({
+          ok: true,
+          summary: "Site Acme",
+          hasToolEvidence: false,
+          evidenceRefs: [],
+        }),
+      },
+      {
+        name: "suggest_ctr_title",
+        description: "ctr",
+        risk: "write",
+        creditCost: 2,
+        execute: async () => {
+          titles += 1;
+          return { ok: true, summary: "titles", evidenceRefs: [], hasToolEvidence: false };
+        },
+      },
+      {
+        name: "generate_draft",
+        description: "draft",
+        risk: "write",
+        creditCost: 5,
+        execute: async () => ({ ok: true, summary: "drafted", evidenceRefs: [], hasToolEvidence: false }),
+      },
+    ];
+    const result = await runAgentLoop({
+      goal: { kind: "chat_turn", text: "Suggest CTR titles", projectId: 3, actionType: "ctr_title", keyword: "payroll" },
+      tools,
+      stepBudget: 8,
+      sink: memoryTrajectorySink(),
+    });
+    expect(titles).toBe(1);
+    expect(result.trajectory.some((step) => step.tool === "generate_draft")).toBe(false);
   });
 });
 

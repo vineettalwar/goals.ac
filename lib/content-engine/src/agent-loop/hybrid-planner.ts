@@ -54,7 +54,7 @@ ${traj || "(empty)"}
 Tools:
 ${toolLines}
 JSON shape: {"type":"call_tool","tool":"<name>","args":{},"reason":"..."} or {"type":"stop","reason":"done","detail":"..."}
-Do not invent tool names. Prefer research tools before writes. Never pick publish_live unless the goal is publish_check.`;
+Do not invent tool names. Prefer research/read tools before writes. After one successful write, stop. Never pick publish_live unless the goal is publish_check.`;
 }
 
 /**

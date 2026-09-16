@@ -1,9 +1,12 @@
-import { resolveProviderId } from "@workspace/ai-providers/config";
+import { resolveProviderId, probeOllamaReachable } from "@workspace/ai-providers/config";
 import {
   getOrgAiSettingsForUser,
   hasOrgAnthropicCredentials,
   hasOrgBedrockCredentials,
   hasOrgOpenAICredentials,
+  hasOrgOpenRouterCredentials,
+  hasOrgGroqCredentials,
+  hasOrgNvidiaCredentials,
   toAiProviderOptionsFromOrg,
 } from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
@@ -24,6 +27,10 @@ function isActiveProviderReady(
     hasPlatformBedrock: boolean;
     hasOrgAnthropicKey: boolean;
     hasOrgOpenAIKey: boolean;
+    hasOrgOpenRouterKey: boolean;
+    hasOrgGroqKey: boolean;
+    hasOrgNvidiaKey: boolean;
+    ollamaReachable: boolean;
   },
 ): boolean {
   switch (activeProvider) {
@@ -37,8 +44,14 @@ function isActiveProviderReady(
       return Boolean(env("ANTHROPIC_API_KEY") || options.hasOrgAnthropicKey);
     case "openai":
       return Boolean(env("OPENAI_API_KEY") || options.hasOrgOpenAIKey);
+    case "openrouter":
+      return Boolean(env("OPENROUTER_API_KEY") || options.hasOrgOpenRouterKey);
+    case "groq":
+      return Boolean(env("GROQ_API_KEY") || options.hasOrgGroqKey);
+    case "nvidia":
+      return Boolean(env("NVIDIA_API_KEY") || options.hasOrgNvidiaKey);
     case "ollama":
-      return Boolean(env("OLLAMA_BASE_URL"));
+      return options.ollamaReachable;
     default:
       return false;
   }
@@ -53,6 +66,9 @@ export async function getAiProviderStatusForUser(userId: number) {
   const hasOrgBedrockKey = hasOrgBedrockCredentials(orgSettings);
   const hasOrgAnthropicKey = hasOrgAnthropicCredentials(orgSettings);
   const hasOrgOpenAIKey = hasOrgOpenAICredentials(orgSettings);
+  const hasOrgOpenRouterKey = hasOrgOpenRouterCredentials(orgSettings);
+  const hasOrgGroqKey = hasOrgGroqCredentials(orgSettings);
+  const hasOrgNvidiaKey = hasOrgNvidiaCredentials(orgSettings);
 
   const organizationId = orgSettings?.organizationId ?? null;
   const [hasPlatformBedrockGrant, platformBedrock] = await Promise.all([
@@ -60,6 +76,10 @@ export async function getAiProviderStatusForUser(userId: number) {
     loadPlatformBedrockCredentials(),
   ]);
   const hasPlatformBedrock = hasPlatformBedrockGrant && Boolean(platformBedrock);
+
+  const ollamaBaseUrl =
+    orgSettings?.ollamaBaseUrl ?? env("OLLAMA_BASE_URL") ?? "http://localhost:11434";
+  const ollamaReachable = await probeOllamaReachable(ollamaBaseUrl);
 
   return {
     activeProvider,
@@ -69,6 +89,10 @@ export async function getAiProviderStatusForUser(userId: number) {
       hasPlatformBedrock,
       hasOrgAnthropicKey,
       hasOrgOpenAIKey,
+      hasOrgOpenRouterKey,
+      hasOrgGroqKey,
+      hasOrgNvidiaKey,
+      ollamaReachable,
     }),
     source: orgSettings?.aiProvider
       ? ("app" as const)
@@ -79,6 +103,8 @@ export async function getAiProviderStatusForUser(userId: number) {
       provider: orgSettings?.aiProvider ?? null,
       ollamaBaseUrl: orgSettings?.ollamaBaseUrl ?? null,
       ollamaModel: orgSettings?.ollamaModel ?? null,
+      openrouterModel: orgSettings?.openrouterModel ?? null,
+      nvidiaModel: orgSettings?.nvidiaModel ?? null,
     },
     gemini: {
       configured: Boolean(
@@ -121,11 +147,37 @@ export async function getAiProviderStatusForUser(userId: number) {
           ? ("env" as const)
           : null,
     },
+    openrouter: {
+      configured: Boolean(env("OPENROUTER_API_KEY") || hasOrgOpenRouterKey),
+      source: hasOrgOpenRouterKey
+        ? ("org-key" as const)
+        : env("OPENROUTER_API_KEY")
+          ? ("env" as const)
+          : null,
+      model: orgSettings?.openrouterModel ?? env("OPENROUTER_MODEL") ?? null,
+    },
+    groq: {
+      configured: Boolean(env("GROQ_API_KEY") || hasOrgGroqKey),
+      source: hasOrgGroqKey
+        ? ("org-key" as const)
+        : env("GROQ_API_KEY")
+          ? ("env" as const)
+          : null,
+    },
+    nvidia: {
+      configured: Boolean(env("NVIDIA_API_KEY") || hasOrgNvidiaKey),
+      source: hasOrgNvidiaKey
+        ? ("org-key" as const)
+        : env("NVIDIA_API_KEY")
+          ? ("env" as const)
+          : null,
+      model: orgSettings?.nvidiaModel ?? env("NVIDIA_MODEL") ?? null,
+    },
     ollama: {
       configured: Boolean(orgSettings?.ollamaBaseUrl || env("OLLAMA_BASE_URL")),
-      baseUrl: orgSettings?.ollamaBaseUrl ?? env("OLLAMA_BASE_URL") ?? "http://localhost:11434",
+      baseUrl: ollamaBaseUrl,
       model: orgSettings?.ollamaModel ?? env("OLLAMA_MODEL") ?? "llama3.2",
-      reachable: false,
+      reachable: ollamaReachable,
     },
   };
 }

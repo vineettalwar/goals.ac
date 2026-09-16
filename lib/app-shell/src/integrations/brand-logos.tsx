@@ -40,6 +40,17 @@ function BeehiivLogo({ className }: LogoProps) {
   );
 }
 
+function OpenrouterLogo({ className }: LogoProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#0F172A" />
+      <text x="12" y="16" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="700" fontFamily="ui-sans-serif, system-ui, sans-serif">
+        OR
+      </text>
+    </svg>
+  );
+}
+
 function WebhookLogo({ className }: LogoProps) {
   return (
     <span className={cn("relative inline-flex h-8 w-8 shrink-0 items-center justify-center", className)}>
@@ -494,6 +505,28 @@ function OllamaLogo({ className }: LogoProps) {
   );
 }
 
+function GroqLogo({ className }: LogoProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#F55036" />
+      <text x="12" y="16.5" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700" fontFamily="ui-sans-serif, system-ui, sans-serif">
+        G
+      </text>
+    </svg>
+  );
+}
+
+function NvidiaLogo({ className }: LogoProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#76B900" />
+      <text x="12" y="16.5" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700" fontFamily="ui-sans-serif, system-ui, sans-serif">
+        NV
+      </text>
+    </svg>
+  );
+}
+
 export type PublishBrandIconId =
   | CmsPlatformId
   | EspPlatformId
@@ -513,6 +546,9 @@ export type PublishBrandIconId =
   | "gemini"
   | "openai"
   | "anthropic"
+  | "openrouter"
+  | "groq"
+  | "nvidia"
   | "ollama"
   | "semrush"
   | "deepl";
@@ -558,6 +594,9 @@ const LOGOS: Partial<Record<PublishBrandIconId, ComponentType<LogoProps>>> = {
   gemini: GeminiLogo,
   openai: OpenaiLogo,
   anthropic: AnthropicLogo,
+  openrouter: OpenrouterLogo,
+  groq: GroqLogo,
+  nvidia: NvidiaLogo,
   ollama: OllamaLogo,
   semrush: SemrushLogo,
   deepl: DeeplLogo,

@@ -55,7 +55,7 @@ export type AgentPolicy = {
   maxCredits: number;
   /**
    * `deterministic` — Autopilot / unattended spend control (`defaultEmployeePlanner`).
-   * `hybrid` / `llm` — interactive Studio (and chat when that PR lands): LLM may pick
+   * `hybrid` / `llm` — interactive Studio and chat: LLM may pick
    * a legal tool; invalid picks fall back to the deterministic planner.
    */
   plannerMode: PlannerMode;

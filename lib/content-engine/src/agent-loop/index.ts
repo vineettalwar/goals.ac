@@ -26,6 +26,7 @@ export {
   detectLoopCredentials,
   loopMetaFromRun,
   studioDraftFromKeyword,
+  hybridPlannerForUser,
   STUDIO_AGENT_LOOP_CAPS,
   UNATTENDED_AGENT_LOOP_CAPS,
 } from "./generate-via-loop";
@@ -46,4 +47,6 @@ export {
   TOOL_CHIP_LABELS,
   CHAT_AGENT_LOOP_CAPS,
 } from "./seo-chat";
+export { chatCapabilityPrompts, chatCapabilityPromptList } from "./chat-catalog";
+export type { ChatProductSurface, ChatCapabilityGroup } from "./chat-catalog";
 export type { ChatIntent, SeoChatCard, SeoChatChip, SeoChatStreamEvent } from "./seo-chat-format";

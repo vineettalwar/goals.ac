@@ -145,7 +145,7 @@ export function PropertyPicker({
         <Label htmlFor={`property-${provider}`} className="text-xs">
           Verified property
         </Label>
-        <Select value={selected} onValueChange={setSelected}>
+        <Select value={selected} onValueChange={setSelected} modal={false}>
           <SelectTrigger id={`property-${provider}`} className="h-9 text-xs">
             <SelectValue placeholder="Select a property" />
           </SelectTrigger>
@@ -166,7 +166,7 @@ export function PropertyPicker({
           <p className="text-[11px] text-muted-foreground break-all">{selected}</p>
         ) : null}
       </div>
-      <Button size="sm" onClick={onSave} disabled={!selected || saving}>
+      <Button type="button" size="sm" onClick={onSave} disabled={!selected || saving}>
         {saving ? <Spinner size="sm" /> : null}
         {saving ? "Saving…" : "Use this property"}
       </Button>

@@ -2,6 +2,9 @@ import { getAiProviderClient, wrapGeminiClient, type AiProviderClient } from "./
 import { createUserGeminiClient, isUserKeyError } from "./gemini";
 import { isAnthropicUserKeyError } from "./anthropic";
 import { isOpenAIUserKeyError } from "./openai";
+import { isOpenRouterUserKeyError } from "./openrouter";
+import { isGroqUserKeyError } from "./groq";
+import { isNvidiaUserKeyError } from "./nvidia";
 import {
   assertOllamaReachableHere,
   resolveOllamaBaseUrl,
@@ -9,7 +12,12 @@ import {
   type AiProviderOptions,
 } from "./config";
 
-export { isLoopbackOllamaUrl, assertOllamaReachableHere } from "./config";
+export {
+  isLoopbackOllamaUrl,
+  assertOllamaReachableHere,
+  probeOllamaReachable,
+  requireOllamaReachable,
+} from "./config";
 
 export async function resolveAiClient(
   userApiKey?: string | null,
@@ -51,6 +59,48 @@ export async function resolveAiClient(
       return OpenAIClient.create({ apiKey: openaiKey });
     } catch (err) {
       if (!isOpenAIUserKeyError(err)) {
+        throw err;
+      }
+    }
+  }
+
+  const openrouterKey = aiProviderOptions?.openrouter?.apiKey?.trim();
+  if (openrouterKey && providerId === "openrouter") {
+    try {
+      const { OpenRouterClient } = await import("./openrouter");
+      return OpenRouterClient.create({
+        apiKey: openrouterKey,
+        model: aiProviderOptions?.openrouter?.model,
+      });
+    } catch (err) {
+      if (!isOpenRouterUserKeyError(err)) {
+        throw err;
+      }
+    }
+  }
+
+  const groqKey = aiProviderOptions?.groq?.apiKey?.trim();
+  if (groqKey && providerId === "groq") {
+    try {
+      const { GroqClient } = await import("./groq");
+      return GroqClient.create({ apiKey: groqKey });
+    } catch (err) {
+      if (!isGroqUserKeyError(err)) {
+        throw err;
+      }
+    }
+  }
+
+  const nvidiaKey = aiProviderOptions?.nvidia?.apiKey?.trim();
+  if (nvidiaKey && providerId === "nvidia") {
+    try {
+      const { NvidiaClient } = await import("./nvidia");
+      return NvidiaClient.create({
+        apiKey: nvidiaKey,
+        model: aiProviderOptions?.nvidia?.model,
+      });
+    } catch (err) {
+      if (!isNvidiaUserKeyError(err)) {
         throw err;
       }
     }

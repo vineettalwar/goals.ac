@@ -20,6 +20,9 @@ const REQUIRED = [
   "gemini",
   "openai",
   "anthropic",
+  "openrouter",
+  "groq",
+  "nvidia",
   "wordpress",
 ] as const;
 

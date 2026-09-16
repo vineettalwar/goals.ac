@@ -306,10 +306,6 @@ export function useAdminIntegrationsOauthActions(deps: {
       toast.error("Paste a Bedrock API key to save");
       return;
     }
-    if (!form.bedrockModel.trim() && !status?.bedrock.model.value) {
-      toast.error("Choose a Bedrock model");
-      return;
-    }
 
     setSavingBedrock(true);
     try {
@@ -338,11 +334,7 @@ export function useAdminIntegrationsOauthActions(deps: {
   }
 
   async function testBedrock() {
-    const model = form.bedrockModel.trim() || status?.bedrock.model.value?.trim() || "";
-    if (!model) {
-      toast.error("Choose a Bedrock model to test");
-      return;
-    }
+    const model = form.bedrockModel.trim() || status?.bedrock.model.value?.trim() || undefined;
     setTestingBedrock(true);
     try {
       const res = await fetch("/api/admin/platform-integrations/bedrock-test", {

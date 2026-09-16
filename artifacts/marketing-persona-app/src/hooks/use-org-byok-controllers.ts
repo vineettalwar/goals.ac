@@ -12,6 +12,12 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
   const [geminiDeleting, setGeminiDeleting] = useState(false);
   const [openaiSaving, setOpenaiSaving] = useState(false);
   const [openaiDeleting, setOpenaiDeleting] = useState(false);
+  const [openrouterSaving, setOpenrouterSaving] = useState(false);
+  const [openrouterDeleting, setOpenrouterDeleting] = useState(false);
+  const [groqSaving, setGroqSaving] = useState(false);
+  const [groqDeleting, setGroqDeleting] = useState(false);
+  const [nvidiaSaving, setNvidiaSaving] = useState(false);
+  const [nvidiaDeleting, setNvidiaDeleting] = useState(false);
   const [anthropicSaving, setAnthropicSaving] = useState(false);
   const [anthropicDeleting, setAnthropicDeleting] = useState(false);
   const [bedrockSaving, setBedrockSaving] = useState(false);
@@ -66,6 +72,8 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
     provider: AiProviderChoice;
     ollamaBaseUrl: string;
     ollamaModel: string;
+    openrouterModel: string;
+    nvidiaModel: string;
   }) {
     setProviderSaving(true);
     setProviderMessage(null);
@@ -77,9 +85,12 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
           provider: input.provider,
           ollamaBaseUrl: input.provider === "ollama" ? input.ollamaBaseUrl : null,
           ollamaModel: input.provider === "ollama" ? input.ollamaModel : null,
+          openrouterModel: input.provider === "openrouter" ? input.openrouterModel : null,
+          nvidiaModel: input.provider === "nvidia" ? input.nvidiaModel : null,
         }),
       });
-      if (!res.ok) throw new Error("Failed to save provider");
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(data?.error || "Failed to save provider");
       await reload(false);
       setProviderMessage("AI provider updated.");
     } catch (err) {
@@ -126,6 +137,114 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
     }
   }
 
+  async function testOpenrouterKey(key: string) {
+    const res = await fetch("/api/auth/openrouter-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key }),
+    });
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
+  }
+
+  async function saveOpenrouterKey(key: string) {
+    setOpenrouterSaving(true);
+    try {
+      const res = await fetch("/api/auth/openrouter-credentials", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      if (!res.ok) throw new Error("Failed to save key");
+      await reload(false);
+    } finally {
+      setOpenrouterSaving(false);
+    }
+  }
+
+  async function deleteOpenrouterKey() {
+    if (!window.confirm("Remove the organization OpenRouter API key?")) return;
+    setOpenrouterDeleting(true);
+    try {
+      const res = await fetch("/api/auth/openrouter-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove key");
+      await reload(false);
+    } finally {
+      setOpenrouterDeleting(false);
+    }
+  }
+
+  async function testGroqKey(key: string) {
+    const res = await fetch("/api/auth/groq-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key }),
+    });
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
+  }
+
+  async function saveGroqKey(key: string) {
+    setGroqSaving(true);
+    try {
+      const res = await fetch("/api/auth/groq-credentials", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      if (!res.ok) throw new Error("Failed to save key");
+      await reload(false);
+    } finally {
+      setGroqSaving(false);
+    }
+  }
+
+  async function deleteGroqKey() {
+    if (!window.confirm("Remove the organization Groq API key?")) return;
+    setGroqDeleting(true);
+    try {
+      const res = await fetch("/api/auth/groq-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove key");
+      await reload(false);
+    } finally {
+      setGroqDeleting(false);
+    }
+  }
+
+  async function testNvidiaKey(key: string) {
+    const res = await fetch("/api/auth/nvidia-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key }),
+    });
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
+  }
+
+  async function saveNvidiaKey(key: string) {
+    setNvidiaSaving(true);
+    try {
+      const res = await fetch("/api/auth/nvidia-credentials", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      if (!res.ok) throw new Error("Failed to save key");
+      await reload(false);
+    } finally {
+      setNvidiaSaving(false);
+    }
+  }
+
+  async function deleteNvidiaKey() {
+    if (!window.confirm("Remove the organization NVIDIA API key?")) return;
+    setNvidiaDeleting(true);
+    try {
+      const res = await fetch("/api/auth/nvidia-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove key");
+      await reload(false);
+    } finally {
+      setNvidiaDeleting(false);
+    }
+  }
+
   async function testAnthropicKey(key: string) {
     const res = await fetch("/api/auth/anthropic-credentials/test", {
       method: "POST",
@@ -165,6 +284,7 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
   function bedrockPayloadFromForm(form: BedrockCredentialsForm) {
     const apiKey = form.apiKey.trim();
     const model = form.model.trim();
+    return apiKey ? { apiKey, ...(model ? { model } : {}) } : { model };
     // Omit empty apiKey so PATCH takes the model-only path when replacing model only.
     return apiKey ? { apiKey, model } : { model };
   }
@@ -354,6 +474,12 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
     geminiDeleting,
     openaiSaving,
     openaiDeleting,
+    openrouterSaving,
+    openrouterDeleting,
+    groqSaving,
+    groqDeleting,
+    nvidiaSaving,
+    nvidiaDeleting,
     anthropicSaving,
     anthropicDeleting,
     bedrockSaving,
@@ -374,6 +500,15 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
     testOpenaiKey,
     saveOpenaiKey,
     deleteOpenaiKey,
+    testOpenrouterKey,
+    saveOpenrouterKey,
+    deleteOpenrouterKey,
+    testGroqKey,
+    saveGroqKey,
+    deleteGroqKey,
+    testNvidiaKey,
+    saveNvidiaKey,
+    deleteNvidiaKey,
     testAnthropicKey,
     saveAnthropicKey,
     deleteAnthropicKey,

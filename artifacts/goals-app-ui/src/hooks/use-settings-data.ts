@@ -61,10 +61,13 @@ type AiStatusResponse = {
     provider?: string | null;
     ollamaBaseUrl?: string | null;
     ollamaModel?: string | null;
+    openrouterModel?: string | null;
+    nvidiaModel?: string | null;
   };
   ollama?: {
     baseUrl?: string;
     model?: string;
+    reachable?: boolean;
   };
 };
 
@@ -85,6 +88,9 @@ async function fetchSettingsData(): Promise<SettingsData> {
     usageData,
     keyData,
     openaiData,
+    openrouterData,
+    groqData,
+    nvidiaData,
     anthropicData,
     bedrockData,
     aiData,
@@ -96,6 +102,9 @@ async function fetchSettingsData(): Promise<SettingsData> {
     apiFetch<{ usage?: UsageSummary }>("/api/usage").catch(() => null),
     apiFetch<ApiKeyResponse>("/api/auth/api-key").catch(() => null),
     apiFetch<ApiKeyResponse>("/api/auth/openai-credentials").catch(() => null),
+    apiFetch<ApiKeyResponse>("/api/auth/openrouter-credentials").catch(() => null),
+    apiFetch<ApiKeyResponse>("/api/auth/groq-credentials").catch(() => null),
+    apiFetch<ApiKeyResponse>("/api/auth/nvidia-credentials").catch(() => null),
     apiFetch<ApiKeyResponse>("/api/auth/anthropic-credentials").catch(() => null),
     apiFetch<BedrockCredentialsResponse>("/api/auth/bedrock-credentials").catch(() => null),
     apiFetch<AiStatusResponse>("/api/ai-providers/status").catch(() => null),
@@ -119,8 +128,14 @@ async function fetchSettingsData(): Promise<SettingsData> {
       geminiLastFour: keyData?.lastFour ?? null,
       hasOpenaiKey: Boolean(openaiData?.hasKey),
       openaiLastFour: openaiData?.lastFour ?? null,
+      hasOpenrouterKey: Boolean(openrouterData?.hasKey),
+      openrouterLastFour: openrouterData?.lastFour ?? null,
       hasAnthropicKey: Boolean(anthropicData?.hasKey),
       anthropicLastFour: anthropicData?.lastFour ?? null,
+      hasGroqKey: Boolean(groqData?.hasKey),
+      groqLastFour: groqData?.lastFour ?? null,
+      hasNvidiaKey: Boolean(nvidiaData?.hasKey),
+      nvidiaLastFour: nvidiaData?.lastFour ?? null,
       hasBedrockCredentials: Boolean(bedrockData?.hasCredentials),
       bedrockAccessKeyLastFour: bedrockData?.accessKeyLastFour ?? null,
       bedrockRegion: bedrockData?.region ?? null,
@@ -131,6 +146,8 @@ async function fetchSettingsData(): Promise<SettingsData> {
         provider: aiData?.settings?.provider ?? null,
         ollamaBaseUrl: aiData?.settings?.ollamaBaseUrl ?? null,
         ollamaModel: aiData?.settings?.ollamaModel ?? null,
+        openrouterModel: aiData?.settings?.openrouterModel ?? null,
+        nvidiaModel: aiData?.settings?.nvidiaModel ?? null,
       },
       ollama: aiData?.ollama,
     },

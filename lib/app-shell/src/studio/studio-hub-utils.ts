@@ -24,6 +24,12 @@ export function aiProviderUnavailableMessage(activeProvider: string): string {
       return "No Anthropic API key configured. Add your key in Integrations → AI.";
     case "openai":
       return "No OpenAI API key configured. Add your key in Integrations → AI.";
+    case "openrouter":
+      return "No OpenRouter API key configured. Add your key in Integrations → AI.";
+    case "groq":
+      return "No Groq API key configured. Add your key in Integrations → AI.";
+    case "nvidia":
+      return "No NVIDIA API key configured. Add your key in Integrations → AI.";
     case "ollama":
       return "Ollama is not reachable. Start Ollama locally or update your Ollama URL in Integrations → AI.";
     default:

@@ -18,6 +18,7 @@ import { wasRecentlyInspected } from "../analytics/gsc-url-inspection-rate-limit
 import { isBacklinksConfigured, fetchBacklinksOverview } from "@workspace/serp-provider";
 import { syncActionQueueFromSignals } from "./action-queue";
 import { createFinishActionTools } from "./finish-actions";
+import { createPlatformTools } from "./platform-tools";
 import { enqueue } from "@workspace/jobs/boss";
 import { QUEUES } from "@workspace/jobs/queues";
 import type { AgentTool, AgentToolResult, EvidenceRef } from "./types";
@@ -350,6 +351,7 @@ export function createFirstPartyTools(options?: {
     upsertQueue,
     generateDraft,
     ...createFinishActionTools(),
+    ...createPlatformTools(),
     publishLive,
   ];
 }

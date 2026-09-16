@@ -44,7 +44,9 @@ export function ConnectionDetails({
 
   function onConnect() {
     const returnUrl = `${window.location.pathname}${window.location.search}`;
-    window.location.href = `/api/auth/${meta.connectPath}?projectId=${projectId}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    window.location.assign(
+      `/api/auth/${meta.connectPath}?projectId=${projectId}&returnUrl=${encodeURIComponent(returnUrl)}`,
+    );
   }
 
   async function onSyncGsc() {
@@ -145,7 +147,7 @@ export function ConnectionDetails({
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {!connection.connected ? (
-          <Button size="sm" onClick={onConnect} disabled={!oauthReady}>
+          <Button type="button" size="sm" onClick={onConnect} disabled={!oauthReady}>
             <Link2 className="w-3.5 h-3.5 mr-1.5" />
             Connect {meta.shortLabel}
           </Button>
@@ -174,6 +176,7 @@ export function ConnectionDetails({
               </>
             ) : null}
             <Button
+              type="button"
               size="sm"
               variant="ghost"
               onClick={() => onDisconnect(connection.provider)}
@@ -190,7 +193,7 @@ export function ConnectionDetails({
             {!connection.propertyVerified ||
             (connection.provider === "google_search_console" &&
               gscSyncStatus?.lastSyncStatus === "auth_error") ? (
-              <Button size="sm" variant="outline" onClick={onConnect}>
+              <Button type="button" size="sm" variant="outline" onClick={onConnect}>
                 Reconnect account
               </Button>
             ) : null}

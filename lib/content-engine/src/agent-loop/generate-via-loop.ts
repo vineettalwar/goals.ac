@@ -14,8 +14,7 @@ import {
   type ContentGenerationContext,
   type ContentPieceResult,
 } from "../content/content-studio-generator";
-import { getDecryptedUserGeminiKey } from "../support/ai/user-api-key";
-import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
+import { getAiProviderOptionsForUser, getDecryptedGeminiKeyForUser } from "../support/ai/org-ai-settings";
 import { isBacklinksConfigured } from "@workspace/serp-provider";
 import type { ContentFormatType } from "@workspace/db";
 import type { ContentPieceMetadata } from "../content/content-piece-seo";
@@ -81,6 +80,31 @@ export function loopMetaFromRun(run: RunAgentLoopResult): Pick<
   };
 }
 
+export function hybridPlannerForUser(userId?: number | null) {
+  return createHybridPlanner({
+    choose: async (ctx, tools) => {
+      if (!userId) return null;
+      try {
+        const resolved = await resolveAiClientForUser(userId);
+        const prompt = buildPlannerChoicePrompt(ctx, tools);
+        const model = modelForProviderTier(resolved.providerId, "rapid");
+        const out = await resolved.client.generate({
+          prompt,
+          temperature: 0,
+          maxOutputTokens: 280,
+          ...(model ? { model } : {}),
+        });
+        return parsePlannerJson(
+          out.text,
+          tools.map((tool) => tool.name),
+        );
+      } catch {
+        return null;
+      }
+    },
+  });
+}
+
 export async function runResearchThenDraftLoop(input: {
   projectId: number;
   userId?: number | null;
@@ -103,28 +127,7 @@ export async function runResearchThenDraftLoop(input: {
     },
   };
   const plannerMode = input.plannerMode ?? "hybrid";
-  const planner =
-    plannerMode === "deterministic"
-      ? defaultEmployeePlanner
-      : createHybridPlanner({
-          choose: async (ctx, tools) => {
-            if (!input.userId) return null;
-            try {
-              const resolved = await resolveAiClientForUser(input.userId);
-              const prompt = buildPlannerChoicePrompt(ctx, tools);
-              const model = modelForProviderTier(resolved.providerId, "rapid");
-              const out = await resolved.client.generate({
-                prompt,
-                temperature: 0,
-                maxOutputTokens: 280,
-                ...(model ? { model } : {}),
-              });
-              return parsePlannerJson(out.text, tools.map((tool) => tool.name));
-            } catch {
-              return null;
-            }
-          },
-        });
+  const planner = plannerMode === "deterministic" ? defaultEmployeePlanner : hybridPlannerForUser(input.userId);
   return runAgentLoop({
     goal: {
       kind: "research_then_draft",
@@ -156,7 +159,7 @@ export async function studioDraftFromKeyword(input: {
   angleHint?: string;
   bypassCache?: boolean;
   userApiKey?: string | null;
-  aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>>;
+  aiProviderOptions?: Awaited<ReturnType<typeof getAiProviderOptionsForUser>>;
   generationContext?: ContentGenerationContext;
   streamChunk?: (chunk: string) => void;
   brand?: BrandContext | null;
@@ -177,10 +180,10 @@ export async function studioDraftFromKeyword(input: {
     input.userApiKey !== undefined
       ? input.userApiKey
       : input.userId
-        ? await getDecryptedUserGeminiKey(input.userId)
+        ? await getDecryptedGeminiKeyForUser(input.userId)
         : null;
   const aiProviderOptions =
-    input.aiProviderOptions ?? (input.userId ? await getUserAiProviderOptions(input.userId) : undefined);
+    input.aiProviderOptions ?? (input.userId ? await getAiProviderOptionsForUser(input.userId) : undefined);
   try {
     const generated = input.streamChunk
       ? await generateContentPieceStream(

@@ -33,7 +33,7 @@ function orgKeyLastFour(encrypted: string | null | undefined): string {
 
 async function saveOrgApiKey(
   userId: number,
-  column: "encryptedGeminiKey" | "encryptedOpenaiApiKey" | "encryptedAnthropicApiKey",
+  column: "encryptedGeminiKey" | "encryptedOpenaiApiKey" | "encryptedAnthropicApiKey" | "encryptedOpenrouterApiKey" | "encryptedGroqApiKey" | "encryptedNvidiaApiKey",
   key: string,
 ) {
   const orgSettings = await getOrgAiSettingsForUser(userId);
@@ -52,7 +52,7 @@ async function saveOrgApiKey(
 
 async function deleteOrgApiKey(
   userId: number,
-  column: "encryptedGeminiKey" | "encryptedOpenaiApiKey" | "encryptedAnthropicApiKey",
+  column: "encryptedGeminiKey" | "encryptedOpenaiApiKey" | "encryptedAnthropicApiKey" | "encryptedOpenrouterApiKey" | "encryptedGroqApiKey" | "encryptedNvidiaApiKey",
 ) {
   const orgSettings = await getOrgAiSettingsForUser(userId);
   if (!orgSettings) {
@@ -70,7 +70,7 @@ async function deleteOrgApiKey(
 function registerSimpleKeyRoutes(
   path: string,
   getEncrypted: (settings: Awaited<ReturnType<typeof getOrgAiSettingsForUser>>) => string | null | undefined,
-  column: "encryptedOpenaiApiKey" | "encryptedAnthropicApiKey",
+  column: "encryptedOpenaiApiKey" | "encryptedAnthropicApiKey" | "encryptedOpenrouterApiKey" | "encryptedGroqApiKey" | "encryptedNvidiaApiKey",
   testClient: (key: string) => Promise<void>,
 ) {
   router.get(path, requireAuth, async (req, res) => {
@@ -224,6 +224,39 @@ registerSimpleKeyRoutes(
   async (key) => {
     const { AnthropicClient } = await import("@workspace/ai-providers/anthropic");
     const client = AnthropicClient.create({ apiKey: key });
+    await client.generate({ prompt: "Reply with the single word: ok", maxOutputTokens: 16 });
+  },
+);
+
+registerSimpleKeyRoutes(
+  "/auth/openrouter-credentials",
+  (settings) => settings?.encryptedOpenrouterApiKey,
+  "encryptedOpenrouterApiKey",
+  async (key) => {
+    const { OpenRouterClient } = await import("@workspace/ai-providers/openrouter");
+    const client = OpenRouterClient.create({ apiKey: key });
+    await client.generate({ prompt: "Reply with the single word: ok", maxOutputTokens: 16 });
+  },
+);
+
+registerSimpleKeyRoutes(
+  "/auth/groq-credentials",
+  (settings) => settings?.encryptedGroqApiKey,
+  "encryptedGroqApiKey",
+  async (key) => {
+    const { GroqClient } = await import("@workspace/ai-providers/groq");
+    const client = GroqClient.create({ apiKey: key });
+    await client.generate({ prompt: "Reply with the single word: ok", maxOutputTokens: 16 });
+  },
+);
+
+registerSimpleKeyRoutes(
+  "/auth/nvidia-credentials",
+  (settings) => settings?.encryptedNvidiaApiKey,
+  "encryptedNvidiaApiKey",
+  async (key) => {
+    const { NvidiaClient } = await import("@workspace/ai-providers/nvidia");
+    const client = NvidiaClient.create({ apiKey: key });
     await client.generate({ prompt: "Reply with the single word: ok", maxOutputTokens: 16 });
   },
 );

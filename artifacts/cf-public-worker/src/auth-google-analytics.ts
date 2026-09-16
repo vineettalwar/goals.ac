@@ -149,7 +149,7 @@ export async function handleGoogleAnalyticsAuthStart(
       response_type: "code",
       scope: "https://www.googleapis.com/auth/analytics.readonly",
       access_type: "offline",
-      prompt: "consent",
+      prompt: "select_account consent",
       state,
     });
 

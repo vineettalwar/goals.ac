@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, ListPlus, PenLine, Plus } from "lucide-react";
 import { cn } from "../cn";
 import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop";
+import { chatCapabilityPrompts, type ChatProductSurface } from "@workspace/content-engine/agent-loop";
 import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
 
 type Thread = { id: number; title: string; updatedAt?: string | Date };
@@ -25,9 +26,8 @@ type SeoChatWorkspaceProps = {
   request: (path: string, init?: RequestInit) => Promise<Response>;
   studioHref: (pieceId?: number) => string;
   actionsHref: string;
+  surface?: ChatProductSurface;
 };
-
-const SUGGESTIONS = ["What's slipping?", "CTR gaps", "Brief for [keyword]", "Relaunch risk for [url]"];
 
 function runInspectorHref(actionsHref: string, runId: number): string {
   return `${actionsHref}${actionsHref.includes("?") ? "&" : "?"}runId=${runId}`;
@@ -53,6 +53,7 @@ export function SeoChatWorkspace({
   request,
   studioHref,
   actionsHref,
+  surface = "full",
 }: SeoChatWorkspaceProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [threadId, setThreadId] = useState<number | null>(null);
@@ -314,16 +315,23 @@ export function SeoChatWorkspace({
             <h1 className="mb-7 text-center text-4xl font-normal tracking-tight text-foreground">
               Where should we start?
             </h1>
-            <div className="mb-9 flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="rounded-full bg-secondary/80 px-3.5 py-1.5 text-xs text-foreground transition-colors duration-150 ease-out hover:bg-secondary active:scale-[0.97]"
-                  onClick={() => void send(prompt)}
-                >
-                  {prompt}
-                </button>
+            <div className="mb-9 flex max-w-3xl flex-col items-center gap-5">
+              {chatCapabilityPrompts(surface).map((group) => (
+                <div key={group.label} className="flex flex-col items-center gap-2">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{group.label}</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {group.prompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        className="rounded-full bg-secondary/80 px-3.5 py-1.5 text-xs text-foreground transition-colors duration-150 ease-out hover:bg-secondary active:scale-[0.97]"
+                        onClick={() => void send(prompt)}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
             <div className="w-full max-w-3xl">{composer}</div>
@@ -646,6 +654,19 @@ function ChatCard({
           <button type="button" className="border px-2 py-1 text-[11px]" onClick={() => onAction(`decision: discarded draft ${card.contentPieceId}`)}>
             Discard
           </button>
+        </div>
+      </div>
+    );
+  }
+  if (card.kind === "nav_link") {
+    return (
+      <div className="rounded-2xl bg-secondary p-3 text-sm">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
+        <p className="mt-1 text-muted-foreground">{card.reason}</p>
+        <div className="mt-2">
+          <a href={card.href} className="border px-2 py-1 text-[11px]">
+            Open
+          </a>
         </div>
       </div>
     );

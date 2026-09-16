@@ -17,6 +17,9 @@ describe("AI tier routing", () => {
       expect(modelForTier("gemini", tier)).toBe(TIER_MODELS.gemini[tier]);
       expect(modelForTier("anthropic", tier)).toBe(TIER_MODELS.anthropic[tier]);
       expect(modelForTier("openai", tier)).toBe(TIER_MODELS.openai[tier]);
+      expect(modelForTier("openrouter", tier)).toBe(TIER_MODELS.openrouter[tier]);
+      expect(modelForTier("groq", tier)).toBe(TIER_MODELS.groq[tier]);
+      expect(modelForTier("nvidia", tier)).toBe(TIER_MODELS.nvidia[tier]);
     }
   });
 
@@ -28,5 +31,8 @@ describe("AI tier routing", () => {
   it("modelForProviderTier returns tier models for direct API providers", () => {
     expect(modelForProviderTier("openai", "execution")).toBe(TIER_MODELS.openai.execution);
     expect(modelForProviderTier("anthropic", "rapid")).toBe(TIER_MODELS.anthropic.rapid);
+    expect(modelForProviderTier("openrouter", "execution")).toBe(TIER_MODELS.openrouter.execution);
+    expect(modelForProviderTier("groq", "rapid")).toBe(TIER_MODELS.groq.rapid);
+    expect(modelForProviderTier("nvidia", "execution")).toBe(TIER_MODELS.nvidia.execution);
   });
 });

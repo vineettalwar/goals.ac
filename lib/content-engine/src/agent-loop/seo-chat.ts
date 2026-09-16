@@ -21,6 +21,7 @@ import {
   type SeoChatChip,
   type SeoChatStreamEvent,
 } from "./seo-chat-format";
+import { resolveToolNavHref } from "./chat-catalog";
 
 export {
   CHAT_AGENT_LOOP_CAPS,
@@ -118,6 +119,7 @@ function chunkText(text: string, size = 48): string[] {
 
 async function cardsFromRun(run: {
   id?: number;
+  websiteProjectId: number;
   status: string;
   contentPieceId?: number | null;
   trajectory: TrajectoryStep[];
@@ -167,6 +169,15 @@ async function cardsFromRun(run: {
 
   if (run.status === "awaiting_approval" && run.id) {
     cards.push({ kind: "publish_gate", runId: run.id, contentPieceId: run.contentPieceId ?? null });
+  }
+
+  const seenNav = new Set<string>();
+  for (const step of run.trajectory) {
+    if (!step.tool) continue;
+    const nav = resolveToolNavHref(step.tool, run.websiteProjectId, `/projects/${run.websiteProjectId}/content-studio`);
+    if (!nav || seenNav.has(nav.href)) continue;
+    seenNav.add(nav.href);
+    cards.push({ kind: "nav_link", title: nav.title, href: nav.href, reason: nav.reason });
   }
   return cards;
 }
@@ -327,7 +338,7 @@ export async function runSeoChatTurn(input: {
     userId: input.userId,
     goal,
     stepBudget: CHAT_AGENT_LOOP_CAPS.stepBudget,
-    policy: { maxCredits: CHAT_AGENT_LOOP_CAPS.maxCredits },
+    policy: { maxCredits: CHAT_AGENT_LOOP_CAPS.maxCredits, plannerMode: "hybrid" },
     sink,
   });
 

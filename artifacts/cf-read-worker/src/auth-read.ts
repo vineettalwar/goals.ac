@@ -35,6 +35,18 @@ const ORG_KEY_ROUTES: OrgKeyRoute[] = [
     getEncrypted: (settings) => settings?.encryptedOpenaiApiKey,
   },
   {
+    path: "/api/auth/openrouter-credentials",
+    getEncrypted: (settings) => settings?.encryptedOpenrouterApiKey,
+  },
+  {
+    path: "/api/auth/groq-credentials",
+    getEncrypted: (settings) => settings?.encryptedGroqApiKey,
+  },
+  {
+    path: "/api/auth/nvidia-credentials",
+    getEncrypted: (settings) => settings?.encryptedNvidiaApiKey,
+  },
+  {
     path: "/api/auth/anthropic-credentials",
     getEncrypted: (settings) => settings?.encryptedAnthropicApiKey,
   },
