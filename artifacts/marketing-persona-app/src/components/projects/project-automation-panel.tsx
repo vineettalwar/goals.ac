@@ -179,25 +179,13 @@ export function ProjectAutomationPanel({ projectId }: Props) {
   return (
     <div className="space-y-10">
       <section>
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 max-w-prose">
-            <h2 className="font-semibold tracking-tight">Content Autopilot</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cadence + review queue — not unattended spam. Writes the next due calendar topic, or
-              queues one keyword / cold-start topic for today when the calendar is empty. Live
-              publish still needs a connected CMS; review gates still apply.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <Label htmlFor="autopilot-enabled" className="text-sm font-medium">
-              {autopilot.enabled ? "On" : "Off"}
-            </Label>
-            <Switch
-              id="autopilot-enabled"
-              checked={autopilot.enabled}
-              onCheckedChange={(checked) => setAutopilot((p) => ({ ...p, enabled: checked }))}
-            />
-          </div>
+        <header className="max-w-prose">
+          <h2 className="font-semibold tracking-tight">Content Autopilot</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Cadence + review queue — not unattended spam. Writes the next due calendar topic, or
+            queues one keyword / cold-start topic for today when the calendar is empty. Live
+            publish still needs a connected CMS; review gates still apply.
+          </p>
         </header>
 
         <div className="copy-desk-bar mt-5">
@@ -224,6 +212,14 @@ export function ProjectAutomationPanel({ projectId }: Props) {
               <span>Last {new Date(autopilot.lastRunAt).toLocaleString()}</span>
             </>
           ) : null}
+          <div className="ml-auto inline-flex items-center gap-2">
+            <Label htmlFor="autopilot-enabled">{autopilot.enabled ? "On" : "Off"}</Label>
+            <Switch
+              id="autopilot-enabled"
+              checked={autopilot.enabled}
+              onCheckedChange={(checked) => setAutopilot((p) => ({ ...p, enabled: checked }))}
+            />
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
