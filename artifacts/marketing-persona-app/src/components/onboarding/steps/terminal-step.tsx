@@ -4,11 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { completeSession } from "../onboarding-api";
-import {
-  AgentTeamProgress,
-  useAgentTeamState,
-  type AgentTeamState,
-} from "@/components/content/agents";
+import { LoopStepProgress, loopStepsFromTrajectory } from "@workspace/app-shell/studio";
 
 type Piece = {
   id: number;
@@ -17,38 +13,35 @@ type Piece = {
   wordCount: number;
   status: string;
   bodyMarkdown?: string;
-  pieceMetadata?: {
-    agentTeamProgress?: {
-      agents: AgentTeamState;
-      isRunning: boolean;
-      totalElapsedMs?: number;
-      updatedAt: string;
-    };
-  } | null;
+  pieceMetadata?: { agentRunId?: number } | null;
+};
+
+type RunListItem = { id: number; status: string; goalKind: string };
+type AgentRun = {
+  id?: number;
+  status: string;
+  stopReason?: string | null;
+  trajectory: Array<{ tool?: string; decision?: string; summary?: string; error?: string; ok?: boolean }>;
 };
 
 const POLL_MS = 2000;
-const MAX_POLLS = 90; // ~3 minutes with agent team
+const MAX_POLLS = 90;
 
 type Phase = "starting" | "queued" | "writing" | "ready" | "failed";
 
-/**
- * Completion screen: polls the real content piece and shows one-agent-at-a-time
- * progress from piece_metadata.agentTeamProgress while the job runs.
- */
 export function TerminalStep() {
   const [phase, setPhase] = useState<Phase>("starting");
   const [piece, setPiece] = useState<Piece | null>(null);
+  const [run, setRun] = useState<AgentRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<number | null>(null);
   const pollCount = useRef(0);
-  const agentTeam = useAgentTeamState();
 
   async function start() {
     setPhase("starting");
     setError(null);
     pollCount.current = 0;
-    agentTeam.reset();
+    setRun(null);
     try {
       const result = await completeSession();
       setProjectId(result.projectId);
@@ -65,6 +58,25 @@ export function TerminalStep() {
     }
   }
 
+  async function loadLatestRun(pid: number, pieceRow: Piece | null): Promise<AgentRun | null> {
+    const stamped = pieceRow?.pieceMetadata?.agentRunId;
+    if (stamped) {
+      const res = await fetch(`/api/agent-runs/${stamped}`);
+      if (res.ok) {
+        const data = (await res.json()) as { run: AgentRun };
+        return data.run;
+      }
+    }
+    const listRes = await fetch(`/api/website-projects/${pid}/agent-runs`);
+    if (!listRes.ok) return null;
+    const data = (await listRes.json()) as { runs?: RunListItem[] };
+    const latest = (data.runs ?? []).find((row) => row.goalKind === "research_then_draft");
+    if (!latest) return null;
+    const res = await fetch(`/api/agent-runs/${latest.id}`);
+    if (!res.ok) return null;
+    return ((await res.json()) as { run: AgentRun }).run;
+  }
+
   async function poll(pid: number, contentItemId: number) {
     for (;;) {
       if (pollCount.current >= MAX_POLLS) {
@@ -77,37 +89,23 @@ export function TerminalStep() {
         const res = await fetch(`/api/content-pieces?websiteProjectId=${pid}`);
         if (res.ok) {
           const { pieces } = (await res.json()) as { pieces: Piece[] };
-          const match = pieces.find((p) => p.contentItemId === contentItemId);
-          if (match) {
-            setPiece(match);
-            const progress = match.pieceMetadata?.agentTeamProgress;
-            if (progress?.agents) {
-              agentTeam.hydrate({
-                agents: progress.agents,
-                isRunning: progress.isRunning,
-                totalElapsedMs: progress.totalElapsedMs,
-              });
-            } else if (match.status === "generating") {
-              agentTeam.handleEvent({ type: "pipeline_start", totalAgents: 8 });
-            }
+          const match = pieces.find((p) => p.contentItemId === contentItemId) ?? null;
+          if (match) setPiece(match);
+          const latestRun = await loadLatestRun(pid, match);
+          if (latestRun) setRun(latestRun);
 
-            if (
-              match.wordCount > 0 ||
-              (match.status !== "draft" && match.status !== "generating") ||
-              match.bodyMarkdown
-            ) {
-              if (match.status === "failed") {
-                setPhase("failed");
-                setError("Generation failed. You can try again.");
-                return;
-              }
-              if (match.wordCount > 0 || match.bodyMarkdown) {
-                setPhase("ready");
-                return;
-              }
+          if (match) {
+            if (match.status === "failed" || latestRun?.status === "failed") {
+              setPhase("failed");
+              setError(latestRun?.stopReason ?? "Generation failed. You can try again.");
+              return;
             }
-            setPhase("writing");
+            if (match.wordCount > 0 || match.bodyMarkdown) {
+              setPhase("ready");
+              return;
+            }
           }
+          setPhase("writing");
         }
       } catch {
         // transient, keep polling
@@ -159,12 +157,11 @@ export function TerminalStep() {
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
       <p className="text-sm text-muted-foreground">
-        {phase === "starting" ? "Starting your first article…" : "Agent team writing your first article…"}
+        {phase === "starting" ? "Starting your first article…" : "Employee loop drafting your first article…"}
       </p>
-      <AgentTeamProgress
-        agentState={agentTeam.state}
-        isRunning={agentTeam.isRunning || phase === "writing" || phase === "queued"}
-        totalElapsedMs={agentTeam.totalElapsedMs}
+      <LoopStepProgress
+        steps={loopStepsFromTrajectory(run?.trajectory ?? [], run?.status)}
+        isRunning={phase === "writing" || phase === "queued" || run?.status === "running"}
       />
     </div>
   );

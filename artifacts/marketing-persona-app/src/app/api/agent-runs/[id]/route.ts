@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { agentRunsTable } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
+import { presentAgentRun } from "@workspace/content-engine/agent-loop";
 
 export async function GET(
   _req: Request,
@@ -21,5 +22,5 @@ export async function GET(
   const access = await requireProjectAccess(run.websiteProjectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  return NextResponse.json({ run });
+  return NextResponse.json({ run: presentAgentRun(run) });
 }

@@ -77,6 +77,8 @@ export type TrajectoryStep = {
   evidenceRefs?: EvidenceRef[];
   ok?: boolean;
   summary?: string;
+  /** Tool/stop error text. Separate from summary so the UI can inspect failures. */
+  error?: string;
   creditsSpent?: number;
 };
 

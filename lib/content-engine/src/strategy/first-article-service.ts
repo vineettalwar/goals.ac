@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import {
   contentItemsTable,
   contentPiecesTable,
+  contentStrategiesTable,
   keywordOpportunitiesTable,
 } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
@@ -15,6 +16,8 @@ import { logger } from "../core/logger";
 // content-engine's own wider ContentPieceMetadata (content-piece-seo.ts), so reading
 // these two fields back needs that wider type, not the db-declared one.
 import type { ContentPieceMetadata as GeneratedPieceMetadata } from "../content/content-piece-seo";
+import { listAgentRunsForProject, loadAgentRun } from "../agent-loop/persist";
+import { presentAgentRun } from "../agent-loop/present-run";
 
 /**
  * D4 onboarding entry point: generate a firm's first article from a chosen keyword
@@ -135,7 +138,8 @@ export interface FirstArticleProgress {
   forbiddenClaimHitCount: number;
   publishedUrl: string | null;
   publishError: string | null;
-  agentTeamProgress?: GeneratedPieceMetadata["agentTeamProgress"] | null;
+  agentRunId?: number | null;
+  agentRun?: ReturnType<typeof presentAgentRun> | null;
   pieceStatus?: string | null;
   wordCount?: number;
   title?: string | null;
@@ -159,11 +163,17 @@ export async function getFirstArticleProgress(
   contentItemId: number,
 ): Promise<FirstArticleProgress> {
   const [item] = await db
-    .select({ status: contentItemsTable.status })
+    .select({ status: contentItemsTable.status, strategyId: contentItemsTable.strategyId })
     .from(contentItemsTable)
     .where(eq(contentItemsTable.id, contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
+
+  const [strategy] = await db
+    .select({ websiteProjectId: contentStrategiesTable.websiteProjectId })
+    .from(contentStrategiesTable)
+    .where(eq(contentStrategiesTable.id, item.strategyId))
+    .limit(1);
 
   const [piece] = await db
     .select({
@@ -182,6 +192,16 @@ export async function getFirstArticleProgress(
     .limit(1);
 
   const metadata = piece?.pieceMetadata as GeneratedPieceMetadata | null | undefined;
+  let agentRun = null;
+  const stampedId = metadata?.agentRunId;
+  if (stampedId) {
+    const row = await loadAgentRun(stampedId);
+    if (row) agentRun = presentAgentRun(row);
+  } else if (strategy?.websiteProjectId) {
+    const rows = await listAgentRunsForProject(strategy.websiteProjectId, 8);
+    const latest = rows.find((row: { goalKind: string }) => row.goalKind === "research_then_draft");
+    if (latest) agentRun = presentAgentRun(latest);
+  }
 
   return {
     status: item.status,
@@ -190,7 +210,8 @@ export async function getFirstArticleProgress(
     forbiddenClaimHitCount: metadata?.forbiddenClaimHits?.length ?? 0,
     publishedUrl: piece?.publishedUrl ?? null,
     publishError: piece?.publishError ?? null,
-    agentTeamProgress: metadata?.agentTeamProgress ?? null,
+    agentRunId: agentRun?.id ?? stampedId ?? null,
+    agentRun,
     pieceStatus: piece?.status ?? null,
     wordCount: piece?.wordCount ?? 0,
     title: piece?.title ?? null,

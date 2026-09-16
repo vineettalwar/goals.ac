@@ -1,5 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
+import { presentAgentRun, presentAgentRunListItem } from "@workspace/content-engine/agent-loop";
 import { db } from "./db";
 import { agentActionItemsTable, agentRunsTable } from "@workspace/db/schema-sqlite";
 import { getAccessibleProject } from "./project-access";
@@ -43,7 +44,7 @@ export async function handleAgentLoopRead(
       .where(eq(agentRunsTable.websiteProjectId, projectId))
       .orderBy(desc(agentRunsTable.createdAt))
       .limit(30);
-    return withCors(request, Response.json({ runs }));
+    return withCors(request, Response.json({ runs: runs.map(presentAgentRunListItem) }));
   }
 
   const runMatch = path.match(/^\/api\/agent-runs\/(\d+)$/);
@@ -57,7 +58,7 @@ export async function handleAgentLoopRead(
     if (!project) {
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
-    return withCors(request, Response.json({ run }));
+    return withCors(request, Response.json({ run: presentAgentRun(run) }));
   }
 
   return null;

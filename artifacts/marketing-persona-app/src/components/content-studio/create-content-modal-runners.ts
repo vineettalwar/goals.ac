@@ -67,7 +67,6 @@ export async function handleGenerateFallback(params: FallbackParams): Promise<Co
       briefId: briefId ?? undefined,
       cmsCategories: trimmedSection ? [trimmedSection] : undefined,
       cmsTags: undefined,
-      ...(useAgentTeam ? { useAgentTeam: true, agentFastMode: agentFastMode || undefined } : {}),
       ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
       ...competitorGenerateFields(),
       ...(showBedrockModelPicker && bedrockModel.trim()

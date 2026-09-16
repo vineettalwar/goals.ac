@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { syncActionQueueFromSignals } from "@workspace/content-engine/agent-loop";
+import { executeStoredAgentRun, startOpportunityScanRun } from "@workspace/content-engine/agent-loop";
 
 export async function POST(
   _req: Request,
@@ -17,6 +17,21 @@ export async function POST(
   const access = await requireProjectAccess(projectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  const result = await syncActionQueueFromSignals(projectId);
-  return NextResponse.json(result);
+  try {
+    const started = await startOpportunityScanRun({ projectId, userId: userId! });
+    const run = await executeStoredAgentRun({
+      runId: started.runId,
+      projectId,
+      userId: userId!,
+      goal: {
+        kind: "opportunity_scan",
+        text: "Score GSC and persist the action queue",
+        projectId,
+      },
+    });
+    return NextResponse.json({ runId: started.runId, status: run.status, stopReason: run.stopReason });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Sync failed";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
