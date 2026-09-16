@@ -23,6 +23,7 @@ export const CF_EDGE_PROCESS_ENV_KEYS = [
   "META_APP_SECRET",
   "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
   "BLUESKY_CLIENT_NAME",
+  "PUBLISH_ALERT_WEBHOOK_URL",
 ] as const;
 
 export type CfWorkerProcessEnvKey = (typeof CF_EDGE_PROCESS_ENV_KEYS)[number];

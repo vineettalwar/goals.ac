@@ -23,6 +23,7 @@ describe("copyCfWorkerProcessEnv", () => {
         "META_APP_ID",
         "META_APP_SECRET",
         "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
+        "PUBLISH_ALERT_WEBHOOK_URL",
       ]),
     );
   });

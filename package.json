@@ -37,6 +37,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "parity:matrix": "node scripts/generate-parity-matrix.mjs",
+    "parity:gate": "node scripts/parity-gate.mjs",
     "parity:smoke": "node scripts/parity-smoke.mjs"
   },
   "private": true,

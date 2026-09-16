@@ -206,6 +206,16 @@ export async function requireProjectAccess(
   return { ok: true };
 }
 
+export async function requireBoundProjectAccess(
+  websiteProjectId: number | null | undefined,
+  userId: number,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  if (websiteProjectId == null) {
+    return { ok: false, status: 404, error: "Not found" };
+  }
+  return requireProjectAccess(websiteProjectId, userId);
+}
+
 export async function getAccessibleProject(projectId: number, userId: number) {
   const access = await requireProjectAccess(projectId, userId);
   if (!access.ok) return null;

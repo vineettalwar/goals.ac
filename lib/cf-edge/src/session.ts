@@ -8,6 +8,7 @@ import {
   assertMfaCompliance,
   clientIpFromRequest,
   isWorkerMfaExemptPath,
+  sessionExpired,
 } from "./org-security";
 import { assertOrgNotSuspended, getOrgMembership } from "./project-access";
 
@@ -56,6 +57,10 @@ export async function requireWorkerSession(
     );
     if (!ipCheck.ok) {
       return { ok: false, status: 403, error: ipCheck.error };
+    }
+
+    if (sessionExpired(session.iat, membership.securitySettings?.maxSessionAgeHours)) {
+      return { ok: false, status: 401, error: "Session expired" };
     }
 
     const path = options?.path ?? ((new URL(request.url).pathname.replace(/\/+$/, "") || "/"));

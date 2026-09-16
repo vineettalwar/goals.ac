@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPageClient titleLine1="Terms of" titleLine2="service" lastUpdated="July 5, 2026">
+    <LegalPageClient titleLine1="Terms of" titleLine2="service" lastUpdated="September 16, 2026">
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">1. Service description</h2>
         <p className="text-sm text-white/65 leading-relaxed">
@@ -36,7 +36,7 @@ export default function TermsPage() {
           You agree not to use the platform to generate or publish unlawful, defamatory, deceptive,
           infringing, or harmful content; to attempt to circumvent quota, rate-limit, or security
           controls; to resell or sublicense access without authorization; or to use the service in a way
-          that violates Google&apos;s Gemini API usage policies. We may suspend or terminate access for
+          that violates our providers&apos; acceptable-use policies (including Google, Anthropic, OpenAI, and AWS where used). We may suspend or terminate access for
           abuse, security risk, non-payment, or repeated policy violations.
         </p>
       </section>
@@ -56,13 +56,7 @@ export default function TermsPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">5. Plans, quotas, and billing</h2>
         <p className="text-sm text-white/65 leading-relaxed">
-          The Starter plan includes a limited number of platform-billed article generations per calendar
-          month; Growth and Scale plans include higher or unlimited monthly quotas. If you provide your
-          own Gemini API key (Bring Your Own Key, or &quot;BYOK&quot;), generations made with that key are
-          not counted against your plan&apos;s quota, and any usage fees are billed to you directly by
-          Google. Quotas reset at the start of each calendar month. We may introduce paid billing (e.g.,
-          via Stripe) for paid tiers in the future; you will be notified of any material pricing changes
-          before they take effect.
+          Paid plans are billed through Stripe. Checkout collects a billing address and tax ID where required so Stripe Tax can apply VAT. If you provide your own AI API key (BYOK), generations with that key are billed by the provider to you and may not count against platform credits. Quotas reset on the billing cycle shown in the product. Material pricing changes are announced before they take effect.
         </p>
       </section>
 

@@ -1,5 +1,10 @@
 import { db } from "./db";
-import { usersTable, organizationsTable, organizationMembersTable } from "@workspace/db/schema-sqlite";
+import {
+  usersTable,
+  organizationsTable,
+  organizationMembersTable,
+  websiteProjectsTable,
+} from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import type { SessionClaims } from "@workspace/cf-edge/jwt";
 import { withCors } from "@workspace/cf-edge/cors";
@@ -101,6 +106,51 @@ export async function handleSessionRead(
         organizationName,
         impersonation,
         supportOrganization,
+      }),
+    );
+  }
+
+  if (path === "/api/auth/me/export" && request.method === "GET") {
+    const [user] = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        createdAt: usersTable.createdAt,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    if (!user) {
+      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    }
+    const projects = await db
+      .select({
+        id: websiteProjectsTable.id,
+        name: websiteProjectsTable.name,
+        url: websiteProjectsTable.url,
+      })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.userId, userId));
+    const memberships = await db
+      .select({
+        organizationId: organizationMembersTable.organizationId,
+        role: organizationMembersTable.role,
+        organizationName: organizationsTable.name,
+      })
+      .from(organizationMembersTable)
+      .innerJoin(
+        organizationsTable,
+        eq(organizationsTable.id, organizationMembersTable.organizationId),
+      )
+      .where(eq(organizationMembersTable.userId, userId));
+    return withCors(
+      request,
+      Response.json({
+        exportedAt: new Date().toISOString(),
+        user,
+        projects,
+        organizations: memberships,
       }),
     );
   }

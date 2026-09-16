@@ -3,14 +3,13 @@ import { db } from "./db";
 import {
   apiKeysTable,
   companiesTable,
-  conversations,
   marketingPersonasTable,
   seoArticlesTable,
 } from "@workspace/db/schema-sqlite";
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
-import { requireSiteAdminAccess } from "@workspace/cf-edge/project-access";
+import { requireBoundProjectAccess, requireSiteAdminAccess } from "@workspace/cf-edge/project-access";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { getAccessibleProject, parsePositiveInt } from "./project-access";
+import { parsePositiveInt } from "./project-access";
 
 export async function handleLegacyRead(
   request: Request,
@@ -29,12 +28,7 @@ export async function handleLegacyRead(
   }
 
   if (path === "/api/conversations" && method === "GET") {
-    const list = await db
-      .select()
-      .from(conversations)
-      .orderBy(desc(conversations.createdAt))
-      .limit(50);
-    return withCors(request, Response.json({ conversations: list }));
+    return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
   }
 
   if (path === "/api/personas" && method === "GET") {
@@ -107,11 +101,9 @@ export async function handleLegacyRead(
       return withCors(request, Response.json({ error: "Article not found" }, { status: 404 }));
     }
 
-    if (article.websiteProjectId) {
-      const project = await getAccessibleProject(article.websiteProjectId, userId);
-      if (!project) {
-        return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
-      }
+    const access = await requireBoundProjectAccess(article.websiteProjectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
 
     return withCors(request, Response.json(article));

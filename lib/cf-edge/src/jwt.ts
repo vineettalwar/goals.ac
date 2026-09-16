@@ -15,6 +15,7 @@ export type SessionClaims = {
   supportOrganizationId?: number | null;
   supportOrganizationName?: string | null;
   mfaVerified?: boolean;
+  iat?: number;
 };
 
 /** Verify NextAuth JWT from request cookie (requires AUTH_SECRET + nodejs_compat). */
@@ -42,5 +43,6 @@ export async function verifySessionClaims(
     supportOrganizationId: (token.supportOrganizationId as number | null) ?? null,
     supportOrganizationName: (token.supportOrganizationName as string | null) ?? null,
     mfaVerified: Boolean(token.mfaVerified),
+    iat: typeof token.iat === "number" ? token.iat : undefined,
   };
 }

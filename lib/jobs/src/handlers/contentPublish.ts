@@ -505,6 +505,24 @@ async function notifyPublishDeadLetter(
       <p><a href="${pieceUrl}">View content</a></p>
     `,
   });
+
+  const webhook = process.env.PUBLISH_ALERT_WEBHOOK_URL?.trim();
+  if (webhook) {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "content_publish_dead_letter",
+        contentPieceId,
+        websiteProjectId,
+        projectName,
+        error: error.slice(0, 500),
+        pieceUrl,
+      }),
+    }).catch((err) => {
+      logger.error({ err, contentPieceId }, "Publish alert webhook failed");
+    });
+  }
 }
 
 export { publishPiece, PUBLISH_MAX_ATTEMPTS };

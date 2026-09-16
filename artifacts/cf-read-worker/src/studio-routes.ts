@@ -17,6 +17,7 @@ import {
 } from "@workspace/db/schema-sqlite";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
+import { requireBoundProjectAccess } from "@workspace/cf-edge/project-access";
 import { getAccessibleProject, requireProjectAccess } from "./project-access";
 
 export async function handleStudioRead(
@@ -63,6 +64,10 @@ export async function handleStudioRead(
       .limit(1);
     if (!strategy) {
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    }
+    const access = await requireBoundProjectAccess(strategy.websiteProjectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
     const items = await db
       .select()

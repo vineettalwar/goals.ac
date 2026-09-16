@@ -126,7 +126,9 @@ Each stage is a pure function, can be executed as a pg-boss job. The canonical c
 
 ## Running Locally
 
-The **Next.js app** (`marketing-persona-app` on :3001) is the canonical product. Legacy Vite + Express remain available for opt-in local testing but are no longer started by default in Docker.
+The **Next.js app** (`marketing-persona-app` on :3001) is the **local reference** for product UI and API handlers. **Production** is Cloudflare Edge Mesh (`cf-gateway` → public/read/write workers + `goals-app-ui`). Do not port new APIs into `artifacts/api-server` or `artifacts/goals-ac`. A change is shipped when it lands on workers/Pages.
+
+Legacy Vite + Express remain available for opt-in local testing but are frozen.
 
 | App | URL | Purpose |
 |---|---|---|

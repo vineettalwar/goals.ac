@@ -31,10 +31,21 @@ export function corsHeaders(
   return headers;
 }
 
+const SECURITY_HEADERS: Record<string, string> = {
+  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+};
+
 export function withCors(request: Request, response: Response): Response {
   const headers = new Headers(response.headers);
   for (const [k, v] of Object.entries(corsHeaders(request))) {
     headers.set(k, v);
+  }
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    if (!headers.has(k)) headers.set(k, v);
   }
   return new Response(response.body, {
     status: response.status,

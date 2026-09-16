@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { requireProjectAccess } from "@/lib/projects/project-access";
+import { requireBoundProjectAccess } from "@/lib/org/org-access";
 
 export async function GET(
   _req: Request,
@@ -25,10 +25,8 @@ export async function GET(
 
     if (!audit) return NextResponse.json({ error: "GEO audit not found" }, { status: 404 });
 
-    if (audit.websiteProjectId) {
-      const access = await requireProjectAccess(audit.websiteProjectId, userId!);
-      if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
-    }
+    const access = await requireBoundProjectAccess(audit.websiteProjectId, userId!);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
     return NextResponse.json(audit);
   } catch {

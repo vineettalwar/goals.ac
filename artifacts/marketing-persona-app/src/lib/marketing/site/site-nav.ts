@@ -146,6 +146,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },
       { label: "Privacy", href: "/privacy" },
+      { label: "Subprocessors", href: "/subprocessors" },
+      { label: "Cookies", href: "/cookies" },
       { label: "Terms", href: "/terms" },
       { label: "Imprint", href: "/imprint" },
     ],

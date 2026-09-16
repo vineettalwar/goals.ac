@@ -42,6 +42,7 @@ declare module "next-auth" {
       orgRole: OrgMemberRole | null;
     };
     mfaVerified?: boolean;
+    issuedAt?: number;
     impersonation?: {
       adminId: string;
       adminEmail: string;
@@ -337,6 +338,7 @@ const nextAuth = NextAuth({
       session.user.organizationId = authToken.organizationId ?? null;
       session.user.orgRole = authToken.orgRole ?? null;
       session.mfaVerified = authToken.mfaVerified ?? true;
+      session.issuedAt = typeof token.iat === "number" ? token.iat : undefined;
       session.impersonation = authToken.impersonatorId
         ? {
             adminId: authToken.impersonatorId,

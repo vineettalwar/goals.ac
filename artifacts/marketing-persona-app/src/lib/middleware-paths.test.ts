@@ -9,6 +9,8 @@ describe("isPublicPath", () => {
   it("treats marketing legal pages as public (no platform-status soft-nav tax)", () => {
     expect(isPublicPath("/terms")).toBe(true);
     expect(isPublicPath("/privacy")).toBe(true);
+    expect(isPublicPath("/cookies")).toBe(true);
+    expect(isPublicPath("/subprocessors")).toBe(true);
     expect(isPublicPath("/imprint")).toBe(true);
     expect(isPublicPath("/about")).toBe(true);
     expect(isPublicPath("/features")).toBe(true);

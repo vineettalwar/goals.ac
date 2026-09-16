@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, keywordAnalysesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { requireProjectAccess } from "@/lib/projects/project-access";
+import { requireBoundProjectAccess } from "@/lib/org/org-access";
 
 export async function GET(
   _req: Request,
@@ -22,10 +22,8 @@ export async function GET(
 
   if (!row) return NextResponse.json({ error: "Keyword analysis not found" }, { status: 404 });
 
-  if (row.websiteProjectId) {
-    const access = await requireProjectAccess(row.websiteProjectId, userId!);
-    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
-  }
+  const access = await requireBoundProjectAccess(row.websiteProjectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   return NextResponse.json({ id: row.id, ...row.result, createdAt: row.createdAt });
 }

@@ -1,7 +1,8 @@
 import { db } from "./db";
 import { geoAuditsTable, competitorAnalysesTable } from "@workspace/db/schema-sqlite";
-import { desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
+import { requireBoundProjectAccess } from "@workspace/cf-edge/project-access";
 import {
   getAccessibleProject,
   listAccessibleProjectIds,
@@ -25,12 +26,7 @@ export async function handleAnalysisRead(
       const audits = await db
         .select()
         .from(geoAuditsTable)
-        .where(
-          or(
-            eq(geoAuditsTable.websiteProjectId, projectId),
-            isNull(geoAuditsTable.websiteProjectId),
-          ),
-        )
+        .where(eq(geoAuditsTable.websiteProjectId, projectId))
         .orderBy(desc(geoAuditsTable.createdAt))
         .limit(50);
       return withCors(request, Response.json({ audits }));
@@ -41,12 +37,7 @@ export async function handleAnalysisRead(
         : await db
             .select()
             .from(geoAuditsTable)
-            .where(
-              or(
-                inArray(geoAuditsTable.websiteProjectId, projectIds),
-                isNull(geoAuditsTable.websiteProjectId),
-              ),
-            )
+            .where(inArray(geoAuditsTable.websiteProjectId, projectIds))
             .orderBy(desc(geoAuditsTable.createdAt))
             .limit(50);
     return withCors(request, Response.json({ audits }));
@@ -55,7 +46,6 @@ export async function handleAnalysisRead(
   const geoAuditMatch = path.match(/^\/api\/geo-audits\/(\d+)$/);
   if (geoAuditMatch && request.method === "GET") {
     const id = Number.parseInt(geoAuditMatch[1]!, 10);
-    const projectIds = await listAccessibleProjectIds(userId);
     const [audit] = await db
       .select()
       .from(geoAuditsTable)
@@ -64,11 +54,9 @@ export async function handleAnalysisRead(
     if (!audit) {
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
-    if (
-      audit.websiteProjectId != null &&
-      !projectIds.includes(audit.websiteProjectId)
-    ) {
-      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    const access = await requireBoundProjectAccess(audit.websiteProjectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
     return withCors(request, Response.json(audit));
   }
@@ -125,11 +113,9 @@ export async function handleAnalysisRead(
       return withCors(request, Response.json({ error: "Competitor analysis not found" }, { status: 404 }));
     }
 
-    if (row.websiteProjectId) {
-      const access = await getAccessibleProject(row.websiteProjectId, userId);
-      if (!access) {
-        return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-      }
+    const access = await requireBoundProjectAccess(row.websiteProjectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
 
     return withCors(

@@ -4,6 +4,7 @@ import {
   resolveProviderId,
   type AiProviderOptions,
 } from "@workspace/ai-providers";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 export type ThreatLevel = "low" | "medium" | "high";
 
@@ -19,6 +20,7 @@ export type CompetitorAnalysisResult = {
 };
 
 export async function scrapeCompetitorText(url: string): Promise<string> {
+  await assertPublicUrl(url);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {

@@ -17,10 +17,10 @@ import { generateApiKey } from "@workspace/content-engine/support/auth/api-key-a
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import { encryptSecret } from "@workspace/security/encryption";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
-import { getAccessibleProject } from "./project-access";
+import { requireBoundProjectAccess } from "@workspace/cf-edge/project-access";
 
 const geminiKeyBody = z.object({ key: z.string().min(1) });
 
@@ -220,15 +220,7 @@ export async function handleLegacyWrite(
   }
 
   if (path === "/api/conversations" && request.method === "DELETE") {
-    const url = new URL(request.url);
-    const convId = Number.parseInt(url.searchParams.get("id") ?? "", 10);
-    if (!Number.isFinite(convId)) {
-      return withCors(request, Response.json({ error: "Missing conversation id" }, { status: 400 }));
-    }
-
-    await db.delete(messages).where(eq(messages.conversationId, convId));
-    await db.delete(conversations).where(eq(conversations.id, convId));
-    return withCors(request, Response.json({ ok: true }));
+    return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
   }
 
   if (path === "/api/companies/humanization" && request.method === "POST") {
@@ -371,7 +363,15 @@ export async function handleLegacyWrite(
     const [updated] = await db
       .update(marketingPersonasTable)
       .set(parsed.data)
-      .where(eq(marketingPersonasTable.id, personaId))
+      .where(
+        and(
+          eq(marketingPersonasTable.id, personaId),
+          inArray(
+            marketingPersonasTable.companyId,
+            db.select({ id: companiesTable.id }).from(companiesTable).where(eq(companiesTable.userId, userId)),
+          ),
+        ),
+      )
       .returning();
 
     return withCors(request, Response.json({ persona: updated }));
@@ -390,7 +390,15 @@ export async function handleLegacyWrite(
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
 
-    await db.delete(marketingPersonasTable).where(eq(marketingPersonasTable.id, personaId));
+    await db.delete(marketingPersonasTable).where(
+      and(
+        eq(marketingPersonasTable.id, personaId),
+        inArray(
+          marketingPersonasTable.companyId,
+          db.select({ id: companiesTable.id }).from(companiesTable).where(eq(companiesTable.userId, userId)),
+        ),
+      ),
+    );
     return withCors(request, Response.json({ ok: true }));
   }
 
@@ -415,11 +423,9 @@ export async function handleLegacyWrite(
       return withCors(request, Response.json({ error: "Article not found" }, { status: 404 }));
     }
 
-    if (article.websiteProjectId) {
-      const project = await getAccessibleProject(article.websiteProjectId, userId);
-      if (!project) {
-        return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
-      }
+    const access = await requireBoundProjectAccess(article.websiteProjectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
 
     const updates: Record<string, unknown> = {};

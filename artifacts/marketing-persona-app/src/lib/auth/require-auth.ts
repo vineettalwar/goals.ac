@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { assertOrgNotSuspended, getOrgMembership } from "@/lib/org/org-access";
-import { assertIpAllowed, assertMfaCompliance } from "@/lib/org/org-security";
+import { assertIpAllowed, assertMfaCompliance, sessionExpired } from "@/lib/org/org-security";
 
 export async function requireAuth(options?: { skipMfaCheck?: boolean }) {
   const session = await getSession();
@@ -39,6 +39,14 @@ export async function requireAuth(options?: { skipMfaCheck?: boolean }) {
         session,
         userId,
         error: NextResponse.json({ error: ipCheck.error }, { status: 403 }),
+      };
+    }
+
+    if (sessionExpired(session.issuedAt, membership.securitySettings?.maxSessionAgeHours)) {
+      return {
+        session,
+        userId,
+        error: NextResponse.json({ error: "Session expired" }, { status: 401 }),
       };
     }
 

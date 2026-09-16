@@ -422,6 +422,27 @@ At scale, migrate brand voice retrieval from D1 JSON cosine to **Vectorize**. St
 | `artifacts/goals-app-ui/` | Product SPA on Pages |
 | `lib/cf-edge/` | Shared CORS, JWT, KV cache, queue HTTP helpers |
 | `artifacts/marketing-persona-app/wrangler.jsonc` | Legacy OpenNext Worker (local preview) |
+
+## Backups, alerts, and secret rotation
+
+**D1 backup / restore (ops, not automated in this repo):**
+
+```sh
+# Snapshot (Cloudflare dashboard → D1 → Export, or wrangler)
+npx wrangler d1 export goals-ac --remote --output=./backups/d1-$(date +%Y%m%d).sql
+# Restore into a new database, then point wrangler D1 binding at the restored DB id
+npx wrangler d1 execute goals-ac --remote --file=./backups/d1-YYYYMMDD.sql
+```
+
+Test restore on a throwaway D1 database before you need it.
+
+**Publish paging:** dead-lettered publishes email the project owner via Resend. Set `PUBLISH_ALERT_WEBHOOK_URL` on the jobs worker (Slack/Pager-compatible JSON POST) so a human is paged even when nobody opens the app. Tail workers with `npx wrangler tail goals-ac-jobs`.
+
+**Encryption key rotation:** `GEMINI_KEY_ENCRYPTION_SECRET` derives AES-GCM keys for BYOK and CMS secrets. Changing it without re-encrypting rows makes stored ciphertext unreadable. Procedure: decrypt with the old secret, write with the new secret, then swap the Worker secret. There is no in-app rotation button.
+
+**Parity gate (local, not GitHub Actions):** `pnpm run parity:gate` regenerates `docs/parity-matrix.md` and fails if a required production path is missing from worker sources.
+
+**Feature freeze:** do not port new APIs into `artifacts/api-server` or `artifacts/goals-ac`. New routes land on Cloudflare workers + `lib/*`. Next.js remains a local reference.
 | `artifacts/cf-jobs-worker/wrangler.jsonc` | Jobs Worker: D1, KV, Queues consumer, Cron |
 | `lib/jobs/src/cf-queues.ts` | Queue producer transport (D1 path) |
 | `lib/jobs/src/process-job.ts` | Shared job dispatcher |

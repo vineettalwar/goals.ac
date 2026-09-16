@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   assertMfaCompliance,
+  ipMatchesAllowlist,
   isWorkerMfaExemptPath,
   mfaVerifiedAtLogin,
+  sessionExpired,
   sessionPayloadFromUser,
 } from "./org-security";
 
@@ -75,5 +77,29 @@ describe("isWorkerMfaExemptPath", () => {
     expect(isWorkerMfaExemptPath("/api/auth/me", "GET")).toBe(true);
     expect(isWorkerMfaExemptPath("/api/auth/me", "PATCH")).toBe(false);
     expect(isWorkerMfaExemptPath("/api/website-projects", "GET")).toBe(false);
+  });
+});
+
+describe("ipMatchesAllowlist", () => {
+  it("treats /24 as a real CIDR, not an octet prefix", () => {
+    expect(ipMatchesAllowlist("192.168.1.200", ["192.168.1.0/24"])).toBe(true);
+    expect(ipMatchesAllowlist("192.168.10.1", ["192.168.1.0/24"])).toBe(false);
+  });
+
+  it("matches /32 exactly", () => {
+    expect(ipMatchesAllowlist("10.0.0.5", ["10.0.0.5/32"])).toBe(true);
+    expect(ipMatchesAllowlist("10.0.0.6", ["10.0.0.5/32"])).toBe(false);
+  });
+});
+
+describe("sessionExpired", () => {
+  it("treats JWT iat as unix seconds", () => {
+    const twoHoursAgoSec = Math.floor(Date.now() / 1000) - 2 * 60 * 60;
+    expect(sessionExpired(twoHoursAgoSec, 1)).toBe(true);
+    expect(sessionExpired(twoHoursAgoSec, 24)).toBe(false);
+  });
+
+  it("skips when max age is unset", () => {
+    expect(sessionExpired(1, undefined)).toBe(false);
   });
 });

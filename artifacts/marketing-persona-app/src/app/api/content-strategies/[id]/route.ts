@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { db } from "@workspace/db";
 import { contentStrategiesTable, contentItemsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireProjectAccess } from "@/lib/org/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireBoundProjectAccess } from "@/lib/org/org-access";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
   const { id: idStr } = await params;
   const id = Number(idStr);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid strategy id" }, { status: 400 });
@@ -22,17 +25,9 @@ export async function GET(
 
     if (!strategy) return NextResponse.json({ error: "Content strategy not found" }, { status: 404 });
 
-    if (strategy.websiteProjectId) {
-      const session = await auth();
-      const userId = session?.user?.id ? parseInt(session.user.id, 10) : null;
-      if (!userId) {
-        return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-      }
-
-      const access = await requireProjectAccess(strategy.websiteProjectId, userId);
-      if (!access.ok) {
-        return NextResponse.json({ error: access.error }, { status: access.status });
-      }
+    const access = await requireBoundProjectAccess(strategy.websiteProjectId, userId!);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     const items = await db

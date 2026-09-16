@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { listAccessibleProjects } from "@workspace/cf-edge/project-access";
+import { listAccessibleProjects, requireBoundProjectAccess } from "@workspace/cf-edge/project-access";
 import { db } from "./db";
 import {
   brandProfilesTable,
@@ -232,11 +232,9 @@ export async function handleResearchRead(
       return withCors(request, Response.json({ error: "Keyword analysis not found" }, { status: 404 }));
     }
 
-    if (row.websiteProjectId) {
-      const project = await getAccessibleProject(row.websiteProjectId, userId);
-      if (!project) {
-        return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
-      }
+    const access = await requireBoundProjectAccess(row.websiteProjectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
     }
 
     return withCors(

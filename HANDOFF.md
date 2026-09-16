@@ -1,5 +1,13 @@
 # Session Handoff
 
+## Latest (2026-09-16) — Investor DD remediations
+
+Tenant isolation: bound-project GET/PATCH, no null-project world-reads, conversations 404, persona writes scoped, session age + CIDR, worker security headers, SSRF in competitor scrape. Compliance drafts: privacy/terms/subprocessors/cookies, DPA template, DSAR export, stricter account delete. Ops: `PUBLISH_ALERT_WEBHOOK_URL`, D1 backup notes, `pnpm run parity:gate`, freeze Express/Vite.
+
+**Verify:** `npx vitest run lib/cf-edge lib/seo-tools/src/competitorAnalyzer.test.ts artifacts/cf-read-worker/src/legacy-routes.test.ts artifacts/cf-read-worker/src/jobs-route.test.ts` · `pnpm run parity:gate` · counsel on `docs/legal/dpa-template.md`
+
+Memo: `docs/audits/2026-09-16-investor-diligence.md`
+
 ## Latest (2026-09-15) — SEO chat control plane (P0+P1)
 
 Conversational SEO chat on `/chat` (goals-app-ui + Next). Threads/messages + project memory tables. Each substantive turn calls `runAgentLoop`. SSE tool chips + grounded replies (no fake verified). Draft / Action Queue / trajectory / Studio+Actions deep links. Inline opportunity/draft/readiness/publish-gate cards.

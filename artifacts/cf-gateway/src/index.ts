@@ -67,6 +67,7 @@ function isReadPath(path: string, method: string): boolean {
   }
   if (method === "GET" || method === "HEAD") {
     if (path === "/api/auth/me") return true;
+    if (path === "/api/auth/me/export") return true;
     if (path === "/api/platform/stock-images/status") return true;
     if (path === "/api/auth/api-key") return true;
     if (path === "/api/auth/openai-credentials") return true;
