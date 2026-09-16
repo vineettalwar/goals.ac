@@ -65,6 +65,8 @@ export function SeoChatWorkspace({
   const [liveRunId, setLiveRunId] = useState<number | null>(null);
   const [openRun, setOpenRun] = useState<AgentRunView | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const inspectGen = useRef(0);
+  const sendGen = useRef(0);
 
   const loadThreads = useCallback(async () => {
     if (!projectId) return;
@@ -114,9 +116,11 @@ export function SeoChatWorkspace({
   }, [messages, liveChips, busy, openRun]);
 
   async function inspectRun(runId: number) {
-    setError(null);
+    const gen = ++inspectGen.current;
     const res = await request(`/api/agent-runs/${runId}`);
+    if (gen !== inspectGen.current) return;
     const data = (await res.json().catch(() => null)) as { run?: AgentRunView; error?: string } | null;
+    if (gen !== inspectGen.current) return;
     if (!res.ok || !data?.run) {
       setError(typeof data?.error === "string" ? data.error : "Run lookup failed");
       return;
@@ -146,6 +150,7 @@ export function SeoChatWorkspace({
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || !projectId || busy) return;
+    const gen = ++sendGen.current;
     setBusy(true);
     setError(null);
     setDraft("");
@@ -272,8 +277,10 @@ export function SeoChatWorkspace({
       }
       await loadThreads();
     } catch (err) {
+      if (gen !== sendGen.current) return;
       setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
+      if (gen !== sendGen.current) return;
       setBusy(false);
       setLiveChips([]);
       setLiveRunId(null);
