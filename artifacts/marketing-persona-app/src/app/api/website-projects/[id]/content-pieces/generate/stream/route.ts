@@ -245,10 +245,11 @@ export async function POST(
             userId,
             keyword: targetKeyword,
             caps: STUDIO_AGENT_LOOP_CAPS,
-            onPersist: (run) => {
-              const step = run.trajectory.at(-1);
-              if (step) send("agent", { type: "loop_step", ...step, runStatus: run.status });
-            },
+              onPersist: (run) => {
+                const step = run.trajectory.at(-1);
+                if (!step && run.id) send("agent", { type: "run", agentRunId: run.id, runStatus: run.status });
+                if (step) send("agent", { type: "loop_step", ...step, runStatus: run.status, agentRunId: run.id });
+              },
             generateDraft: async () => {
               let out = await studioDraftFromKeyword({
                 projectId,

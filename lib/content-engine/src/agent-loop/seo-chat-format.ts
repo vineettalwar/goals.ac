@@ -41,7 +41,8 @@ export type ChatIntent =
 
 export type SeoChatStreamEvent =
   | { event: "user"; data: { id: number; content: string } }
-  | { event: "loop_step"; data: { tool?: string; label: string; summary?: string; ok?: boolean } }
+  | { event: "run"; data: { agentRunId: number; status: string } }
+  | { event: "loop_step"; data: { tool?: string; label: string; summary?: string; ok?: boolean; agentRunId?: number } }
   | { event: "delta"; data: { text: string } }
   | { event: "card"; data: SeoChatCard }
   | {
@@ -57,6 +58,11 @@ export type SeoChatStreamEvent =
       };
     }
   | { event: "error"; data: { error: string } };
+
+export function runInspectorHref(actionsHref: string, runId: number): string {
+  const join = actionsHref.includes("?") ? "&" : "?";
+  return `${actionsHref}${join}runId=${runId}`;
+}
 
 const URL_RE = /https?:\/\/[^\s)]+/i;
 

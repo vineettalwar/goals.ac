@@ -31,6 +31,8 @@ Production: CF read/write workers + `goals-app-ui` `/chat`. Local Docker: Next `
 
 Gemini-style center thread, newsprint/ink tokens, IBM Plex chrome, serif only on draft excerpts. Site picker, suggestion chips, Draft / Queue / Trajectory, Continue in Studio, Open in Actions.
 
+Turns that start an AgentLoop emit SSE `run` `{ agentRunId, status }` on the first persist (before tools). The thread’s `last_agent_run_id` is stamped then so Inspect / Show trajectory can bind while the loop is still running. Assistant turns and publish-gate cards open `AgentRunInspector` inline and deep-link to `/search/actions?runId=`.
+
 ## Migrations
 
 Postgres `0082_seo_chat.sql`. D1 `0017_seo_chat.sql`.

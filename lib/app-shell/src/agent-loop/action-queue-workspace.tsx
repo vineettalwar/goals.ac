@@ -38,6 +38,13 @@ type ActionQueueWorkspaceProps = {
   request: (path: string, init?: RequestInit) => Promise<Response>;
 };
 
+function runIdFromLocation(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = new URLSearchParams(window.location.search).get("runId");
+  const id = raw ? Number(raw) : NaN;
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 async function readJson<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => null)) as T & { error?: string };
   if (!res.ok) {
@@ -81,6 +88,23 @@ export function ActionQueueWorkspace({ projectId, request }: ActionQueueWorkspac
   useEffect(() => {
     void load();
   }, [load]);
+
+  const showRun = useCallback(
+    async (runId: number) => {
+      try {
+        const data = await readJson<{ run: AgentRunView }>(await request(`/api/agent-runs/${runId}`));
+        setOpenRun(data.run);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Run lookup failed");
+      }
+    },
+    [request],
+  );
+
+  useEffect(() => {
+    const fromUrl = runIdFromLocation();
+    if (fromUrl) void showRun(fromUrl);
+  }, [projectId, showRun]);
 
   async function sync() {
     if (!projectId) return;
@@ -126,15 +150,6 @@ export function ActionQueueWorkspace({ projectId, request }: ActionQueueWorkspac
       setError(err instanceof Error ? err.message : "Update failed");
     } finally {
       setBusyId(null);
-    }
-  }
-
-  async function showRun(runId: number) {
-    try {
-      const data = await readJson<{ run: AgentRunView }>(await request(`/api/agent-runs/${runId}`));
-      setOpenRun(data.run);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Run lookup failed");
     }
   }
 

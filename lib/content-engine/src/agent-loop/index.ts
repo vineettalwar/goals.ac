@@ -34,6 +34,7 @@ export {
   parseChatIntent,
   goalFromIntent,
   composeGroundedReply,
+  runInspectorHref,
   runSeoChatTurn,
   listSeoChatThreads,
   getSeoChatThread,
