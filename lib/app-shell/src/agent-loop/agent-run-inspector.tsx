@@ -58,8 +58,8 @@ export function AgentRunInspector({
         isRunning={run.status === "running"}
       />
       <ol className="mt-3 list-decimal space-y-2 pl-5 text-muted-foreground">
-        {run.trajectory.map((step, index) => (
-          <li key={`${step.at ?? index}:${step.tool ?? "stop"}:${step.decision ?? ""}`}>
+        {run.trajectory.map((step) => (
+          <li key={`${step.at ?? ""}:${step.tool ?? "stop"}:${step.decision ?? ""}:${step.summary ?? ""}`}>
             <span className={step.ok === false || failed ? "text-destructive" : undefined}>
               {step.tool ?? "stop"} — {step.decision}
               {step.summary ? ` (${step.summary})` : ""}

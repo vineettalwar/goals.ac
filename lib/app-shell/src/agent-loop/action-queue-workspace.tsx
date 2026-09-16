@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentRunInspector, type AgentRunView } from "./agent-run-inspector";
 
 type Evidence = { source?: string; detail?: string; url?: string };
@@ -53,9 +53,11 @@ export function ActionQueueWorkspace({ projectId, request }: ActionQueueWorkspac
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [openRun, setOpenRun] = useState<AgentRunView | null>(null);
+  const loadGen = useRef(0);
 
   const load = useCallback(async () => {
     if (!projectId) return;
+    const gen = ++loadGen.current;
     setLoading(true);
     setError(null);
     try {
@@ -65,12 +67,14 @@ export function ActionQueueWorkspace({ projectId, request }: ActionQueueWorkspac
       ]);
       const actionsData = await readJson<{ items?: ActionItem[] }>(actionsRes);
       const runsData = await readJson<{ runs?: RunListItem[] }>(runsRes);
+      if (gen !== loadGen.current) return;
       setItems(actionsData.items ?? []);
       setRuns(runsData.runs ?? []);
     } catch (err) {
+      if (gen !== loadGen.current) return;
       setError(err instanceof Error ? err.message : "Failed to load actions");
     } finally {
-      setLoading(false);
+      if (gen === loadGen.current) setLoading(false);
     }
   }, [projectId, request]);
 
