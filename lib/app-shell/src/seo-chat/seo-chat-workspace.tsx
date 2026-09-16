@@ -1,8 +1,11 @@
+"use client";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ListPlus, PenLine, Plus, Send } from "lucide-react";
 import { APP_SHELL_PAGE_WIDE } from "../shell-constants";
 import { cn } from "../cn";
 import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop";
+import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
 
 type Thread = { id: number; title: string; updatedAt?: string | Date };
 type ProjectOption = { id: number | string; name: string };
@@ -13,6 +16,7 @@ type ChatMessage = {
   content: string;
   chips?: SeoChatChip[];
   cards?: SeoChatCard[];
+  agentRunId?: number | null;
 };
 
 type SeoChatWorkspaceProps = {
@@ -25,6 +29,23 @@ type SeoChatWorkspaceProps = {
 };
 
 const SUGGESTIONS = ["What's slipping?", "CTR gaps", "Brief for [keyword]", "Relaunch risk for [url]"];
+
+function runInspectorHref(actionsHref: string, runId: number): string {
+  return `${actionsHref}${actionsHref.includes("?") ? "&" : "?"}runId=${runId}`;
+}
+
+function runIdFromMessageRow(row: {
+  agentRunId?: number | null;
+  payload?: Record<string, unknown> | null;
+}): number | null {
+  if (typeof row.agentRunId === "number") return row.agentRunId;
+  const fromPayload = row.payload?.agentRunId;
+  return typeof fromPayload === "number" ? fromPayload : null;
+}
+
+function cardRunId(card: SeoChatCard): number | null {
+  return card.kind === "publish_gate" ? card.runId : null;
+}
 
 export function SeoChatWorkspace({
   projectId,
@@ -41,6 +62,8 @@ export function SeoChatWorkspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveChips, setLiveChips] = useState<SeoChatChip[]>([]);
+  const [liveRunId, setLiveRunId] = useState<number | null>(null);
+  const [openRun, setOpenRun] = useState<AgentRunView | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
 
   const loadThreads = useCallback(async () => {
@@ -56,7 +79,13 @@ export function SeoChatWorkspace({
       const res = await request(`/api/seo-chat/threads/${id}`);
       if (!res.ok) throw new Error("Could not load conversation");
       const data = (await res.json()) as {
-        messages?: Array<{ id: number; role: "user" | "assistant"; content: string; payload?: Record<string, unknown> }>;
+        messages?: Array<{
+          id: number;
+          role: "user" | "assistant";
+          content: string;
+          agentRunId?: number | null;
+          payload?: Record<string, unknown>;
+        }>;
       };
       setThreadId(id);
       setMessages(
@@ -66,6 +95,7 @@ export function SeoChatWorkspace({
           content: row.content,
           chips: Array.isArray(row.payload?.chips) ? (row.payload!.chips as SeoChatChip[]) : [],
           cards: Array.isArray(row.payload?.cards) ? (row.payload!.cards as SeoChatCard[]) : [],
+          agentRunId: runIdFromMessageRow(row),
         })),
       );
     },
@@ -75,12 +105,24 @@ export function SeoChatWorkspace({
   useEffect(() => {
     setThreadId(null);
     setMessages([]);
+    setOpenRun(null);
     void loadThreads().catch((err: unknown) => setError(err instanceof Error ? err.message : "Load failed"));
   }, [loadThreads]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
-  }, [messages, liveChips, busy]);
+  }, [messages, liveChips, busy, openRun]);
+
+  async function inspectRun(runId: number) {
+    setError(null);
+    const res = await request(`/api/agent-runs/${runId}`);
+    const data = (await res.json().catch(() => null)) as { run?: AgentRunView; error?: string } | null;
+    if (!res.ok || !data?.run) {
+      setError(typeof data?.error === "string" ? data.error : "Run lookup failed");
+      return;
+    }
+    setOpenRun(data.run);
+  }
 
   async function newThread() {
     if (!projectId) return;
@@ -98,6 +140,7 @@ export function SeoChatWorkspace({
     setThreads((prev) => [data.thread, ...prev]);
     setThreadId(data.thread.id);
     setMessages([]);
+    setOpenRun(null);
   }
 
   async function send(text: string) {
@@ -107,6 +150,7 @@ export function SeoChatWorkspace({
     setError(null);
     setDraft("");
     setLiveChips([]);
+    setLiveRunId(null);
     try {
       let activeId = threadId;
       if (!activeId) {
@@ -131,6 +175,7 @@ export function SeoChatWorkspace({
       if (!res.ok || !res.body) throw new Error("Chat request failed");
 
       let assistant = "";
+      let agentRunId: number | null = null;
       const cards: SeoChatCard[] = [];
       const chips: SeoChatChip[] = [];
       const reader = res.body.getReader();
@@ -157,11 +202,22 @@ export function SeoChatWorkspace({
           } catch {
             // keep string
           }
+          if (pendingEvent === "run" && data && typeof data === "object" && "agentRunId" in data) {
+            const id = Number((data as { agentRunId: number }).agentRunId);
+            if (Number.isInteger(id) && id > 0) {
+              agentRunId = id;
+              setLiveRunId(id);
+            }
+          }
           if (pendingEvent === "loop_step" && data && typeof data === "object") {
-            const step = data as { tool?: string; label: string; ok?: boolean };
+            const step = data as { tool?: string; label: string; ok?: boolean; agentRunId?: number };
             const chip = { tool: step.tool ?? "stop", label: step.label, ok: step.ok };
             chips.push(chip);
             setLiveChips([...chips]);
+            if (typeof step.agentRunId === "number") {
+              agentRunId = step.agentRunId;
+              setLiveRunId(step.agentRunId);
+            }
           }
           if (pendingEvent === "delta" && data && typeof data === "object" && "text" in data) {
             assistant += String((data as { text: string }).text);
@@ -169,9 +225,16 @@ export function SeoChatWorkspace({
               const next = [...prev];
               const last = next.at(-1);
               if (last?.role === "assistant" && String(last.id).startsWith("a-live")) {
-                next[next.length - 1] = { ...last, content: assistant, chips: [...chips], cards: [...cards] };
+                next[next.length - 1] = { ...last, content: assistant, chips: [...chips], cards: [...cards], agentRunId };
               } else {
-                next.push({ id: "a-live", role: "assistant", content: assistant, chips: [...chips], cards: [...cards] });
+                next.push({
+                  id: "a-live",
+                  role: "assistant",
+                  content: assistant,
+                  chips: [...chips],
+                  cards: [...cards],
+                  agentRunId,
+                });
               }
               return next;
             });
@@ -183,7 +246,14 @@ export function SeoChatWorkspace({
             throw new Error(String((data as { error: string }).error));
           }
           if (pendingEvent === "done" && data && typeof data === "object") {
-            const doneData = data as { assistantId?: number; content?: string; chips?: SeoChatChip[]; cards?: SeoChatCard[] };
+            const doneData = data as {
+              assistantId?: number;
+              content?: string;
+              chips?: SeoChatChip[];
+              cards?: SeoChatCard[];
+              agentRunId?: number | null;
+            };
+            const doneRunId = typeof doneData.agentRunId === "number" ? doneData.agentRunId : agentRunId;
             setMessages((prev) => {
               const next = prev.filter((row) => row.id !== "a-live" && !String(row.id).startsWith("a-live"));
               next.push({
@@ -192,6 +262,7 @@ export function SeoChatWorkspace({
                 content: doneData.content ?? assistant,
                 chips: doneData.chips ?? chips,
                 cards: doneData.cards ?? cards,
+                agentRunId: doneRunId,
               });
               return next;
             });
@@ -205,6 +276,7 @@ export function SeoChatWorkspace({
     } finally {
       setBusy(false);
       setLiveChips([]);
+      setLiveRunId(null);
     }
   }
 
@@ -314,6 +386,7 @@ export function SeoChatWorkspace({
                           studioHref={studioHref}
                           actionsHref={actionsHref}
                           onAction={(text) => void send(text)}
+                          onInspectRun={(id) => void inspectRun(id)}
                         />
                       ))}
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -340,11 +413,29 @@ export function SeoChatWorkspace({
                         >
                           Show trajectory
                         </button>
+                        {message.agentRunId ? (
+                          <>
+                            <button
+                              type="button"
+                              className="border border-border px-2 py-1 text-[11px]"
+                              onClick={() => void inspectRun(message.agentRunId!)}
+                            >
+                              Inspect run
+                            </button>
+                            <a
+                              href={runInspectorHref(actionsHref, message.agentRunId)}
+                              className="border border-border px-2 py-1 text-[11px]"
+                            >
+                              Open in Actions
+                            </a>
+                          </>
+                        ) : (
+                          <a href={actionsHref} className="border border-border px-2 py-1 text-[11px]">
+                            Open in Actions
+                          </a>
+                        )}
                         <a href={studioHref()} className="border border-border px-2 py-1 text-[11px]">
                           Continue in Studio
-                        </a>
-                        <a href={actionsHref} className="border border-border px-2 py-1 text-[11px]">
-                          Open in Actions
                         </a>
                       </div>
                     </>
@@ -352,15 +443,25 @@ export function SeoChatWorkspace({
                 </article>
               ))}
 
-              {busy && liveChips.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
+              {busy && (liveChips.length > 0 || liveRunId) ? (
+                <div className="flex flex-wrap items-center gap-2">
                   {liveChips.map((chip) => (
                     <span key={`${chip.tool}-${chip.label}`} className="border border-primary/40 px-2 py-0.5 text-[11px]">
                       {chip.label}
                     </span>
                   ))}
+                  {liveRunId ? (
+                    <button
+                      type="button"
+                      className="border border-border px-2 py-1 text-[11px]"
+                      onClick={() => void inspectRun(liveRunId)}
+                    >
+                      Inspect run {liveRunId}
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
+              {openRun ? <AgentRunInspector run={openRun} onClose={() => setOpenRun(null)} /> : null}
             </div>
           </div>
 
@@ -411,12 +512,15 @@ function ChatCard({
   studioHref,
   actionsHref,
   onAction,
+  onInspectRun,
 }: {
   card: SeoChatCard;
   studioHref: (pieceId?: number) => string;
   actionsHref: string;
   onAction: (text: string) => void;
+  onInspectRun: (runId: number) => void;
 }) {
+  const inspectId = cardRunId(card);
   if (card.kind === "opportunity") {
     return (
       <div className="border border-border p-3 text-sm">
@@ -485,9 +589,20 @@ function ChatCard({
         <button type="button" className="border border-primary px-2 py-1 text-[11px]" onClick={() => onAction("decision: approved live publish")}>
           Approve
         </button>
-        <a href={card.contentPieceId ? studioHref(card.contentPieceId) : studioHref()} className="border px-2 py-1 text-[11px]">
-          Continue in Studio
-        </a>
+        {inspectId ? (
+          <>
+            <button type="button" className="border px-2 py-1 text-[11px]" onClick={() => onInspectRun(inspectId)}>
+              Inspect run
+            </button>
+            <a href={runInspectorHref(actionsHref, inspectId)} className="border px-2 py-1 text-[11px]">
+              Open in Actions
+            </a>
+          </>
+        ) : (
+          <a href={card.contentPieceId ? studioHref(card.contentPieceId) : studioHref()} className="border px-2 py-1 text-[11px]">
+            Continue in Studio
+          </a>
+        )}
         <button type="button" className="border px-2 py-1 text-[11px]" onClick={() => onAction("decision: rejected live publish")}>
           Discard
         </button>

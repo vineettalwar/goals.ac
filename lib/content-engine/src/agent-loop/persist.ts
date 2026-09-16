@@ -1,7 +1,22 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { agentRunsTable } from "@workspace/db/schema";
+import { agentRunsTable, contentPiecesTable } from "@workspace/db/schema";
 import type { AgentRunRecord, TrajectorySink } from "./types";
+
+async function stampPieceAgentRunId(pieceId: number, agentRunId: number) {
+  const [row] = await db
+    .select({ pieceMetadata: contentPiecesTable.pieceMetadata })
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.id, pieceId))
+    .limit(1);
+  if (!row) return;
+  const prev = row.pieceMetadata ?? {};
+  if (prev.agentRunId === agentRunId) return;
+  await db
+    .update(contentPiecesTable)
+    .set({ pieceMetadata: { ...prev, agentRunId } })
+    .where(eq(contentPiecesTable.id, pieceId));
+}
 
 export function dbTrajectorySink(): TrajectorySink {
   return {
@@ -25,11 +40,14 @@ export function dbTrajectorySink(): TrajectorySink {
 
       if (run.id) {
         await db.update(agentRunsTable).set(row).where(eq(agentRunsTable.id, run.id));
-        return;
+      } else {
+        const [inserted] = await db.insert(agentRunsTable).values(row).returning({ id: agentRunsTable.id });
+        if (inserted) run.id = inserted.id;
       }
 
-      const [inserted] = await db.insert(agentRunsTable).values(row).returning({ id: agentRunsTable.id });
-      if (inserted) run.id = inserted.id;
+      if (run.id && run.contentPieceId) {
+        await stampPieceAgentRunId(run.contentPieceId, run.id);
+      }
     },
   };
 }

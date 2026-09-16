@@ -176,9 +176,11 @@ function contentPieceIdFromToolData(data: unknown): number | undefined {
 
 export function memoryTrajectorySink(): TrajectorySink & { runs: AgentRunRecord[] } {
   const runs: AgentRunRecord[] = [];
+  let nextId = 1;
   return {
     runs,
     async save(run) {
+      if (run.id == null) run.id = nextId++;
       const copy = structuredClone(run);
       const idx = runs.findIndex((row) => row.id != null && row.id === copy.id);
       if (idx >= 0) runs[idx] = copy;

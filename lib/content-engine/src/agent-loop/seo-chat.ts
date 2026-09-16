@@ -16,6 +16,7 @@ import {
   goalFromIntent,
   keywordFrom,
   parseChatIntent,
+  runInspectorHref,
   type SeoChatCard,
   type SeoChatChip,
   type SeoChatStreamEvent,
@@ -30,6 +31,7 @@ export {
   chipLabel,
   suggestionPrompts,
   keywordFrom,
+  runInspectorHref,
 } from "./seo-chat-format";
 export type { ChatIntent, SeoChatCard, SeoChatChip, SeoChatStreamEvent } from "./seo-chat-format";
 
@@ -268,7 +270,7 @@ export async function runSeoChatTurn(input: {
         role: "assistant",
         content,
         agentRunId: run?.id ?? null,
-        payload: { intent, chips },
+        payload: { intent, chips, agentRunId: run?.id ?? null },
       })
       .returning();
     for (const chip of chips) {
@@ -292,9 +294,18 @@ export async function runSeoChatTurn(input: {
 
   const goal = goalFromIntent(intent, input.projectId, userText)!;
   const inner = dbTrajectorySink();
+  let boundRunId: number | null = null;
   const sink: TrajectorySink = {
     async save(run) {
       await inner.save(run);
+      if (run.id && boundRunId !== run.id) {
+        boundRunId = run.id;
+        await db
+          .update(seoChatThreadsTable)
+          .set({ lastAgentRunId: run.id, updatedAt: new Date() })
+          .where(eq(seoChatThreadsTable.id, input.threadId));
+        await emit({ event: "run", data: { agentRunId: run.id, status: run.status } });
+      }
       const last = run.trajectory.at(-1);
       if (last?.tool) {
         await emit({
@@ -304,6 +315,7 @@ export async function runSeoChatTurn(input: {
             label: chipLabel(last.tool),
             summary: last.summary,
             ok: last.ok,
+            agentRunId: run.id,
           },
         });
       }
@@ -343,13 +355,17 @@ export async function runSeoChatTurn(input: {
         citations: composed.citations,
         verified: composed.verified,
         status: run.status,
+        agentRunId: run.id ?? null,
       },
     })
     .returning();
 
   await db
     .update(seoChatThreadsTable)
-    .set({ lastAgentRunId: run.id ?? null, updatedAt: new Date() })
+    .set({
+      ...(run.id ? { lastAgentRunId: run.id } : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(seoChatThreadsTable.id, input.threadId));
 
   await emit({
