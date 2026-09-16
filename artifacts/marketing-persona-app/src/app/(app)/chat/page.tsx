@@ -10,7 +10,11 @@ const SeoChatPanel = dynamic(
 export default function ChatPage() {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <SeoChatPanel />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="absolute inset-0 flex flex-col">
+          <SeoChatPanel />
+        </div>
+      </div>
     </Suspense>
   );
 }

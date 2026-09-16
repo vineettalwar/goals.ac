@@ -8,7 +8,7 @@ Chat is the conversational surface for the existing employee loop. It is not a s
 |---|---|
 | Substantive turn | `runAgentLoop` via `runSeoChatTurn` → `executeStoredAgentRun` |
 | “What’s slipping?” / CTR gaps | `opportunity_scan` (GSC + Action Queue upsert) |
-| “Brief for {keyword}” / Draft this | `research_then_draft` |
+| “Brief for {keyword}” / “create content about {keyword}” / Draft this | `research_then_draft` (same Studio generator) |
 | “Relaunch risk for {url}” | `execute_action` + `inspect_url` |
 | “Add to Action Queue” | `chat_turn` + `upsert_action_queue` |
 | “publish live” | `publish_check` (approve-first; `publish_live` stays gated) |

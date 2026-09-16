@@ -31,28 +31,13 @@ export function MarketingReveal({
     const el = ref.current;
     if (!el) return;
 
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || mode === "inView") {
       el.classList.add("marketing-reveal-visible");
       return;
     }
 
-    if (mode === "mount") {
-      const timer = window.setTimeout(() => el.classList.add("marketing-reveal-visible"), delayMs);
-      return () => window.clearTimeout(timer);
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          el.classList.add("marketing-reveal-visible");
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "-80px 0px", threshold: 0.01 },
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
+    const timer = window.setTimeout(() => el.classList.add("marketing-reveal-visible"), delayMs);
+    return () => window.clearTimeout(timer);
   }, [disabled, mode, delayMs]);
 
   if (disabled) {

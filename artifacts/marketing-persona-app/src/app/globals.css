@@ -1,6 +1,6 @@
 @import "tailwindcss";
 /* Scan shared product UI — without this, app-shell utilities (e.g. piece editor 2-col grid) never emit. */
-@source "../../../../lib/app-shell/src";
+@source "../../../../lib/app-shell/src/**/*.{ts,tsx}";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "@workspace/app-shell/product-theme.css";
@@ -149,32 +149,16 @@
   }
 
   .hero-anim {
-    opacity: 0;
     animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .marketing-reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition:
-      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .marketing-reveal-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
+  .marketing-reveal,
   .scroll-reveal {
-    opacity: 0;
-    transform: translateY(28px);
-    transition:
-      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: heroFadeUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  .marketing-reveal-visible,
   .scroll-reveal-visible {
     opacity: 1;
     transform: translateY(0);

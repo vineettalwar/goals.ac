@@ -6,6 +6,7 @@ import { getSession } from "@/auth";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
 import { MARKETING_CRITICAL_CSS } from "@/lib/marketing/site/marketing-critical-css";
 import { sanitizeJsonLd } from "@/lib/security/json-ld";
+import { productThemeBootScript } from "@/lib/theme-path";
 
 const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -41,10 +42,9 @@ export const metadata: Metadata = {
   },
 };
 
-const THEME_BOOT =
-  process.env.MARKETING_STATIC === "1"
-    ? `(function(){try{document.documentElement.classList.remove('dark');}catch(e){}})();`
-    : `(function(){try{var p=location.pathname||'';var app=/^\\/(dashboard|projects|studio|settings|admin|content-piece|content-pieces|onboarding|audit|research|search|strategy|integrations|growth-roadmaps|partner|autopilot)(\\/|$)/.test(p);if(!app){document.documentElement.classList.remove('dark');return;}var s=localStorage.getItem('theme');if(s!=='light'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+const THEME_BOOT = productThemeBootScript({
+  marketingStatic: process.env.MARKETING_STATIC === "1",
+});
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = process.env.MARKETING_STATIC === "1" ? null : await getSession();

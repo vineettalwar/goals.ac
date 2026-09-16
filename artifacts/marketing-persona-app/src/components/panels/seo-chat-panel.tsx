@@ -8,19 +8,21 @@ export function SeoChatPanel() {
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
 
   return (
-    <SeoChatWorkspace
-      projectId={projectId}
-      projects={projects}
-      onProjectChange={(id) => setActiveProjectId(id ? Number(id) : null)}
-      request={(path, init) => fetch(path, { credentials: "include", ...init })}
-      studioHref={(pieceId) =>
-        activeProjectId
-          ? pieceId
-            ? `/projects/${activeProjectId}/content-piece/${pieceId}`
-            : `/projects/${activeProjectId}/content-studio`
-          : "/projects"
-      }
-      actionsHref="/search/actions"
-    />
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <SeoChatWorkspace
+        projectId={projectId}
+        projects={projects}
+        onProjectChange={(id) => setActiveProjectId(id ? Number(id) : null)}
+        request={(path, init) => fetch(path, { credentials: "include", ...init })}
+        studioHref={(pieceId) =>
+          activeProjectId
+            ? pieceId
+              ? `/projects/${activeProjectId}/content-piece/${pieceId}`
+              : `/projects/${activeProjectId}/content-studio`
+            : "/projects"
+        }
+        actionsHref="/search/actions"
+      />
+    </div>
   );
 }

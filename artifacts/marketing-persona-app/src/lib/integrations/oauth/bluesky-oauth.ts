@@ -9,6 +9,7 @@ import { JoseKey } from "@atproto/jwk-jose";
 import type { BlueskyCredentials } from "@workspace/connectors/bluesky";
 import { publishToBluesky, testBlueskyConnection } from "@workspace/connectors/bluesky";
 import { resolveBlueskyOAuthCredentials } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
+import { assertSocialPublishingEnabled } from "@/lib/platform/platform-settings";
 
 const oauthStateStore = new Map<string, { state: NodeSavedState; expiresAt: number }>();
 const oauthSessionStore = new Map<string, NodeSavedSession>();
@@ -131,6 +132,7 @@ export async function getBlueskyJwks(origin: string) {
 }
 
 export async function startBlueskyAuthorize(handle: string, statePayload: string): Promise<string> {
+  await assertSocialPublishingEnabled();
   const origin = getNextApiOrigin();
   const client = await getBlueskyOAuthClient(origin);
   const url = await client.authorize(handle.trim(), { state: statePayload });

@@ -8,7 +8,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { APP_SHELL_MAIN_OFFSET, GoalsBrandMark, cn } from "@workspace/app-shell";
+import { APP_SHELL_GUTTER, APP_SHELL_MAIN_OFFSET, APP_SHELL_STAGE, GoalsBrandMark, cn } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { ADMIN_NAV_ITEMS, isAdminNavActive } from "./admin-nav";
@@ -274,9 +274,9 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      <div className={`flex min-w-0 flex-1 flex-col overflow-hidden ${APP_SHELL_MAIN_OFFSET}`}>
+      <div className={`${APP_SHELL_GUTTER} ${APP_SHELL_MAIN_OFFSET}`}>
         <ImpersonationBanner />
-        <main className="min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+        <main className={APP_SHELL_STAGE}>
           <Outlet />
         </main>
       </div>

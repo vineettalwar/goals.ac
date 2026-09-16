@@ -5,9 +5,11 @@ export {
 } from "./AppSidebarShell";
 export { GoalsBrandMark } from "./brand-mark";
 export {
+  APP_SHELL_GUTTER,
   APP_SHELL_MAIN_OFFSET,
   APP_SHELL_PAGE,
   APP_SHELL_PAGE_WIDE,
+  APP_SHELL_STAGE,
 } from "./shell-constants";
 export { cn } from "./cn";
 export {

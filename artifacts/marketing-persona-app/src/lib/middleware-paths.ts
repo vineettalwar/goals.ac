@@ -26,22 +26,29 @@ export function isOrgIntegrationsAppPath(pathname: string) {
   );
 }
 
+/** Product chrome prefixes — theme boot + middleware share this list. */
+export const APP_SHELL_PREFIXES = [
+  "/dashboard",
+  "/partner",
+  "/clients",
+  "/chat",
+  "/projects",
+  "/strategy",
+  "/search",
+  "/audit",
+  "/research",
+  "/growth-roadmaps",
+  "/settings",
+  "/content-piece",
+  "/content-pieces",
+  "/studio",
+  "/onboarding",
+] as const;
+
 export function isAppShellPath(pathname: string) {
   return (
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/partner") ||
-    pathname.startsWith("/clients") ||
-    pathname.startsWith("/projects") ||
-    pathname.startsWith("/strategy") ||
-    pathname.startsWith("/search") ||
-    pathname.startsWith("/audit") ||
-    pathname.startsWith("/research") ||
-    pathname.startsWith("/growth-roadmaps") ||
-    isOrgIntegrationsAppPath(pathname) ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/content-piece") ||
-    pathname.startsWith("/studio") ||
-    pathname.startsWith("/onboarding")
+    APP_SHELL_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+    isOrgIntegrationsAppPath(pathname)
   );
 }
 

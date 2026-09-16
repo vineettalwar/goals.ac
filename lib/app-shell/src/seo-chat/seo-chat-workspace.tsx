@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ListPlus, PenLine, Plus, Send } from "lucide-react";
-import { APP_SHELL_PAGE_WIDE } from "../shell-constants";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowUp, ChevronDown, ListPlus, PenLine, Plus } from "lucide-react";
 import { cn } from "../cn";
 import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop";
 import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
@@ -112,7 +111,9 @@ export function SeoChatWorkspace({
   }, [loadThreads]);
 
   useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
+    const el = scroller.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: busy ? "auto" : "smooth" });
   }, [messages, liveChips, busy, openRun]);
 
   async function inspectRun(runId: number) {
@@ -288,229 +289,310 @@ export function SeoChatWorkspace({
   }
 
   const empty = messages.length === 0 && !busy;
-  const selectedProject = useMemo(
-    () => projects.find((row) => String(row.id) === String(projectId)),
-    [projects, projectId],
+
+  const composer = (
+    <ChatComposer
+      draft={draft}
+      busy={busy}
+      projectId={projectId}
+      projects={projects}
+      threads={threads}
+      threadId={threadId}
+      onDraftChange={setDraft}
+      onProjectChange={onProjectChange}
+      onNewChat={() => void newThread()}
+      onSelectThread={(id) => void loadThread(id)}
+      onSend={() => void send(draft)}
+    />
   );
 
   return (
-    <div className={cn(APP_SHELL_PAGE_WIDE, "flex min-h-[calc(100vh-3.5rem)] flex-col")}>
-      <div className="flex min-h-0 flex-1 gap-4">
-        <aside className="hidden w-52 shrink-0 flex-col border-r border-border pr-3 lg:flex">
+    <div className="seo-chat-shell flex min-h-0 w-full flex-1 overflow-hidden text-foreground">
+      <section className="seo-chat-stage relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {empty ? (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4">
+            <h1 className="mb-7 text-center text-4xl font-normal tracking-tight text-foreground">
+              Where should we start?
+            </h1>
+            <div className="mb-9 flex flex-wrap justify-center gap-2">
+              {SUGGESTIONS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="rounded-full bg-secondary/80 px-3.5 py-1.5 text-xs text-foreground transition-colors duration-150 ease-out hover:bg-secondary active:scale-[0.97]"
+                  onClick={() => void send(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            <div className="w-full max-w-3xl">{composer}</div>
+            {!projectId ? (
+              <p className="mt-4 text-sm text-muted-foreground">Pick a site in the composer to begin.</p>
+            ) : null}
+            {error ? <p className="mt-3 text-center text-sm text-destructive">{error}</p> : null}
+          </div>
+        ) : (
+          <>
+            <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth">
+              <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-8">
+                {messages.map((message) => (
+                  <article key={String(message.id)} className="space-y-2">
+                    {message.role === "user" ? (
+                      <p className="seo-chat-user ml-auto max-w-[85%] rounded-3xl px-4 py-2.5 text-[15px] leading-relaxed">
+                        {message.content}
+                      </p>
+                    ) : (
+                      <>
+                        {message.chips && message.chips.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {message.chips.map((chip) => (
+                              <span
+                                key={`${chip.tool}-${chip.label}`}
+                                className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] text-muted-foreground"
+                              >
+                                {chip.label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        <div className="whitespace-pre-wrap font-serif text-[17px] leading-7 text-foreground/95">{message.content}</div>
+                        {message.cards?.map((card, index) => (
+                          <ChatCard
+                            key={`${card.kind}-${index}`}
+                            card={card}
+                            studioHref={studioHref}
+                            actionsHref={actionsHref}
+                            onAction={(text) => void send(text)}
+                            onInspectRun={(id) => void inspectRun(id)}
+                          />
+                        ))}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            onClick={() => void send("Draft this")}
+                          >
+                            <PenLine className="h-3 w-3" />
+                            Draft this
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            onClick={() => void send("Add to Action Queue")}
+                          >
+                            <ListPlus className="h-3 w-3" />
+                            Add to Action Queue
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            onClick={() => void send("Show trajectory")}
+                          >
+                            Show trajectory
+                          </button>
+                          {message.agentRunId ? (
+                            <>
+                              <button
+                                type="button"
+                                className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                                onClick={() => void inspectRun(message.agentRunId!)}
+                              >
+                                Inspect run
+                              </button>
+                              <a
+                                href={runInspectorHref(actionsHref, message.agentRunId)}
+                                className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                              >
+                                Open in Actions
+                              </a>
+                            </>
+                          ) : (
+                            <a
+                              href={actionsHref}
+                              className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            >
+                              Open in Actions
+                            </a>
+                          )}
+                          <a
+                            href={studioHref()}
+                            className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                          >
+                            Continue in Studio
+                          </a>
+                        </div>
+                      </>
+                    )}
+                  </article>
+                ))}
+
+                {busy && (liveChips.length > 0 || liveRunId) ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {liveChips.map((chip) => (
+                      <span
+                        key={`${chip.tool}-${chip.label}`}
+                        className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] text-foreground"
+                      >
+                        {chip.label}
+                      </span>
+                    ))}
+                    {liveRunId ? (
+                      <button
+                        type="button"
+                        className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        onClick={() => void inspectRun(liveRunId)}
+                      >
+                        Inspect run {liveRunId}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {openRun ? <AgentRunInspector run={openRun} onClose={() => setOpenRun(null)} /> : null}
+              </div>
+            </div>
+            {error ? <p className="px-4 pb-2 text-center text-sm text-destructive">{error}</p> : null}
+            <div className="seo-chat-composer-dock shrink-0 px-4 pb-6 pt-4">
+              <div className="mx-auto w-full max-w-3xl">{composer}</div>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function closeDetails(el: HTMLElement) {
+  el.closest("details")?.removeAttribute("open");
+}
+
+function ChatComposer({
+  draft,
+  busy,
+  projectId,
+  projects,
+  threads,
+  threadId,
+  onDraftChange,
+  onProjectChange,
+  onNewChat,
+  onSelectThread,
+  onSend,
+}: {
+  draft: string;
+  busy: boolean;
+  projectId: string;
+  projects: ProjectOption[];
+  threads: Thread[];
+  threadId: number | null;
+  onDraftChange: (value: string) => void;
+  onProjectChange: (id: string) => void;
+  onNewChat: () => void;
+  onSelectThread: (id: number) => void;
+  onSend: () => void;
+}) {
+  const canSend = Boolean(draft.trim() && projectId && !busy);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [draft]);
+
+  return (
+    <form
+      className="seo-chat-composer flex items-end gap-2 rounded-full px-3 py-2.5 ring-1 ring-border"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSend();
+      }}
+    >
+      <details className="relative mb-0.5 shrink-0">
+        <summary
+          className="inline-flex size-11 cursor-pointer list-none items-center justify-center rounded-full text-foreground transition-colors duration-150 ease-out hover:bg-secondary active:scale-[0.97] [&::-webkit-details-marker]:hidden"
+          aria-label="Conversations"
+        >
+          <Plus className="h-5 w-5" />
+        </summary>
+        <div className="hairline-panel absolute bottom-full left-0 z-20 mb-2 w-56 bg-background py-1">
           <button
             type="button"
-            className="mb-3 flex h-8 items-center justify-center gap-1 border border-border px-2 text-xs"
-            onClick={() => void newThread()}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors duration-150 ease-out hover:bg-secondary"
+            onClick={(event) => {
+              closeDetails(event.currentTarget);
+              onNewChat();
+            }}
           >
             <Plus className="h-3.5 w-3.5" />
             New chat
           </button>
-          <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto text-sm">
-            {threads.map((thread) => (
-              <li key={thread.id}>
-                <button
-                  type="button"
-                  className={cn(
-                    "w-full truncate px-2 py-1.5 text-left",
-                    thread.id === threadId ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/60",
-                  )}
-                  onClick={() => void loadThread(thread.id)}
-                >
-                  {thread.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        <section className="flex min-w-0 flex-1 flex-col">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="seo-chat-project">
-              Site
-            </label>
-            <select
-              id="seo-chat-project"
-              className="h-9 max-w-xs border border-border bg-background px-2 text-sm"
-              value={projectId}
-              onChange={(event) => onProjectChange(event.target.value)}
-            >
-              {projects.length === 0 ? <option value="">No sites</option> : null}
-              {projects.map((project) => (
-                <option key={String(project.id)} value={String(project.id)}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-muted-foreground">SEO coworker · AgentLoop control plane</span>
-          </div>
-
-          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-prose space-y-6 py-6">
-              {empty ? (
-                <div className="pt-16 text-center">
-                  <p className="text-lg font-medium text-foreground">What should we work on?</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {selectedProject?.name ?? "Pick a site"}. Tools run the employee loop — not a second brain.
-                  </p>
-                  <div className="mt-6 flex flex-wrap justify-center gap-2">
-                    {SUGGESTIONS.map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        className="border border-border px-3 py-1.5 text-xs text-foreground hover:border-primary"
-                        onClick={() => void send(prompt)}
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {messages.map((message) => (
-                <article key={String(message.id)} className="space-y-2">
-                  {message.role === "user" ? (
-                    <p className="ml-auto max-w-[90%] bg-secondary px-3 py-2 text-sm">{message.content}</p>
-                  ) : (
-                    <>
-                      {message.chips && message.chips.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {message.chips.map((chip) => (
-                            <span
-                              key={`${chip.tool}-${chip.label}`}
-                              className="border border-border px-2 py-0.5 text-[11px] text-muted-foreground"
-                            >
-                              {chip.label}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
-                      {message.cards?.map((card, index) => (
-                        <ChatCard
-                          key={`${card.kind}-${index}`}
-                          card={card}
-                          studioHref={studioHref}
-                          actionsHref={actionsHref}
-                          onAction={(text) => void send(text)}
-                          onInspectRun={(id) => void inspectRun(id)}
-                        />
-                      ))}
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 border border-border px-2 py-1 text-[11px]"
-                          onClick={() => void send("Draft this")}
-                        >
-                          <PenLine className="h-3 w-3" />
-                          Draft this
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 border border-border px-2 py-1 text-[11px]"
-                          onClick={() => void send("Add to Action Queue")}
-                        >
-                          <ListPlus className="h-3 w-3" />
-                          Add to Action Queue
-                        </button>
-                        <button
-                          type="button"
-                          className="border border-border px-2 py-1 text-[11px]"
-                          onClick={() => void send("Show trajectory")}
-                        >
-                          Show trajectory
-                        </button>
-                        {message.agentRunId ? (
-                          <>
-                            <button
-                              type="button"
-                              className="border border-border px-2 py-1 text-[11px]"
-                              onClick={() => void inspectRun(message.agentRunId!)}
-                            >
-                              Inspect run
-                            </button>
-                            <a
-                              href={runInspectorHref(actionsHref, message.agentRunId)}
-                              className="border border-border px-2 py-1 text-[11px]"
-                            >
-                              Open in Actions
-                            </a>
-                          </>
-                        ) : (
-                          <a href={actionsHref} className="border border-border px-2 py-1 text-[11px]">
-                            Open in Actions
-                          </a>
-                        )}
-                        <a href={studioHref()} className="border border-border px-2 py-1 text-[11px]">
-                          Continue in Studio
-                        </a>
-                      </div>
-                    </>
-                  )}
-                </article>
-              ))}
-
-              {busy && (liveChips.length > 0 || liveRunId) ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {liveChips.map((chip) => (
-                    <span key={`${chip.tool}-${chip.label}`} className="border border-primary/40 px-2 py-0.5 text-[11px]">
-                      {chip.label}
-                    </span>
-                  ))}
-                  {liveRunId ? (
-                    <button
-                      type="button"
-                      className="border border-border px-2 py-1 text-[11px]"
-                      onClick={() => void inspectRun(liveRunId)}
-                    >
-                      Inspect run {liveRunId}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-              {openRun ? <AgentRunInspector run={openRun} onClose={() => setOpenRun(null)} /> : null}
-            </div>
-          </div>
-
-          {error ? <p className="mb-2 text-sm text-destructive">{error}</p> : null}
-
-          <form
-            className="mt-auto flex gap-2 border-t border-border pt-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void send(draft);
-            }}
-          >
-            <label className="sr-only" htmlFor="seo-chat-input">
-              Message
-            </label>
-            <textarea
-              id="seo-chat-input"
-              rows={1}
-              value={draft}
-              disabled={busy || !projectId}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  void send(draft);
-                }
-              }}
-              placeholder={projectId ? "Ask about this site’s search work…" : "Select a site first"}
-              className="min-h-11 flex-1 resize-none border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-            />
+          {threads.map((thread) => (
             <button
-              type="submit"
-              disabled={busy || !draft.trim() || !projectId}
-              className="inline-flex h-11 w-11 items-center justify-center bg-primary text-primary-foreground disabled:opacity-40"
-              aria-label="Send"
+              key={thread.id}
+              type="button"
+              className={cn(
+                "w-full truncate px-3 py-2 text-left text-sm transition-colors duration-150 ease-out hover:bg-secondary",
+                thread.id === threadId ? "text-foreground" : "text-muted-foreground",
+              )}
+              onClick={(event) => {
+                closeDetails(event.currentTarget);
+                onSelectThread(thread.id);
+              }}
             >
-              <Send className="h-4 w-4" />
+              {thread.title}
             </button>
-          </form>
-        </section>
+          ))}
+        </div>
+      </details>
+      <label className="sr-only" htmlFor="seo-chat-input">
+        Message
+      </label>
+      <textarea
+        id="seo-chat-input"
+        ref={inputRef}
+        rows={1}
+        value={draft}
+        disabled={busy || !projectId}
+        onChange={(event) => onDraftChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            onSend();
+          }
+        }}
+        placeholder={projectId ? "Ask about this site" : "Select a site first"}
+        className="max-h-40 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-base leading-snug text-foreground caret-foreground outline-none placeholder:text-muted-foreground selection:bg-primary/30 disabled:opacity-50"
+      />
+      <div className="relative mb-0.5 shrink-0">
+        <label className="sr-only" htmlFor="seo-chat-project">
+          Site
+        </label>
+        <select
+          id="seo-chat-project"
+          className="h-11 max-w-32 cursor-pointer appearance-none bg-transparent py-1 pl-2 pr-6 text-sm text-muted-foreground outline-none"
+          value={projectId}
+          onChange={(event) => onProjectChange(event.target.value)}
+        >
+          {projects.length === 0 ? <option value="">No sites</option> : null}
+          {projects.map((project) => (
+            <option key={String(project.id)} value={String(project.id)}>
+              {project.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
       </div>
-    </div>
+      <button
+        type="submit"
+        disabled={!canSend}
+        className="mb-0.5 inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-transform duration-150 ease-out enabled:active:scale-[0.97] disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-40"
+        aria-label="Send"
+      >
+        <ArrowUp className="h-4 w-4" />
+      </button>
+    </form>
   );
 }
 
@@ -530,7 +612,7 @@ function ChatCard({
   const inspectId = cardRunId(card);
   if (card.kind === "opportunity") {
     return (
-      <div className="border border-border p-3 text-sm">
+      <div className="rounded-2xl bg-secondary p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Opportunity</p>
         <p className="mt-1 font-medium">{card.title}</p>
         <p className="text-muted-foreground">{card.keyword}</p>
@@ -550,7 +632,7 @@ function ChatCard({
   }
   if (card.kind === "draft_preview") {
     return (
-      <div className="border border-border p-3 text-sm">
+      <div className="rounded-2xl bg-secondary p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Draft</p>
         <p className="mt-1 font-medium">{card.title}</p>
         <p className="mt-2 font-serif text-[15px] leading-relaxed text-foreground/90">{card.excerpt}</p>
@@ -570,7 +652,7 @@ function ChatCard({
   }
   if (card.kind === "readiness") {
     return (
-      <div className="border border-border p-3 text-sm">
+      <div className="rounded-2xl bg-secondary p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Readiness</p>
         <p className="mt-1 font-medium">{card.label}</p>
         {card.blockers.length > 0 ? <p className="text-muted-foreground">{card.blockers.join(" · ")}</p> : null}
@@ -589,7 +671,7 @@ function ChatCard({
     );
   }
   return (
-    <div className="border border-primary/50 p-3 text-sm">
+    <div className="rounded-2xl bg-secondary p-3 text-sm ring-1 ring-primary/40">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Live publish gate</p>
       <p className="mt-1">Approve-first. The loop will not push live until you say so, and CMS publish still happens in Studio.</p>
       <div className="mt-2 flex flex-wrap gap-2">

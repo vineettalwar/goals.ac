@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { platformSettingsTable } from "@workspace/db/schema";
-import { decryptSecret } from "@workspace/security/encryption";
+import { decryptStoredSecret } from "@workspace/security/encryption";
 import { eq } from "drizzle-orm";
 
 type CredentialSource = "db" | "env";
@@ -25,12 +25,7 @@ function envTrim(name: string): string | null {
 }
 
 function safeDecrypt(stored: string | null | undefined): string | null {
-  if (!stored) return null;
-  try {
-    return decryptSecret(stored);
-  } catch {
-    return null;
-  }
+  return decryptStoredSecret(stored);
 }
 
 export function invalidatePlatformMetaCredentialsCache(): void {

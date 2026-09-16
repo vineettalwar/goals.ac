@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
+  APP_SHELL_GUTTER,
   APP_SHELL_MAIN_OFFSET,
+  APP_SHELL_STAGE,
   AppSidebarShell,
   projectIdFromPathname,
 } from "@workspace/app-shell";
@@ -63,13 +65,13 @@ export function AppShell() {
           </Link>
         )}
       />
-      <main
-        className={`min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable] ${APP_SHELL_MAIN_OFFSET}`}
-      >
+      <div className={`${APP_SHELL_GUTTER} ${APP_SHELL_MAIN_OFFSET}`}>
         <MfaComplianceGate>
-          <Outlet />
+          <main className={APP_SHELL_STAGE}>
+            <Outlet />
+          </main>
         </MfaComplianceGate>
-      </main>
+      </div>
     </div>
   );
 }

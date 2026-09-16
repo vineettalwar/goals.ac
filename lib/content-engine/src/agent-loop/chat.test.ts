@@ -20,6 +20,17 @@ describe("parseChatIntent", () => {
     expect(intent).toEqual({ kind: "research_then_draft", keyword: "payroll software" });
   });
 
+  it("maps create-content prompts onto the same Studio draft loop", () => {
+    expect(parseChatIntent("Can we create some content about wordpress")).toEqual({
+      kind: "research_then_draft",
+      keyword: "wordpress",
+    });
+    expect(parseChatIntent("generate an article on payroll software")).toEqual({
+      kind: "research_then_draft",
+      keyword: "payroll software",
+    });
+  });
+
   it("maps relaunch + URL to inspect_url execute_action", () => {
     const intent = parseChatIntent("Relaunch risk for https://example.com/old-post");
     expect(intent).toEqual({

@@ -100,10 +100,8 @@ export function parseChatIntent(text: string, opts?: { contentPieceId?: number }
     return { kind: "chat_turn", actionType: "enqueue", keyword: keywordFrom(raw) };
   }
 
-  const brief = raw.match(/\b(?:brief|draft)\s+(?:this\s+)?(?:for\s+)?["“]?([^"”\n]+?)["”]?\s*$/i);
-  const about = raw.match(/\b(?:draft|write|brief)\s+(?:about|for)\s+(.+)$/i);
-  const keyword = (brief?.[1] ?? about?.[1] ?? "").trim().replace(/[.?!]+$/, "");
-  if (keyword && /\b(brief|draft|write)\b/.test(lower) && !/^draft this\.?$/i.test(raw)) {
+  const keyword = draftKeyword(raw);
+  if (keyword && wantsStudioDraft(lower) && !/^draft this\.?$/i.test(raw)) {
     return { kind: "research_then_draft", keyword };
   }
 
@@ -115,11 +113,31 @@ export function parseChatIntent(text: string, opts?: { contentPieceId?: number }
   };
 }
 
+function stripTopic(value: string): string {
+  return value.trim().replace(/[.?!]+$/, "").replace(/\s+/g, " ");
+}
+
+function wantsStudioDraft(lower: string): boolean {
+  if (/\b(brief|draft|write)\b/.test(lower)) return true;
+  return (
+    /\b(create|make|generate)\b/.test(lower) && /\b(content|article|post|piece|blog)\b/.test(lower)
+  );
+}
+
+function draftKeyword(text: string): string | undefined {
+  const brief = text.match(/\b(?:brief|draft)\s+(?:this\s+)?(?:for\s+)?["“]?([^"”\n]+?)["”]?\s*$/i);
+  const about = text.match(/\b(?:draft|write|brief|create|make|generate)\b.{0,48}\b(?:about|for|on)\s+(.+)$/i);
+  const topic = stripTopic(brief?.[1] ?? about?.[1] ?? "");
+  return topic || keywordFrom(text);
+}
+
 export function keywordFrom(text: string): string | undefined {
   const quoted = text.match(/["“]([^"”]+)["”]/);
-  if (quoted?.[1]) return quoted[1].trim();
+  if (quoted?.[1]) return stripTopic(quoted[1]);
+  const about = text.match(/\b(?:about|on)\s+([a-z0-9][\w\s-]{1,80})$/i);
+  if (about?.[1] && !/^https?:/i.test(about[1])) return stripTopic(about[1]);
   const forKw = text.match(/\bfor\s+([a-z0-9][\w\s-]{1,80})$/i);
-  if (forKw?.[1] && !/^https?:/i.test(forKw[1])) return forKw[1].trim();
+  if (forKw?.[1] && !/^https?:/i.test(forKw[1])) return stripTopic(forKw[1]);
   return undefined;
 }
 

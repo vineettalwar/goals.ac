@@ -32,6 +32,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   output: "standalone",
   // Keep Node-only deps out of the webpack graph (pg/dns; atproto undici_v* aliases).
   serverExternalPackages: [

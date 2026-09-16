@@ -2,10 +2,6 @@
 
 import { type RefObject, useEffect } from "react";
 
-function prefersReducedMotion() {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 function revealElements(scope: HTMLElement, selector: string) {
   const elements = scope.querySelectorAll<HTMLElement>(selector);
   elements.forEach((element, index) => {
@@ -25,25 +21,8 @@ export function useMarketingScrollReveal(
     const elements = scope.querySelectorAll<HTMLElement>(selector);
     if (!elements.length) return;
 
-    if (prefersReducedMotion()) {
-      revealElements(scope, selector);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          const target = entry.target as HTMLElement;
-          target.classList.add("scroll-reveal-visible");
-          observer.unobserve(target);
-        });
-      },
-      { rootMargin: "0px 0px -18% 0px", threshold: 0.01 },
-    );
-
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+    // Always show — opacity:0 without this class traps SSR HTML if hydration/IO never runs.
+    revealElements(scope, selector);
   }, [scopeRef, selector]);
 }
 

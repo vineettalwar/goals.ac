@@ -26,8 +26,8 @@
   --accent-warm-hover: #b45309;
   --accent-warm-foreground: #0a0a0b;
   --surface-dark: #0a0a0b;
-  --sidebar-bg: #0a0a0b;
-  --sidebar-border: #2e2c28;
+  --sidebar-bg: #f3efe6;
+  --sidebar-border: #c9c2b4;
   --chart-1: #d97706;
   --chart-2: #0a0a0b;
   --chart-3: #78716c;
@@ -92,6 +92,55 @@
   color-scheme: light;
 }
 
+.app-sidebar {
+  color: var(--foreground);
+  background-color: var(--sidebar-bg);
+}
+
+.app-sidebar .app-nav-active {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.dark .app-sidebar {
+  color-scheme: dark;
+  color: var(--studio-chrome-fg);
+  --foreground: var(--studio-chrome-fg);
+  --muted-foreground: #a39e94;
+  --border: var(--sidebar-border);
+  --input: var(--sidebar-border);
+  --secondary: #1a1a1c;
+  --secondary-foreground: var(--studio-chrome-fg);
+  --muted: #1a1a1c;
+  --accent: #1a1a1c;
+  --accent-foreground: var(--studio-chrome-fg);
+  --background: #141416;
+  --card: #141416;
+  --card-foreground: var(--studio-chrome-fg);
+  scrollbar-width: thin;
+  scrollbar-color: #3a3834 transparent;
+  background-image:
+    linear-gradient(180deg, rgba(217, 119, 6, 0.07) 0%, transparent 32%),
+    linear-gradient(180deg, #121110 0%, var(--sidebar-bg) 42%, #070708 100%);
+}
+
+.dark .app-sidebar .app-nav-active {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.26), rgba(255, 255, 255, 0.06));
+}
+
+.dark .app-sidebar *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark .app-sidebar *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark .app-sidebar *::-webkit-scrollbar-thumb {
+  background: #3a3834;
+  border-radius: 1px;
+}
+
 .hairline-panel {
   background: transparent;
   border: 1px solid var(--border);
@@ -116,6 +165,36 @@
   font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.75rem;
   letter-spacing: 0.02em;
+}
+
+.seo-chat-shell {
+  height: 100%;
+  min-height: 0;
+  color: var(--foreground);
+}
+
+.seo-chat-composer-dock {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(180deg, transparent 0%, var(--background) 42%);
+}
+
+.seo-chat-composer {
+  background: var(--card);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.seo-chat-user {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.dark .seo-chat-composer {
+  background: color-mix(in srgb, var(--foreground) 8%, var(--background));
+  box-shadow: inset 0 1px 0 rgba(243, 239, 230, 0.08);
+}
+
+.dark .seo-chat-user {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .score-signal {

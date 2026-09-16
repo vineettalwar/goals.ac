@@ -4,12 +4,15 @@ import { setD1Binding } from "@workspace/db/d1-binding";
 import { setJobsQueueBinding } from "@workspace/jobs/cf-queues";
 import { setKvBindings } from "@workspace/content-engine/core/kv-binding";
 import { setContentMediaR2Binding } from "@workspace/media";
+import {
+  copyCfWorkerProcessEnv,
+  type CfWorkerProcessEnvKey,
+} from "@workspace/cf-edge/wire";
 
 let initialized = false;
 
 /** Wire Cloudflare bindings (D1, KV, Queues, content-media R2) into shared libs. */
 export function initCfBindings(): void {
-  if (initialized) return;
   if (process.env.DB_DIALECT?.trim().toLowerCase() !== "d1") return;
 
   try {
@@ -20,8 +23,12 @@ export function initCfBindings(): void {
         RATE_LIMIT?: Parameters<typeof setKvBindings>[0]["RATE_LIMIT"];
         JOBS_QUEUE?: Parameters<typeof setJobsQueueBinding>[0];
         CONTENT_MEDIA_R2?: Parameters<typeof setContentMediaR2Binding>[0];
-      };
+      } & Partial<Record<CfWorkerProcessEnvKey, string>>;
     };
+
+    if (env) copyCfWorkerProcessEnv(env);
+
+    if (initialized) return;
 
     if (env?.DB) setD1Binding(env.DB);
     if (env?.AI_CACHE || env?.RATE_LIMIT) {

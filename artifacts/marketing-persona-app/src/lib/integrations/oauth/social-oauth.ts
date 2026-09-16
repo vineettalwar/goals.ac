@@ -345,6 +345,7 @@ export async function startMastodonOAuth(
   userId: number,
   instanceRaw: string,
 ): Promise<never> {
+  await assertSocialPublishingEnabled();
   const { normalizeMastodonInstance, registerMastodonApp } = await import("@workspace/connectors/mastodon");
   const instanceUrl = normalizeMastodonInstance(instanceRaw);
   const redirectUri = `${getNextApiOrigin()}/api/auth/mastodon/callback`;

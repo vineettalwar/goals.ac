@@ -22,6 +22,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/admin")).toBe(false);
     expect(isPublicPath("/api/website-projects")).toBe(false);
     expect(isAppShellPath("/integrations/ai")).toBe(true);
+    expect(isAppShellPath("/chat")).toBe(true);
+    expect(isPublicPath("/chat")).toBe(false);
   });
 
   it("keeps public CMS landers public", () => {

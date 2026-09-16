@@ -6,7 +6,7 @@ import { ActiveProjectProvider } from "@/context/active-project";
 import { ImpersonationBanner } from "@/components/admin/layout/impersonation-banner";
 import { IntegrationHealthAlertBannerContainer } from "@/components/integrations/integration-health-alert-banner";
 import { MfaComplianceGate } from "@/components/mfa/mfa-compliance-gate";
-import { APP_SHELL_MAIN_OFFSET } from "@workspace/app-shell/shell-constants";
+import { APP_SHELL_GUTTER, APP_SHELL_MAIN_OFFSET, APP_SHELL_STAGE } from "@workspace/app-shell/shell-constants";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -31,13 +31,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userRole={sidebarRole}
           orgRole={session.user.orgRole}
         />
-        <div
-          className={`flex min-w-0 flex-1 flex-col overflow-hidden ${APP_SHELL_MAIN_OFFSET}`}
-        >
+        <div className={`${APP_SHELL_GUTTER} ${APP_SHELL_MAIN_OFFSET}`}>
           <ImpersonationBanner />
           <IntegrationHealthAlertBannerContainer />
           <MfaComplianceGate>
-            <main className="flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+            <main className={APP_SHELL_STAGE}>{children}</main>
           </MfaComplianceGate>
         </div>
       </div>

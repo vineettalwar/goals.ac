@@ -142,24 +142,11 @@ export async function assertBingWebmasterEnabled(): Promise<void> {
 }
 
 export async function assertSocialPublishingEnabled(): Promise<void> {
-  const [linkedInMod, twitterMod, metaMod, blueskyMod, settings] = await Promise.all([
-    import("@workspace/content-engine/support/social/linkedin-platform-credentials"),
-    import("@workspace/content-engine/support/social/twitter-platform-credentials"),
-    import("@workspace/content-engine/support/social/meta-platform-credentials"),
-    import("@workspace/content-engine/support/social/bluesky-platform-credentials"),
-    getPlatformSettings(),
-  ]);
+  const { initCfBindings } = await import("@/lib/init-cf-bindings");
+  initCfBindings();
+  const settings = await getPlatformSettings();
   if (!settings.socialPublishingEnabled) {
     throw new Error("Social publishing is disabled on this platform.");
-  }
-  const [hasLinkedIn, hasTwitter, hasMeta, hasBluesky] = await Promise.all([
-    linkedInMod.hasPlatformLinkedInCredentials(),
-    twitterMod.hasPlatformTwitterCredentials(),
-    metaMod.hasPlatformMetaCredentials(),
-    blueskyMod.hasPlatformBlueskyCredentials(),
-  ]);
-  if (!hasLinkedIn && !hasTwitter && !hasMeta && !hasBluesky) {
-    throw new Error("Social publishing is not configured on this platform.");
   }
 }
 

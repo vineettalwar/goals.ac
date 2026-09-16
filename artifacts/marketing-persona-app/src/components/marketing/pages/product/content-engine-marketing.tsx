@@ -72,8 +72,8 @@ export function ContentEngineMarketing() {
         <ol className="max-w-2xl space-y-8">
           {PIPELINE_STEPS.map(({ title, desc }) => (
             <li key={title}>
-              <h3 className="text-base font-semibold text-white">{title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-white/65">{desc}</p>
+              <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+              <p className="mt-1.5 text-base leading-relaxed text-muted-foreground">{desc}</p>
             </li>
           ))}
         </ol>
@@ -86,13 +86,13 @@ export function ContentEngineMarketing() {
         bordered
         className="py-20"
       >
-        <ul className="max-w-2xl space-y-4 text-sm leading-relaxed text-white/70">
+        <ul className="max-w-2xl space-y-4 text-sm leading-relaxed text-muted-foreground">
           <li>Humanize pass strips AI tells while keeping headings and links</li>
           <li>Editorial + SERP scores update as you edit</li>
           <li>Publish readiness blocks sloppy meta, dashes, and structure gaps</li>
         </ul>
-        <p className="mt-6 text-sm text-white/55">
-          <Link href="/article-quality" className="text-white/85 underline-offset-2 hover:text-white hover:underline">
+        <p className="mt-6 text-sm text-muted-foreground">
+          <Link href="/article-quality" className="text-foreground underline-offset-2 hover:underline">
             Open the article quality demo
           </Link>
         </p>
@@ -106,13 +106,13 @@ export function ContentEngineMarketing() {
       >
         <ul className="max-w-xl columns-1 gap-x-10 sm:columns-2">
           {SEO_FORMATS.map((format) => (
-            <li key={format.name} className="mb-2 break-inside-avoid text-sm text-white/80">
+            <li key={format.name} className="mb-2 break-inside-avoid text-sm text-foreground">
               {format.name}{" "}
-              <span className="text-white/45">{format.range}</span>
+              <span className="text-muted-foreground">{format.range}</span>
             </li>
           ))}
         </ul>
-        <p className="mt-5 text-sm leading-relaxed text-white/55">
+        <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
           Also available via repurpose: LinkedIn, X, email sequences, landing page copy.
         </p>
       </MarketingSection>
@@ -124,13 +124,13 @@ export function ContentEngineMarketing() {
         bordered
         className="py-20"
       >
-        <p className="max-w-2xl text-sm leading-relaxed text-white/70">
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
           WordPress, Ghost, Shopify (deep). Drupal, Joomla, Notion, Webflow, webhook (Basic). After the article,
           repurpose to LinkedIn, X, Instagram, Facebook, Bluesky, and Mastodon.
         </p>
-        <p className="mt-4 text-sm text-white/55">
+        <p className="mt-4 text-sm text-muted-foreground">
           See{" "}
-          <Link href="/integrations" className="text-white/80 underline-offset-2 hover:text-white hover:underline">
+          <Link href="/integrations" className="text-foreground underline-offset-2 hover:underline">
             integrations
           </Link>{" "}
           for destination details.
@@ -145,7 +145,7 @@ export function ContentEngineMarketing() {
         primaryCta={{ label: "See Autopilot", href: "/content-autopilot" }}
         secondaryCta={{ label: "Run free GEO audit", href: "/geo-audit" }}
       >
-        <p className="mx-auto max-w-xl text-sm leading-relaxed text-white/65">
+        <p className="mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
           Scheduled queue, scores on every draft, you keep editorial control.
         </p>
       </DarkCTABand>
