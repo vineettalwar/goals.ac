@@ -56,6 +56,37 @@ describe("runAgentLoop", () => {
     expect(sink.runs.at(-1)?.status).toBe("budget_exhausted");
   });
 
+  it("stamps run.id on the first persist before any tool runs", async () => {
+    const ids: Array<number | undefined> = [];
+    const sink = memoryTrajectorySink();
+    let toolSawId: number | undefined;
+    const noisy: AgentTool = {
+      name: "gsc_query",
+      description: "gsc",
+      risk: "read",
+      creditCost: 1,
+      async execute() {
+        toolSawId = sink.runs[0]?.id;
+        return { ok: true, summary: "ping", evidenceRefs: [], hasToolEvidence: false };
+      },
+    };
+    const result = await runAgentLoop({
+      goal: { kind: "opportunity_scan", text: "scan", projectId: 1 },
+      tools: [noisy],
+      stepBudget: 1,
+      sink: {
+        async save(run) {
+          await sink.save(run);
+          ids.push(run.id);
+        },
+      },
+      planner: () => ({ type: "call_tool", tool: "gsc_query", args: { projectId: 1 }, reason: "again" }),
+    });
+    expect(ids[0]).toBe(1);
+    expect(toolSawId).toBe(1);
+    expect(result.id).toBe(1);
+  });
+
   it("invokes GSC when that tool is on the registry (credentials exist)", async () => {
     let gscCalls = 0;
     const gsc: AgentTool = {

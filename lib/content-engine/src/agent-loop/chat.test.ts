@@ -5,6 +5,7 @@ import {
   composeGroundedReply,
   goalFromIntent,
   parseChatIntent,
+  runInspectorHref,
 } from "./seo-chat-format";
 import type { AgentTool } from "./types";
 
@@ -163,5 +164,12 @@ describe("chat_turn planner wiring", () => {
     expect(drafted).toBe(0);
     expect(chipLabel("gsc_query")).toBe("Queried GSC");
     expect(result.status).toBe("completed");
+  });
+});
+
+describe("runInspectorHref", () => {
+  it("appends runId for Actions inspector deep-links", () => {
+    expect(runInspectorHref("/search/actions", 41)).toBe("/search/actions?runId=41");
+    expect(runInspectorHref("/search/actions?project=2", 9)).toBe("/search/actions?project=2&runId=9");
   });
 });

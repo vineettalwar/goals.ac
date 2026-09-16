@@ -58,7 +58,8 @@ An employee run is a persisted `AgentLoop`: a goal, a tool registry, a step/cred
 ## Observability
 
 - `agent_runs.trajectory` stores each tool, args summary, evidence refs, ok/error, and planner decision. Failed write tools persist `error`. Approve-first `publish_live` is inspectable (`status: awaiting_approval` + `pendingApproval`).
-- Search → Actions (Next + SPA) lists queue items **and** recent failed/gated/running runs. Trajectory inspector shows verified vs not-verified evidence.
+- Search → Actions (Next + SPA) lists queue items **and** recent failed/gated/running runs. Trajectory inspector shows verified vs not-verified evidence. `/search/actions?runId=` opens that run. SEO chat **Inspect run** uses the same inspector.
+- `agent_runs.id` is assigned on the first trajectory persist (empty trajectory, status `running`). Pieces already tied to the run (`contentPieceId` on the goal) get `pieceMetadata.agentRunId` on that same write.
 - `GET /api/website-projects/:id/agent-runs` returns summaries (`presentAgentRunListItem`). `GET /api/agent-runs/:id` returns the full run (`presentAgentRun`).
 - Next **Score from GSC** creates an `opportunity_scan` run and executes it (same tools as CF queue). Studio SSE still emits `event: agent` `{ type: "loop_step" }`.
 
