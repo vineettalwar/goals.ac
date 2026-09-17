@@ -1,6 +1,12 @@
 # Session Handoff
 
-## Latest (2026-09-17) — Dashboard stuck on Loading
+## Latest (2026-09-17) — Light mode keeps the ink rail
+
+Product Light mode (sidebar footer) only flips the main column to newsprint. `.app-sidebar` stays studio chrome (`--studio-chrome` / newsprint-on-ink) in both themes. Marketing `(public)` still uses `.marketing-register` cream. First visit stays dark unless `localStorage.theme === "light"`.
+
+**Verify:** signed-in `/dashboard`, `/chat`, `/projects/:id/content-studio`, `/settings` → Light mode. Rail ink, stage newsprint. Marketing `/` unchanged.
+
+## Prior (2026-09-17) — Dashboard stuck on Loading
 
 `app.goals.ac/dashboard` never left `Loading…` after sign-in. TanStack Query v5 keeps a **disabled** query `isPending` (no projects, or `/api/website-projects` failed). The page also waited on that flag **and** on command-center/usage before first paint.
 

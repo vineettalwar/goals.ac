@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, ListPlus, PenLine, Plus } from "lucide-react";
 import { cn } from "../cn";
-import { chatCapabilityPrompts, type ChatProductSurface } from "@workspace/content-engine/agent-loop/chat-catalog";
+import { chatCapabilityPromptList, type ChatProductSurface } from "@workspace/content-engine/agent-loop/chat-catalog";
 import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop/seo-chat-format";
 import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
 
@@ -339,23 +339,16 @@ export function SeoChatWorkspace({
             <h1 className="mb-7 text-center text-4xl font-normal tracking-tight text-foreground">
               Where should we start?
             </h1>
-            <div className="mb-9 flex max-w-3xl flex-col items-center gap-5">
-              {chatCapabilityPrompts(surface).map((group) => (
-                <div key={group.label} className="flex flex-col items-center gap-2">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{group.label}</p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {group.prompts.map((prompt) => (
-                      <button
-                        key={prompt}
-                        type="button"
-                        className="rounded-sm border border-border bg-secondary px-3.5 py-1.5 text-xs text-foreground hover:bg-muted"
-                        onClick={() => void send(prompt)}
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <div className="mb-9 flex max-w-3xl flex-wrap justify-center gap-2">
+              {chatCapabilityPromptList(surface).map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="rounded-sm border border-border bg-secondary px-3.5 py-1.5 text-xs text-foreground hover:bg-muted"
+                  onClick={() => void send(prompt)}
+                >
+                  {prompt}
+                </button>
               ))}
             </div>
             <div className="w-full max-w-3xl">{composer}</div>
