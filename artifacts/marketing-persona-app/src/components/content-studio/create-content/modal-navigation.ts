@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { toast } from "sonner";
-import type { ContentFormatType } from "./content-studio-format-data";
-import type { WizardStepId } from "./create-content-modal-types";
-import { STEPS_WITH_ENTER_CONTINUE, newsNeedsSourceUrl } from "./create-content-modal-logic";
+import type { ContentFormatType } from "../content-studio-format-data";
+import type { WizardStepId } from "./modal-types";
+import { STEPS_WITH_ENTER_CONTINUE, newsNeedsSourceUrl } from "./modal-logic";
 
 export function useCreateContentContinue(opts: {
   currentStep: WizardStepId;

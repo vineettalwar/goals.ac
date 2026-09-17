@@ -28,8 +28,8 @@ import {
   ReviewRow,
   StepActions,
   WizardStep,
-} from "./create-content-modal-parts";
-import { FORMAT_META } from "./content-studio-format-data";
+} from "./modal-parts";
+import { FORMAT_META } from "../content-studio-format-data";
 import {
   LINKEDIN_ARCHETYPES,
   LINKEDIN_HOOK_TYPES,
@@ -37,8 +37,8 @@ import {
 import type { PublishDestinationId } from "@/lib/projects/publishing-destinations";
 import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
 import { cn } from "@/lib/utils";
-import type { WizardStepId } from "./create-content-modal-types";
-import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import type { WizardStepId } from "./modal-types";
+import type { CreateContentWizardProps } from "./wizard-props";
 export function CreateContentCreateKeywordSteps({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
   const {
     selectPath, selectFormat, loadingCompetitors, competitorUrls, competitorAnalyses,

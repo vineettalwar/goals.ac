@@ -2,11 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import type { ContentFormatType } from "./content-studio-format-data";
+import type { ContentFormatType } from "../content-studio-format-data";
 import type { LinkedInArchetypeId, LinkedInHookId } from "@workspace/app-shell/studio";
 import type { PublishDestinationId } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-utils";
-import type { CreatePace, Flow } from "./create-content-modal-types";
+import type { ContentPieceRow } from "../content-studio-utils";
+import type { CreatePace, Flow } from "./modal-types";
 
 export function useCreateContentFormState() {
   const [flow, setFlow] = useState<Flow>("create");

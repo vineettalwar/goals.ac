@@ -8,12 +8,12 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CreateContentCreateSteps } from "./create-content-create-steps";
-import { CreateContentRepurposeSteps } from "./create-content-repurpose-steps";
-import { CreateContentOptimizeSteps } from "./create-content-optimize-steps";
-import type { WizardStepId } from "./create-content-modal-types";
+import { CreateContentCreateSteps } from "./create-steps";
+import { CreateContentRepurposeSteps } from "./repurpose-steps";
+import { CreateContentOptimizeSteps } from "./optimize-steps";
+import type { WizardStepId } from "./modal-types";
 
-import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import type { CreateContentWizardProps } from "./wizard-props";
 
 export function CreateContentModalShell({
   open,

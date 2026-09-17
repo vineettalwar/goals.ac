@@ -2,8 +2,8 @@ import {
   getConnectedDestinationsForFormat,
   type CmsConnectionSnapshot,
 } from "@/lib/projects/publishing-destinations";
-import type { ContentFormatType } from "./content-studio-format-data";
-import type { CreatePace, Flow, WizardStepId } from "./create-content-modal-types";
+import type { ContentFormatType } from "../content-studio-format-data";
+import type { CreatePace, Flow, WizardStepId } from "./modal-types";
 
 export function parseSourceUrls(raw: string): string[] {
   return raw

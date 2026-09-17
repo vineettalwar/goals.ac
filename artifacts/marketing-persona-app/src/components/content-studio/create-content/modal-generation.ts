@@ -1,16 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import type { ContentFormatType } from "./content-studio-format-data";
+import type { ContentFormatType } from "../content-studio-format-data";
 import type { LinkedInArchetypeId, LinkedInHookId } from "@workspace/app-shell/studio";
-import type { WizardStepId } from "./create-content-modal-types";
-import { parseSourceUrls } from "./create-content-modal-logic";
+import type { WizardStepId } from "./modal-types";
+import { parseSourceUrls } from "./modal-logic";
 import {
   runGeneration as runGenerationFn,
   runRepurpose as runRepurseFn,
   runOptimizeImport as runOptimizeImportFn,
-} from "./create-content-modal-runners";
-import type { ContentPieceRow } from "./content-studio-utils";
+} from "./modal-runners";
+import type { ContentPieceRow } from "../content-studio-utils";
 import type { AgentProgressEvent } from "@workspace/content-engine/agents/types";
 
 type GenerationShared = {

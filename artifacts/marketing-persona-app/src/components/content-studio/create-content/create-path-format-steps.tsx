@@ -1,10 +1,10 @@
 "use client";
 
 import { FileText, Shuffle, RefreshCw, Zap } from "lucide-react";
-import { OptionCard, WizardStep } from "./create-content-modal-parts";
-import { CreateContentFormatPicker } from "./create-content-format-picker";
-import type { WizardStepId } from "./create-content-modal-types";
-import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import { OptionCard, WizardStep } from "./modal-parts";
+import { CreateContentFormatPicker } from "./format-picker";
+import type { WizardStepId } from "./modal-types";
+import type { CreateContentWizardProps } from "./wizard-props";
 
 export function CreateContentCreatePathFormatSteps({
   currentStep,

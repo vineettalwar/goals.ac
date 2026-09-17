@@ -1,11 +1,11 @@
 "use client";
 
-import type { WizardStepId } from "./create-content-modal-types";
-import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import type { WizardStepId } from "./modal-types";
+import type { CreateContentWizardProps } from "./wizard-props";
 
-import { CreateContentCreatePathFormatSteps } from "./create-content-create-path-format-steps";
-import { CreateContentCreateCompetitorsStep } from "./create-content-create-competitors-step";
-import { CreateContentCreateKeywordSteps } from "./create-content-create-keyword-steps";
+import { CreateContentCreatePathFormatSteps } from "./create-path-format-steps";
+import { CreateContentCreateCompetitorsStep } from "./create-competitors-step";
+import { CreateContentCreateKeywordSteps } from "./create-keyword-steps";
 
 export function CreateContentCreateEarlySteps({
   currentStep,

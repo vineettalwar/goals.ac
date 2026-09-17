@@ -2,9 +2,9 @@
 
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-utils";
-import { CreateContentModalShell } from "./create-content-modal-shell";
-import { useCreateContentModal, type BriefContentDraft } from "./use-create-content-modal";
+import type { ContentPieceRow } from "../content-studio-utils";
+import { CreateContentModalShell } from "./modal-shell";
+import { useCreateContentModal, type BriefContentDraft } from "./use-modal";
 
 export type { BriefContentDraft };
 

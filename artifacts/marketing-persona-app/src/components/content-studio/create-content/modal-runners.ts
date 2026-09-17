@@ -4,9 +4,9 @@
  * independently of React state machinery.
  */
 import { toast } from "sonner";
-import type { ContentFormatType } from "./content-studio-format-data";
-import type { ContentPieceRow } from "./content-studio-utils";
-import { extractSections } from "./create-content-modal-logic";
+import type { ContentFormatType } from "../content-studio-format-data";
+import type { ContentPieceRow } from "../content-studio-utils";
+import { extractSections } from "./modal-logic";
 import type React from "react";
 import type { AgentProgressEvent } from "@workspace/content-engine/agents/types";
 

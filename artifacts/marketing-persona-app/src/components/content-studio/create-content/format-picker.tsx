@@ -5,7 +5,7 @@ import {
   formatCategoriesForSurface,
   type ContentFormatType,
   type ProductSurface,
-} from "./content-studio-format-data";
+} from "../content-studio-format-data";
 import { cn } from "@/lib/utils";
 
 export function CreateContentFormatPicker({

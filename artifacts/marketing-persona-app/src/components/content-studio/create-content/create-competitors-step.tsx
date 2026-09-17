@@ -31,11 +31,11 @@ import {
   ReviewRow,
   StepActions,
   WizardStep,
-} from "./create-content-modal-parts";
+} from "./modal-parts";
 import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
-import type { WizardStepId } from "./create-content-modal-types";
-import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import type { WizardStepId } from "./modal-types";
+import type { CreateContentWizardProps } from "./wizard-props";
 export function CreateContentCreateCompetitorsStep({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
   const {
     selectPath, selectFormat, loadingCompetitors, competitorUrls, competitorAnalyses,

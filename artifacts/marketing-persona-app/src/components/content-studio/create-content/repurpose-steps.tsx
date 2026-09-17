@@ -23,24 +23,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreateContentFormatPicker } from "./create-content-format-picker";
+import { CreateContentFormatPicker } from "./format-picker";
 import {
   CompetitorContentGaps,
   OptionCard,
   ReviewRow,
   StepActions,
   WizardStep,
-} from "./create-content-modal-parts";
+} from "./modal-parts";
 import {
   FORMAT_META,
   type ContentFormatType,
-} from "./content-studio-format-data";
+} from "../content-studio-format-data";
 import type { PublishDestinationId, CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
 import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
-import type { WizardStepId } from "./create-content-modal-types";
-import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import type { WizardStepId } from "./modal-types";
+import type { CreateContentWizardProps } from "./wizard-props";
 
 
 export function CreateContentRepurposeSteps({

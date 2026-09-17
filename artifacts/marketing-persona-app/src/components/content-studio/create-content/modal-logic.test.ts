@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStepSequence, newsNeedsSourceUrl } from "./create-content-modal-logic";
+import { buildStepSequence, newsNeedsSourceUrl } from "./modal-logic";
 
 describe("buildStepSequence", () => {
   it("express create is format → keyword → review → generating", () => {

@@ -1,4 +1,4 @@
-import type { ContentFormatType } from "./content-studio-format-data";
+import type { ContentFormatType } from "../content-studio-format-data";
 
 export type BriefContentDraft = {
   briefId?: number;

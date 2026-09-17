@@ -24,8 +24,8 @@
     "next-auth": "^5.0.0-beta.30"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260911.1",
+    "@cloudflare/workers-types": "^5.20260916.1",
     "typescript": "~5.9.2",
-    "wrangler": "^4.131.2"
+    "wrangler": "^4.133.0"
   }
 }

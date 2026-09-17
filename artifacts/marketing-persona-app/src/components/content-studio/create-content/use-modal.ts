@@ -3,26 +3,26 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 import type { AiProviderId } from "@workspace/ai-providers/config";
-import type { ContentFormatType } from "./content-studio-format-data";
+import type { ContentFormatType } from "../content-studio-format-data";
 import {
   resolveSuggestedDestination,
   type CmsConnectionSnapshot,
 } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-utils";
-import type { CreatePace, Flow } from "./create-content-modal-types";
-import { buildStepSequence, EMPTY_CMS_CONNECTIONS } from "./create-content-modal-logic";
-export type { BriefContentDraft } from "./create-content-modal-types";
-import type { BriefContentDraft } from "./create-content-modal-types";
-import { useCreateContentCompetitors } from "./create-content-modal-competitors";
-import { useCreateContentFormState } from "./create-content-modal-form-state";
+import type { ContentPieceRow } from "../content-studio-utils";
+import type { CreatePace, Flow } from "./modal-types";
+import { buildStepSequence, EMPTY_CMS_CONNECTIONS } from "./modal-logic";
+export type { BriefContentDraft } from "./modal-types";
+import type { BriefContentDraft } from "./modal-types";
+import { useCreateContentCompetitors } from "./modal-competitors";
+import { useCreateContentFormState } from "./modal-form-state";
 import {
   buildAngleHintFromFields,
   useCreateContentGeneration,
-} from "./create-content-modal-generation";
+} from "./modal-generation";
 import {
   useCreateContentContinue,
   useCreateContentKeyboard,
-} from "./create-content-modal-navigation";
+} from "./modal-navigation";
 import { useAgentTeamState } from "@/components/content/agents";
 import { applyLoopStepEvent, type LoopStepEvent } from "@workspace/app-shell/studio";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/seo-longform-formats";
