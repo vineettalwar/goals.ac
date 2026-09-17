@@ -50,7 +50,7 @@ describe("applySemrushMetricsToGaps", () => {
       competitorName: "Competitor",
       industry: "SEO",
     });
-    expect(gaps[0]?.estimatedVolume).toBe("500-1,500/mo");
+    expect(gaps[0]?.estimatedVolume).toBeUndefined();
 
     const metrics = new Map([
       ["ai citation strategy for b2b", { searchVolume: 2400, difficulty: "low" as const }],
@@ -61,7 +61,7 @@ describe("applySemrushMetricsToGaps", () => {
     expect(enriched[0]?.opportunityScore).toBeGreaterThan(gaps[0]!.opportunityScore);
   });
 
-  it("keeps placeholders when Semrush has no match", () => {
+  it("leaves volume unmeasured when Semrush has no match", () => {
     const gaps = opportunitiesFromCompetitorGaps({
       contentGaps: ["obscure niche topic"],
       competitorUrl: "https://competitor.com",
@@ -69,7 +69,7 @@ describe("applySemrushMetricsToGaps", () => {
       industry: "SEO",
     });
     const enriched = applySemrushMetricsToGaps(gaps, new Map(), (n) => `${n}/mo`);
-    expect(enriched[0]?.estimatedVolume).toBe("500-1,500/mo");
+    expect(enriched[0]?.estimatedVolume).toBeUndefined();
     expect(enriched[0]?.difficulty).toBe("medium");
   });
 });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, competitorAnalysesTable } from "@workspace/db";
-import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
+import { analyzeCompetitor, CompetitorUnreachableError } from "@workspace/seo-tools/competitorAnalyzer";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
@@ -123,6 +123,9 @@ export async function POST(req: Request) {
     return NextResponse.json(flatAnalysisResponse(saved));
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
+    if (err instanceof CompetitorUnreachableError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Analysis failed" },
       { status: 500 },

@@ -12,7 +12,19 @@ export type RedditSearchHit = {
   createdUtc: number;
 };
 
+export type RedditThreadContext = {
+  selftext: string;
+  comments: string[];
+};
+
+export const REDDIT_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
+
 const USER_AGENT = "goals.ac/1.0 (content research)";
+
+export function isFreshRedditThread(createdUtc: number, nowSeconds = Date.now() / 1000): boolean {
+  if (!createdUtc) return true;
+  return nowSeconds - createdUtc <= REDDIT_MAX_AGE_SECONDS;
+}
 
 export async function searchRedditThreads(
   query: string,
@@ -72,6 +84,44 @@ export async function searchRedditThreads(
   }
 
   return hits;
+}
+
+export function redditJsonUrl(permalink: string): string {
+  const base = permalink.split("?")[0]?.replace(/\/$/, "") ?? permalink;
+  return base.endsWith(".json") ? base : `${base}.json`;
+}
+
+export function parseRedditThreadJson(json: unknown): RedditThreadContext {
+  const empty: RedditThreadContext = { selftext: "", comments: [] };
+  if (!Array.isArray(json) || json.length < 1) return empty;
+  const postListing = json[0] as { data?: { children?: Array<{ data?: { selftext?: string } }> } };
+  const selftext = postListing.data?.children?.[0]?.data?.selftext?.trim() ?? "";
+  const commentsListing = json[1] as {
+    data?: { children?: Array<{ data?: { body?: string; kind?: string } }> };
+  };
+  const comments: string[] = [];
+  for (const child of commentsListing?.data?.children ?? []) {
+    const body = child.data?.body?.replace(/\s+/g, " ").trim();
+    if (!body || body === "[deleted]" || body === "[removed]") continue;
+    comments.push(body.slice(0, 280));
+    if (comments.length >= 3) break;
+  }
+  return { selftext: selftext.slice(0, 800), comments };
+}
+
+export async function fetchRedditThreadContext(
+  permalink: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RedditThreadContext> {
+  try {
+    const res = await fetchImpl(redditJsonUrl(permalink), {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+    });
+    if (!res.ok) return { selftext: "", comments: [] };
+    return parseRedditThreadJson(await res.json());
+  } catch {
+    return { selftext: "", comments: [] };
+  }
 }
 
 export function redditSearchUrl(subreddit: string, query: string): string {

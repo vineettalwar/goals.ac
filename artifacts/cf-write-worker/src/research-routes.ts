@@ -6,16 +6,11 @@ import {
   seoArticlesTable,
   websiteProjectsTable,
 } from "@workspace/db/schema-sqlite";
-import { cleanAndParse } from "@workspace/content-engine/core/utils";
 import { rateLimitResponse, RATE_LIMITS } from "@workspace/content-engine/core/rate-limit";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
-import {
-  searchRedditThreads,
-  type RedditSearchHit,
-} from "@workspace/content-engine/social/reddit-public-search";
-import { persistRedditOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
+import { runRedditDiscovery } from "@workspace/content-engine/social/reddit-discovery";
 import { generateTopicalMap } from "@workspace/content-engine/strategy/topical-map-generator";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -25,57 +20,11 @@ import { requireProjectAccess } from "./project-access";
 const redditDiscoveryBody = z.object({ projectId: z.number().int().positive() });
 const topicalMapBody = z.object({ websiteProjectId: z.number().int().positive() });
 
-type RedditThread = {
-  subreddit: string;
-  title: string;
-  url: string;
-  intentScore: number;
-  suggestedReply: string;
-  score: number;
-  numComments: number;
-  source: "reddit";
-};
-
 type ScrapeData = {
   companyName?: string;
   industry?: string;
   targetAudience?: string;
 };
-
-function keywordTerms(
-  brand: { primaryKeywords?: string[] | null } | undefined,
-  projectName: string,
-): string[] {
-  const fromBrand = brand?.primaryKeywords?.slice(0, 5) ?? [];
-  if (fromBrand.length > 0) return fromBrand;
-  return projectName
-    .split(/\s+/)
-    .filter((w) => w.length > 2)
-    .slice(0, 3);
-}
-
-function intentScoreForHit(hit: RedditSearchHit, keywords: string[]): number {
-  const titleLower = hit.title.toLowerCase();
-  const keywordHits = keywords.filter((k) => titleLower.includes(k.toLowerCase())).length;
-  const engagement = Math.min(
-    40,
-    Math.log10(Math.max(hit.score, 1) + 1) * 12 + Math.log10(Math.max(hit.numComments, 1) + 1) * 6,
-  );
-  const relevance = Math.min(60, keywordHits * 18 + (hit.numComments >= 5 ? 12 : 0));
-  return Math.round(Math.min(100, engagement + relevance));
-}
-
-async function findRedditHits(keywords: string[], industry: string): Promise<RedditSearchHit[]> {
-  const primaryQuery = keywords.slice(0, 3).join(" ");
-  let hits = primaryQuery ? await searchRedditThreads(primaryQuery, 8) : [];
-  if (hits.length === 0 && keywords[0]) {
-    hits = await searchRedditThreads(keywords[0], 8);
-  }
-  if (hits.length === 0 && industry) {
-    hits = await searchRedditThreads(`${industry} ${keywords[0] ?? ""}`.trim(), 6);
-  }
-  return hits.slice(0, 6);
-}
 
 async function handleRedditDiscovery(
   request: Request,
@@ -111,28 +60,61 @@ async function handleRedditDiscovery(
       .limit(1),
   ]);
 
-  const keywords = keywordTerms(brand, project?.name ?? "B2B SaaS");
-  const industry = brand?.industry ?? "B2B";
-  const audience = brand?.targetAudience ?? "";
+  type OkBilling = Extract<Awaited<ReturnType<typeof prepareAiBilling>>, { ok: true }>;
+  const billing = { current: null as OkBilling | null };
 
-  const hits = await findRedditHits(keywords, industry);
-  if (hits.length === 0) {
-    return withCors(request, Response.json({ threads: [], keywords, source: "reddit" }));
-  }
-
-  const billingPrep = await prepareAiBilling({
-    userId,
-    tier: "rapid",
-    quotaKind: "article",
-  });
-  if (!billingPrep.ok) return withCors(request, billingPrep.response);
-
-  let client: Awaited<ReturnType<typeof resolveAiClientForUser>>["client"];
   try {
-    ({ client } = await resolveAiClientForUser(userId));
+    const result = await runRedditDiscovery({
+      projectId: parsed.data.projectId,
+      projectName: project?.name ?? "B2B SaaS",
+      projectUrl: project?.url,
+      industry: brand?.industry,
+      audience: brand?.targetAudience,
+      primaryKeywords: brand?.primaryKeywords,
+      generate: async (prompt) => {
+        const billingPrep = await prepareAiBilling({
+          userId,
+          tier: "rapid",
+          quotaKind: "article",
+        });
+        if (!billingPrep.ok) {
+          throw Object.assign(new Error("billing"), { response: billingPrep.response });
+        }
+        billing.current = billingPrep;
+        try {
+          const { client } = await resolveAiClientForUser(userId);
+          const response = await client.generate({
+            prompt,
+            responseMimeType: "application/json",
+            maxOutputTokens: 2048,
+          });
+          return response.text ?? "";
+        } catch (err) {
+          await cancelAiBilling(billingPrep.ctx, "ai_unavailable");
+          billing.current = null;
+          throw err;
+        }
+      },
+    });
+
+    if (billing.current && result.threads.length > 0) {
+      await completeAiBilling(billing.current.ctx, {
+        userId,
+        eventType: "reddit_discovery",
+        usedByok: billing.current.usedByok,
+        tier: "rapid",
+      });
+    }
+
+    return withCors(request, Response.json(result));
   } catch (err) {
-    await cancelAiBilling(billingPrep.ctx, "ai_unavailable");
-    const msg = err instanceof Error ? err.message : String(err);
+    if (err && typeof err === "object" && "response" in err) {
+      return withCors(request, (err as { response: Response }).response);
+    }
+    if (billing.current) {
+      await cancelAiBilling(billing.current.ctx, err instanceof Error ? err.message : "generation_failed");
+    }
+    const msg = err instanceof Error ? err.message : "";
     if (
       msg.includes("not configured") ||
       msg.includes("No Gemini API key") ||
@@ -150,84 +132,9 @@ async function handleRedditDiscovery(
         ),
       );
     }
-    throw err;
-  }
-
-  const threadBrief = hits.map((h, i) => ({
-    index: i,
-    subreddit: h.subreddit,
-    title: h.title,
-  }));
-
-  const prompt = `Draft helpful Reddit replies for a ${industry} brand.
-Keywords: ${keywords.join(", ")}
-Audience: ${audience}
-Website: ${project?.url ?? ""}
-
-Threads (real Reddit posts — do not invent URLs):
-${JSON.stringify(threadBrief)}
-
-Return JSON: { "replies": [{ "index": 0, "suggestedReply": "2-3 sentence helpful reply, not salesy" }] }
-One reply per thread index. Be conversational and value-first.`;
-
-  try {
-    const response = await client.generate({
-      prompt,
-      responseMimeType: "application/json",
-      maxOutputTokens: 2048,
-    });
-
-    const text = response.text ?? "";
-    let replies: Array<{ index: number; suggestedReply: string }> = [];
-    try {
-      const data = cleanAndParse<{ replies: Array<{ index: number; suggestedReply: string }> }>(
-        text,
-      );
-      replies = data.replies ?? [];
-    } catch {
-      await cancelAiBilling(billingPrep.ctx, "parse_failed");
+    if (msg.toLowerCase().includes("parse")) {
       return withCors(request, Response.json({ error: "Failed to parse reply drafts" }, { status: 500 }));
     }
-
-    const replyByIndex = new Map(replies.map((r) => [r.index, r.suggestedReply]));
-
-    const threads: RedditThread[] = hits.map((hit, i) => ({
-      subreddit: hit.subreddit.startsWith("r/") ? hit.subreddit : `r/${hit.subreddit}`,
-      title: hit.title,
-      url: hit.url,
-      intentScore: intentScoreForHit(hit, keywords),
-      suggestedReply:
-        replyByIndex.get(i) ??
-        "Share a concise, helpful perspective based on your experience — avoid pitching unless asked.",
-      score: hit.score,
-      numComments: hit.numComments,
-      source: "reddit",
-    }));
-
-    await completeAiBilling(billingPrep.ctx, {
-      userId,
-      eventType: "reddit_discovery",
-      usedByok: billingPrep.usedByok,
-      tier: "rapid",
-    });
-
-    let opportunitiesInserted = 0;
-    try {
-      opportunitiesInserted = await persistRedditOpportunities(
-        parsed.data.projectId,
-        threads,
-        keywords,
-      );
-    } catch {
-      // discovery still succeeds even if opportunity persist fails
-    }
-
-    return withCors(
-      request,
-      Response.json({ threads, keywords, source: "reddit", opportunitiesInserted }),
-    );
-  } catch (err) {
-    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
     return withCors(request, Response.json({ error: "Reddit discovery failed" }, { status: 500 }));
   }
 }

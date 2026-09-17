@@ -140,13 +140,13 @@ export function ArticleIdeasOpportunityList({
               </div>
               <p className="mt-1 text-sm">{opp.suggestedTitle}</p>
               <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{opp.suggestedAngle}</p>
-              {(metrics || opp.estimatedVolume) && (
-                <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+              <p className="mt-1 text-xs tabular-nums text-muted-foreground">
                   {metrics
                     ? `${metrics.impressions.toLocaleString()} imp · pos ${metrics.position.toFixed(1)} · CTR ${(metrics.ctr * 100).toFixed(1)}%`
-                    : opp.estimatedVolume}
+                    : opp.estimatedVolume?.trim()
+                      ? opp.estimatedVolume
+                      : "Volume unmeasured"}
                 </p>
-              )}
             </div>
             <div className="flex flex-wrap items-center gap-1 shrink-0">
               {opp.linkedContentPieceId && activeProjectId != null ? (

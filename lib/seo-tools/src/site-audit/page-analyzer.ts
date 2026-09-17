@@ -35,6 +35,25 @@ function parseLinkHeaderCanonical(header: string | null): string | null {
   return match?.[1] ?? null;
 }
 
+function collectSchemaTypes(node: unknown, into: string[]): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const entry of node) collectSchemaTypes(entry, into);
+    return;
+  }
+  const record = node as Record<string, unknown>;
+  const typeValue = record["@type"];
+  if (typeof typeValue === "string") into.push(typeValue);
+  else if (Array.isArray(typeValue)) {
+    for (const entry of typeValue) {
+      if (typeof entry === "string") into.push(entry);
+    }
+  }
+  if (Array.isArray(record["@graph"])) {
+    for (const entry of record["@graph"]) collectSchemaTypes(entry, into);
+  }
+}
+
 export type AnalyzeHtmlInput = {
   html: string;
   pageUrl: string;
@@ -67,11 +86,23 @@ export function analyzeHtml(input: AnalyzeHtmlInput): CrawledPage {
 
   const headingOrder: number[] = [];
   const h1s: string[] = [];
+  const h2s: string[] = [];
   for (const el of root.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
     const level = Number(el.tagName.replace(/\D/g, ""));
     if (!level) continue;
     headingOrder.push(level);
-    if (level === 1) h1s.push(el.text.trim());
+    const headingText = el.text.replace(/\s+/g, " ").trim();
+    if (level === 1 && headingText) h1s.push(headingText);
+    if (level === 2 && headingText && h2s.length < 8) h2s.push(headingText);
+  }
+
+  const schemaTypes: string[] = [];
+  for (const script of root.querySelectorAll('script[type="application/ld+json"]')) {
+    try {
+      collectSchemaTypes(JSON.parse(script.text), schemaTypes);
+    } catch {
+      // ignore invalid JSON-LD
+    }
   }
 
   const images = root.querySelectorAll("img").slice(0, MAX_IMAGES);
@@ -117,6 +148,9 @@ export function analyzeHtml(input: AnalyzeHtmlInput): CrawledPage {
     xRobotsTag: input.xRobotsTag,
     isIndexable: isIndexable(robotsMeta, input.xRobotsTag),
     h1Count: h1s.length,
+    h1Text: h1s[0] ?? null,
+    h2s,
+    schemaTypes: [...new Set(schemaTypes)],
     headingOrder,
     wordCount,
     contentHash,
@@ -155,6 +189,9 @@ export function emptyPage(partial: {
     xRobotsTag: partial.xRobotsTag ?? null,
     isIndexable: true,
     h1Count: 0,
+    h1Text: null,
+    h2s: [],
+    schemaTypes: [],
     headingOrder: [],
     wordCount: 0,
     contentHash: null,

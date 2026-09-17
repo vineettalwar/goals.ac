@@ -1,5 +1,13 @@
 # Session Handoff
 
+## Latest (2026-09-17) — Deepen thin research tools
+
+Competitor analysis uses the site-audit crawler (`runSiteAuditCrawl`, max 6 pages) and **fails** if the homepage is blocked; stores `evidencePages` / `crawlPartial`. GEO audit stays one URL and now checks llms.txt, AI robots, sameAs/author/dates, outbound citations, citability length. Keyword gaps no longer invent `500-1,500/mo` — unmeasured volume until Semrush overlays. Reddit discovery uses live search + post selftext/comments; shared `runRedditDiscovery` for Next and CF.
+
+**Verify:** `npx vitest run lib/seo-tools/src/competitorAnalyzer.test.ts lib/seo-tools/src/geoAuditor.test.ts lib/seo-tools/src/keywordGapAnalyzer.reddit-semrush.test.ts lib/seo-tools/src/keywordGapAnalyzer.refresh.test.ts lib/content-engine/src/social` · `npx tsc --noEmit -p lib/seo-tools/tsconfig.json` · `npx tsc --noEmit -p artifacts/cf-write-worker/tsconfig.json`
+
+**Manual:** Research → Competitors (blocked URL 422; real site shows source pages). GEO on a page missing `llms.txt`. Keyword opportunities without Semrush show Volume unmeasured. Reddit replies mention the post body.
+
 ## Latest (2026-09-16) — Investor DD remediations
 
 Tenant isolation: bound-project GET/PATCH, no null-project world-reads, conversations 404, persona writes scoped, session age + CIDR, worker security headers, SSRF in competitor scrape. Compliance drafts: privacy/terms/subprocessors/cookies, DPA template, DSAR export, stricter account delete. Ops: `PUBLISH_ALERT_WEBHOOK_URL`, D1 backup notes, `pnpm run parity:gate`, freeze Express/Vite.

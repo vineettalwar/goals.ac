@@ -242,7 +242,6 @@ Return ONLY valid JSON array (max 8 items) of keyword gaps they should target:
 [
   {
     "keyword": "string",
-    "estimatedVolume": "e.g. 800/mo",
     "difficulty": "low" | "medium" | "high",
     "opportunityScore": <0-100 integer>,
     "intent": "informational" | "commercial" | "transactional",
@@ -251,7 +250,7 @@ Return ONLY valid JSON array (max 8 items) of keyword gaps they should target:
   }
 ]
 
-Focus on keywords competitors likely rank for that this brand does not yet cover.`;
+Do not invent monthly search volume. Focus on keywords competitors likely rank for that this brand does not yet cover.`;
 
   try {
     const providerId = resolveProviderId(params.aiProviderOptions);
@@ -263,7 +262,6 @@ Focus on keywords competitors likely rank for that this brand does not yet cover
     });
     const parsed = JSON.parse(response.text ?? "[]") as Array<{
       keyword: string;
-      estimatedVolume?: string;
       difficulty?: "low" | "medium" | "high";
       opportunityScore?: number;
       intent?: string;
@@ -275,7 +273,6 @@ Focus on keywords competitors likely rank for that this brand does not yet cover
     return parsed.map((item) => ({
       keyword: item.keyword,
       source: "ai_analysis" as const,
-      estimatedVolume: item.estimatedVolume,
       difficulty: item.difficulty ?? "medium",
       opportunityScore: Math.min(100, Math.max(0, item.opportunityScore ?? 50)),
       intent: item.intent,

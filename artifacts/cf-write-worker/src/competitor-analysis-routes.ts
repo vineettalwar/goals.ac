@@ -1,7 +1,7 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { db } from "./db";
 import { competitorAnalysesTable } from "@workspace/db/schema-sqlite";
-import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
+import { analyzeCompetitor, CompetitorUnreachableError } from "@workspace/seo-tools/competitorAnalyzer";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
@@ -109,11 +109,12 @@ export async function handleCompetitorAnalysisWrite(
     );
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
+    const status = err instanceof CompetitorUnreachableError ? err.status : 500;
     return withCors(
       request,
       Response.json(
         { error: err instanceof Error ? err.message : "Analysis failed" },
-        { status: 500 },
+        { status },
       ),
     );
   }

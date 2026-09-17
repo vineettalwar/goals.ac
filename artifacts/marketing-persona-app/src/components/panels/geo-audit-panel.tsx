@@ -15,7 +15,7 @@ import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useProjectContent } from "@/lib/queries";
 import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 
-const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
+const CHECKS = ["This URL only", "llms.txt", "AI robots", "Schema.org", "Citations"];
 
 export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
@@ -109,7 +109,7 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
         <div>
           <h2 className="text-lg font-semibold">Run GEO audit</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Scan schema, metadata, and page structure that influence AI search citation.
+            Scores this page only (schema, llms.txt, AI crawlers, citations). For a full-site crawl use Search → Site.
           </p>
         </div>
         <form onSubmit={handleAudit} className="space-y-4">

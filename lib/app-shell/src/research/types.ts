@@ -2,6 +2,15 @@ import type { ReactNode } from "react";
 
 export type ThreatLevel = "low" | "medium" | "high";
 
+export type CompetitorEvidencePage = {
+  url: string;
+  title: string | null;
+  h1: string | null;
+  h2s: string[];
+  schemaTypes: string[];
+  wordCountBucket: "thin" | "medium" | "long";
+};
+
 export type CompetitorAnalysisResult = {
   competitorName: string;
   summary: string;
@@ -11,6 +20,8 @@ export type CompetitorAnalysisResult = {
   geoGaps: string[];
   quickWins: string[];
   threatLevel: ThreatLevel;
+  evidencePages?: CompetitorEvidencePage[];
+  crawlPartial?: boolean;
 };
 
 export type CompetitorAnalysisRow = {

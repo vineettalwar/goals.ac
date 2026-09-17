@@ -1,4 +1,9 @@
-import type { CompetitorAnalysisResult, CompetitorAnalysisRow, ThreatLevel } from "./types";
+import type {
+  CompetitorAnalysisResult,
+  CompetitorAnalysisRow,
+  CompetitorEvidencePage,
+  ThreatLevel,
+} from "./types";
 
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -8,6 +13,26 @@ function asStringArray(value: unknown): string[] {
 function asThreat(value: unknown): ThreatLevel {
   if (value === "low" || value === "medium" || value === "high") return value;
   return "medium";
+}
+
+function asEvidencePages(value: unknown): CompetitorEvidencePage[] {
+  if (!Array.isArray(value)) return [];
+  const pages: CompetitorEvidencePage[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    if (typeof row.url !== "string") continue;
+    const bucket = row.wordCountBucket;
+    pages.push({
+      url: row.url,
+      title: typeof row.title === "string" ? row.title : null,
+      h1: typeof row.h1 === "string" ? row.h1 : null,
+      h2s: asStringArray(row.h2s),
+      schemaTypes: asStringArray(row.schemaTypes),
+      wordCountBucket: bucket === "thin" || bucket === "medium" || bucket === "long" ? bucket : "medium",
+    });
+  }
+  return pages;
 }
 
 /** Unwrap nested `result` (DB row) or accept already-flat analysis payloads. */
@@ -47,6 +72,8 @@ export function flattenCompetitorAnalysis(data: unknown): (CompetitorAnalysisRes
     geoGaps: asStringArray(source.geoGaps),
     quickWins: asStringArray(source.quickWins),
     threatLevel: asThreat(source.threatLevel),
+    evidencePages: asEvidencePages(source.evidencePages),
+    crawlPartial: source.crawlPartial === true,
   };
 }
 

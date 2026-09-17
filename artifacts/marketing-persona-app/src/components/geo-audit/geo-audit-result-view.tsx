@@ -56,8 +56,11 @@ export function GeoAuditResultView({
 
       <div className="space-y-4 border-b border-border pb-6">
         <div>
-          <p className="text-sm text-muted-foreground">Audited URL</p>
+          <p className="text-sm text-muted-foreground">This page (not a full-site crawl)</p>
           <p className="truncate font-medium">{url.replace(/^https?:\/\//, "")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Site-wide issues live under Search → Site.
+          </p>
         </div>
         <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
           <p className="text-3xl font-semibold tabular-nums tracking-tight">{geoScore}</p>

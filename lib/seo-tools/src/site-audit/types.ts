@@ -25,6 +25,9 @@ export type CrawledPage = {
   xRobotsTag: string | null;
   isIndexable: boolean;
   h1Count: number;
+  h1Text: string | null;
+  h2s: string[];
+  schemaTypes: string[];
   headingOrder: number[];
   wordCount: number;
   contentHash: string | null;

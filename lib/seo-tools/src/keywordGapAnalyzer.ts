@@ -20,11 +20,13 @@ export type GapOpportunity = {
   suggestedAngle: string;
 };
 
-export function parseVolumeEstimate(volumeStr: string): number {
+export function parseVolumeEstimate(volumeStr: string | null | undefined): number | null {
+  if (!volumeStr?.trim()) return null;
   const nums = volumeStr.match(/[\d,]+/g)?.map((n) => Number(n.replace(/,/g, ""))) ?? [];
-  if (nums.length === 0) return 500;
-  if (nums.length === 1) return nums[0] ?? 500;
-  return Math.round((nums[0]! + nums[1]!) / 2);
+  const valid = nums.filter((n) => Number.isFinite(n) && n > 0);
+  if (valid.length === 0) return null;
+  if (valid.length === 1) return valid[0]!;
+  return Math.round((valid[0]! + valid[1]!) / 2);
 }
 
 export function difficultyMultiplier(difficulty: KeywordDifficulty): number {
@@ -42,13 +44,14 @@ export function intentBoost(intent?: string): number {
 }
 
 export function computeOpportunityScore(params: {
-  estimatedVolume: number;
+  estimatedVolume?: number | null;
   difficulty: KeywordDifficulty;
   aiVisibility?: number;
   intent?: string;
 }): number {
   const { estimatedVolume, difficulty, aiVisibility = 50, intent } = params;
-  const volumeFactor = Math.min(1, estimatedVolume / 5000);
+  const volumeFactor =
+    estimatedVolume == null || !Number.isFinite(estimatedVolume) ? 0 : Math.min(1, estimatedVolume / 5000);
   const raw =
     volumeFactor * 40 +
     difficultyMultiplier(difficulty) * 30 +
@@ -70,9 +73,9 @@ export function explainOpportunityScore(params: {
   difficulty?: KeywordDifficulty | null;
   source: string;
 }): OpportunityScoreFactor[] {
-  const volume = parseVolumeEstimate(params.estimatedVolume ?? "500/mo");
+  const volume = parseVolumeEstimate(params.estimatedVolume);
   const difficulty = params.difficulty ?? "medium";
-  const volumeFactor = Math.min(1, volume / 5000);
+  const volumeFactor = volume == null ? 0 : Math.min(1, volume / 5000);
   const volumePoints = Math.round(volumeFactor * 40);
   const difficultyPoints = Math.round(difficultyMultiplier(difficulty) * 30);
   const visibilityPoints = 10;
@@ -96,7 +99,9 @@ export function explainOpportunityScore(params: {
       label: "Search volume",
       points: volumePoints,
       maxPoints: 40,
-      detail: params.estimatedVolume ?? `~${volume.toLocaleString()}/mo estimated`,
+      detail:
+        params.estimatedVolume?.trim() ||
+        (volume == null ? "Volume unmeasured" : `~${volume.toLocaleString()}/mo estimated`),
     },
     {
       label: "Difficulty",
@@ -128,7 +133,7 @@ export function explainOpportunityScore(params: {
 export function opportunitiesFromKeywordAnalysis(
   keywords: Array<{
     keyword: string;
-    estimatedVolume: string;
+    estimatedVolume?: string;
     difficulty: KeywordDifficulty;
     aiVisibility: number;
     suggestedContent: string;
@@ -150,6 +155,10 @@ export function opportunitiesFromKeywordAnalysis(
   }));
 }
 
+export function topicKeywordFromGap(gap: string): string {
+  return gap.replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
 export function opportunitiesFromCompetitorGaps(params: {
   contentGaps: string[];
   competitorUrl: string;
@@ -157,18 +166,16 @@ export function opportunitiesFromCompetitorGaps(params: {
   industry: string;
 }): GapOpportunity[] {
   const { contentGaps, competitorUrl, competitorName, industry } = params;
-  return contentGaps.slice(0, 5).map((gap, i) => {
-    const keyword = gap.split(/[.:]/)[0]?.trim().slice(0, 120) || gap.slice(0, 80);
+  return contentGaps.slice(0, 5).map((gap) => {
+    const keyword = topicKeywordFromGap(gap);
     return {
       keyword,
       source: "competitor_gap" as const,
       competitorUrl,
-      estimatedVolume: "500-1,500/mo",
       difficulty: "medium" as const,
       opportunityScore: computeOpportunityScore({
-        estimatedVolume: 800,
         difficulty: "medium",
-        aiVisibility: 55 - i * 3,
+        intent: "informational",
       }),
       intent: "informational",
       suggestedTitle: `${keyword}: What ${industry} teams need to know`,

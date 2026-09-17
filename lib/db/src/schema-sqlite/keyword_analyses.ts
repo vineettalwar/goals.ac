@@ -4,7 +4,7 @@ import { websiteProjectsTable } from "./website_projects";
 export type KeywordAnalysisPayload = {
   keywords: Array<{
     keyword: string;
-    estimatedVolume: string;
+    estimatedVolume?: string;
     difficulty: "low" | "medium" | "high";
     aiVisibility: number;
     opportunities: string[];

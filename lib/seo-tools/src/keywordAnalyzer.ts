@@ -10,7 +10,7 @@ export type KeywordDifficulty = "low" | "medium" | "high";
 
 export type KeywordResult = {
   keyword: string;
-  estimatedVolume: string;
+  estimatedVolume?: string;
   difficulty: KeywordDifficulty;
   aiVisibility: number;
   opportunities: string[];
@@ -73,6 +73,10 @@ ${JSON.stringify(
 
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
 
+  const volumeInstruction = semrushMetricsBlock
+    ? `Include "estimatedVolume" as a string like "1,200/mo" matching the Semrush figures.`
+    : `Omit "estimatedVolume". Do not invent monthly search volume.`;
+
   const prompt = `You are an SEO and GEO (Generative Engine Optimization) analyst. Analyze these keywords for a B2B startup${websiteUrl ? ` with website ${websiteUrl}` : ""}.
 
 Keywords to analyze: ${keywords.join(", ")}${semrushMetricsBlock}
@@ -82,7 +86,7 @@ Respond ONLY with a valid JSON object in this exact shape:
   "keywords": [
     {
       "keyword": "exact keyword string",
-      "estimatedVolume": "e.g. 1,200/mo or 200-500/mo",
+      ${semrushMetricsBlock ? `"estimatedVolume": "e.g. 1,200/mo",` : ""}
       "difficulty": "low" | "medium" | "high",
       "aiVisibility": <integer 0-100 representing how likely this keyword surfaces in AI answers>,
       "opportunities": ["2-3 specific actionable opportunities to rank for this keyword"],
@@ -93,7 +97,8 @@ Respond ONLY with a valid JSON object in this exact shape:
   "summary": "2-3 sentence overall analysis of the keyword set"
 }
 
-Be specific and tactical. Base estimates on realistic B2B SaaS market data.`;
+${volumeInstruction}
+Be specific and tactical.`;
 
   const providerId = resolveProviderId(aiProviderOptions);
   const model = modelForProviderTier(providerId, "planning");
@@ -106,20 +111,18 @@ Be specific and tactical. Base estimates on realistic B2B SaaS market data.`;
   const raw = response.text ?? "{}";
   try {
     const parsed = JSON.parse(raw) as KeywordAnalysisResult;
-    if (metricsByKeyword.size === 0) return parsed;
-
-    return {
-      ...parsed,
-      keywords: parsed.keywords.map((kw) => {
-        const metrics = metricsByKeyword.get(kw.keyword.toLowerCase());
-        if (!metrics) return kw;
-        return {
-          ...kw,
-          estimatedVolume: formatVolume(metrics.searchVolume),
-          difficulty: metrics.difficulty,
-        };
-      }),
-    };
+    const keywords = (parsed.keywords ?? []).map((kw) => {
+      const metrics = metricsByKeyword.get(kw.keyword.toLowerCase());
+      if (!metrics) {
+        return { ...kw, estimatedVolume: undefined };
+      }
+      return {
+        ...kw,
+        estimatedVolume: formatVolume(metrics.searchVolume),
+        difficulty: metrics.difficulty,
+      };
+    });
+    return { ...parsed, keywords };
   } catch {
     throw new Error("Failed to parse analysis response");
   }

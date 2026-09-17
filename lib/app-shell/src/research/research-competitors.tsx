@@ -89,7 +89,7 @@ export function ResearchCompetitorsView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">Watchlist</h2>
-            <p className="text-xs text-muted-foreground">Select an analysis to reopen the report</p>
+            <p className="text-xs text-muted-foreground">Select an analysis to reopen the report. Analyses use crawled pages from the competitor site.</p>
           </div>
           {onFormOpenChange ? (
             <button
@@ -249,6 +249,25 @@ function CompetitorReport({
               </a>
             ) : null}
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{result.summary}</p>
+            {result.evidencePages && result.evidencePages.length > 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                From crawled pages
+                {result.crawlPartial ? " (partial crawl)" : ""}:{" "}
+                {result.evidencePages.slice(0, 3).map((page, i) => (
+                  <span key={page.url}>
+                    {i > 0 ? " · " : null}
+                    <a
+                      href={page.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {page.title || page.h1 || page.url.replace(/^https?:\/\//, "")}
+                    </a>
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </div>
           <StatusPill label={`${threat} threat`} tone={THREAT_TONE[threat]} />
         </div>

@@ -1,6 +1,15 @@
 import { pgTable, serial, integer, text, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { websiteProjectsTable } from "./website_projects";
 
+export type CompetitorEvidencePage = {
+  url: string;
+  title: string | null;
+  h1: string | null;
+  h2s: string[];
+  schemaTypes: string[];
+  wordCountBucket: "thin" | "medium" | "long";
+};
+
 export type CompetitorAnalysisPayload = {
   competitorName: string;
   summary: string;
@@ -10,6 +19,8 @@ export type CompetitorAnalysisPayload = {
   geoGaps: string[];
   quickWins: string[];
   threatLevel: "low" | "medium" | "high";
+  evidencePages?: CompetitorEvidencePage[];
+  crawlPartial?: boolean;
 };
 
 export const competitorAnalysesTable = pgTable("competitor_analyses", {

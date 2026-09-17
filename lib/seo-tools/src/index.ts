@@ -2,7 +2,9 @@ export { auditUrl, type AuditResult } from "./geoAuditor";
 export {
   analyzeCompetitor,
   scrapeCompetitorText,
+  CompetitorUnreachableError,
   type CompetitorAnalysisResult,
+  type CompetitorEvidencePage,
   type ThreatLevel,
 } from "./competitorAnalyzer";
 export {

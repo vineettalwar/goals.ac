@@ -12,6 +12,17 @@ describe("explainOpportunityScore content_refresh", () => {
     const intent = factors.find((factor) => factor.label === "Intent fit");
     expect(intent?.detail).toMatch(/GSC clicks declined/i);
   });
+
+  it("labels missing volume as unmeasured", () => {
+    const factors = explainOpportunityScore({
+      opportunityScore: 40,
+      difficulty: "medium",
+      source: "competitor_gap",
+    });
+    const volume = factors.find((factor) => factor.label === "Search volume");
+    expect(volume?.points).toBe(0);
+    expect(volume?.detail).toBe("Volume unmeasured");
+  });
 });
 
 describe("rankDropToOpportunity", () => {

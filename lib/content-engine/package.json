@@ -135,6 +135,7 @@
     "./social-history-sync-service": "./src/social/social-history-sync-service.ts",
     "./social-metrics-service": "./src/social/social-metrics-service.ts",
     "./social/reddit-public-search": "./src/social/reddit-public-search.ts",
+    "./social/reddit-discovery": "./src/social/reddit-discovery.ts",
     "./social/social-history-sync-service": "./src/social/social-history-sync-service.ts",
     "./social/social-metrics-service": "./src/social/social-metrics-service.ts",
     "./strategy/autopilot-orchestrator": "./src/strategy/autopilot-orchestrator.ts",

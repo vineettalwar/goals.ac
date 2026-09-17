@@ -96,13 +96,13 @@ function ArticleIdeasList({
               </div>
               <p className="mt-1 text-sm">{opp.suggestedTitle}</p>
               <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{opp.suggestedAngle}</p>
-              {metrics || opp.estimatedVolume ? (
-                <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                   {metrics
                     ? `${metrics.impressions.toLocaleString()} imp · pos ${metrics.position.toFixed(1)} · CTR ${(metrics.ctr * 100).toFixed(1)}%`
-                    : opp.estimatedVolume}
+                    : opp.estimatedVolume?.trim()
+                      ? opp.estimatedVolume
+                      : "Volume unmeasured"}
                 </p>
-              ) : null}
             </div>
             <div className="flex shrink-0 flex-col gap-1">
               {opp.linkedContentPieceId && contentPieceHref ? (
