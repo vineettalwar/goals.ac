@@ -21,7 +21,11 @@ export function AdminEnvIntegrationDialog({ controller }: { controller: AdminInt
     activeDialog === "linkedin" ||
     activeDialog === "twitter" ||
     activeDialog === "meta" ||
-    activeDialog === "bluesky"
+    activeDialog === "bluesky" ||
+    activeDialog === "bing" ||
+    activeDialog === "google" ||
+    activeDialog === "dataforseo" ||
+    activeDialog === "bedrock"
   ) {
     return null;
   }
