@@ -6,6 +6,7 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ActiveProjectProvider } from "./context/active-project";
 import { AuthProvider } from "./context/auth";
+import { ThemeProvider } from "./context/theme";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -24,11 +25,13 @@ createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AuthProvider>
-            <ActiveProjectProvider>
-              <App />
-            </ActiveProjectProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <ActiveProjectProvider>
+                <App />
+              </ActiveProjectProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

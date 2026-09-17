@@ -35,7 +35,7 @@ export const LANDER_ROUTES: Record<LanderConfigKey, string> = {
 
 export const PRODUCT_NAV: NavLink[] = [
   { label: "Content Studio", href: "/content-engine", description: "Draft and review workflow" },
-  { label: "Content Autopilot", href: "/content-autopilot", description: "Automated publishing queue" },
+  { label: "Content Autopilot", href: "/content-autopilot", description: "Scheduled Studio with review gates" },
   { label: "AI Visibility", href: "/llm-visibility", description: "Track AI brand citations" },
   { label: "CMS Publishing", href: "/cms-publishing", description: "WordPress, Ghost, Shopify (deep) + Basic publish for headless/site builders" },
   { label: "All features", href: "/features", description: "Full platform overview" },

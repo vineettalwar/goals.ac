@@ -38,9 +38,9 @@ export function OrgIntegrationsView({
       {projectIntegrationsHref !== undefined ? (
         <a
           href={projectIntegrationsHref ?? "/projects"}
-          className="group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 text-left transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
+          className="group flex w-full items-center gap-3 rounded-sm border border-border bg-card px-4 py-3 text-left hover:bg-muted/20"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-xs font-bold text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-border bg-secondary text-xs font-bold text-foreground">
             CMS
           </span>
           <div className="min-w-0 flex-1">

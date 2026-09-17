@@ -4,11 +4,11 @@ import { PricingPageDynamic } from "@/components/marketing/layout/marketing-clie
 export const metadata: Metadata = {
   title: "Plans & pricing",
   description:
-    "Hands-on GEO/AEO content programs for research, production, editorial review, and cross-platform publishing.",
+    "Self-serve Growth and Scale for SEO Chat, Content Studio, Action Queue, and WordPress-first publish. Optional GEO programs when you want hands-on help.",
   openGraph: {
     title: "Plans & pricing | goals.ac",
     description:
-      "Hands-on GEO/AEO content programs for research, production, editorial review, and cross-platform publishing.",
+      "Self-serve desk plans plus optional GEO programs — approve before live, WordPress-first CMS.",
   },
 };
 

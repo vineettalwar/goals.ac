@@ -28,7 +28,9 @@ const ROWS = [
   { feature: "Humanization pipeline", goals: true, autopilot: false },
   { feature: "BYOK cost transparency", goals: true, autopilot: false },
   { feature: "SEO formats in Studio (incl. comparison, listicle, case study) + repurposing", goals: true, autopilot: false },
-  { feature: "Dedicated strategist", goals: true, autopilot: false },
+  { feature: "Dedicated strategist", goals: "Retainer programs", autopilot: false },
+  { feature: "SEO Chat control plane", goals: true, autopilot: false },
+  { feature: "GSC Action Queue", goals: true, autopilot: false },
 ];
 
 function Cell({ value }: { value: boolean | string }) {

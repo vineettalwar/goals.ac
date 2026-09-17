@@ -10,7 +10,7 @@
  * streaming ContentPieceRepurposeDialog, toast for hard failures.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate } from "lucide-react";
@@ -96,12 +96,42 @@ export function ContentPieceClient({
   pieceId,
   initialPiece,
   initialCmsConnections,
-  stockImagesConfigured,
+  stockImagesConfigured: initialStockConfigured,
   brandTailoring = null,
 }: ContentPieceClientProps) {
   const router = useRouter();
   const [pieceRecord, setPieceRecord] = useState(initialPiece);
   const piece = toDetail(pieceRecord);
+  const [cmsConnections, setCmsConnections] = useState(initialCmsConnections);
+  const [stockImagesConfigured, setStockImagesConfigured] = useState(initialStockConfigured);
+
+  useEffect(() => {
+    let cancelled = false;
+    const projectId = initialPiece.websiteProjectId;
+    void Promise.all([
+      fetch(`/api/website-projects/${projectId}/cms-integrations`).then((r) =>
+        r.ok ? r.json() : null,
+      ),
+      fetch("/api/auth/stock-credentials").then((r) => (r.ok ? r.json() : null)),
+    ]).then(([cms, stock]) => {
+      if (cancelled) return;
+      if (cms && typeof cms === "object") {
+        setCmsConnections(cms as typeof initialCmsConnections);
+      }
+      if (stock && typeof stock === "object") {
+        const body = stock as {
+          platform?: { configured?: boolean };
+          org?: unknown[];
+        };
+        if (body.platform?.configured || (body.org?.length ?? 0) > 0) {
+          setStockImagesConfigured(true);
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialPiece.websiteProjectId]);
 
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -157,10 +187,12 @@ export function ContentPieceClient({
       `/api/website-projects/${piece.websiteProjectId}/cms-integrations`,
     );
     if (!res.ok) {
-      return initialCmsConnections as Record<string, unknown>;
+      return cmsConnections as Record<string, unknown>;
     }
-    return (await res.json()) as Record<string, unknown>;
-  }, [piece.websiteProjectId, initialCmsConnections]);
+    const next = (await res.json()) as typeof cmsConnections;
+    setCmsConnections(next);
+    return next as Record<string, unknown>;
+  }, [piece.websiteProjectId, cmsConnections]);
 
   const renderPreview = useCallback(
     async (platform: PublishDestinationId): Promise<RenderPreviewResult> => {
@@ -186,7 +218,7 @@ export function ContentPieceClient({
     if (!piece.websiteProjectId) return;
     setQueueingSocial(true);
     try {
-      let connections: Record<string, unknown> = initialCmsConnections as Record<
+      let connections: Record<string, unknown> = cmsConnections as Record<
         string,
         unknown
       >;

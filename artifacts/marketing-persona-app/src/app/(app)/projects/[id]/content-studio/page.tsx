@@ -8,6 +8,7 @@ import {
 } from "@/components/content-studio/content-studio-utils";
 import type { BriefContentDraft } from "@/components/content-studio/create-content-modal";
 import { loadBriefForProject } from "@/lib/content/content-pieces-helpers";
+import { loadContentStudioInitialData } from "@/lib/server/load-content-studio-data";
 
 const ContentStudioClient = dynamic(
   () =>
@@ -89,7 +90,14 @@ export default async function ContentStudioPage({
   const { id } = await params;
   const sp = await searchParams;
   const urlParams = toUrlSearchParams(sp);
-  const { initialBriefDraft, initialCreateOpen, initialOptimize } = await resolveInitialCreateState(id, urlParams);
+  const session = await getSession();
+  const userId = session?.user?.id ? Number(session.user.id) : null;
+
+  const [{ initialBriefDraft, initialCreateOpen, initialOptimize }, initialStudioData] =
+    await Promise.all([
+      resolveInitialCreateState(id, urlParams),
+      userId ? loadContentStudioInitialData(Number(id), userId) : Promise.resolve(null),
+    ]);
 
   return (
     <Suspense fallback={<PageSkeleton />}>
@@ -99,6 +107,7 @@ export default async function ContentStudioPage({
         initialCreateOpen={initialCreateOpen}
         initialOptimize={initialOptimize}
         initialTab={urlParams.get("tab") === "ideas" ? "ideas" : "hub"}
+        initialStudioData={initialStudioData}
       />
     </Suspense>
   );

@@ -3,12 +3,9 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/auth";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import {
-  loadCmsConnectionsForProject,
   loadContentPieceForUser,
   loadWebsiteProjectForUser,
 } from "@/lib/server/loaders";
-import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/integrations/stock-credentials";
-import { isStockSearchAvailable } from "@workspace/stock-images";
 
 const ContentPieceClient = dynamic(
   () => import("@/components/content/content-piece-client").then((m) => m.ContentPieceClient),
@@ -29,23 +26,24 @@ export default async function ProjectContentPiecePage({
   if (Number.isNaN(projectId) || Number.isNaN(pieceId)) notFound();
 
   const userId = parseInt(session.user.id, 10);
-  const piece = await loadContentPieceForUser(pieceId, userId);
-  if (!piece || piece.websiteProjectId !== projectId) notFound();
-
-  const [cmsConnections, stockCredentials, project] = await Promise.all([
-    loadCmsConnectionsForProject(projectId, userId),
-    loadStockCredentialContextForProject(projectId),
+  const [piece, project] = await Promise.all([
+    loadContentPieceForUser(pieceId, userId),
     loadWebsiteProjectForUser(projectId, userId),
   ]);
+  if (!piece || piece.websiteProjectId !== projectId) notFound();
 
   const bp = project?.brandProfile;
+  // Platform env keys only — org/project BYOK decrypted on client when needed.
+  const stockImagesConfigured = Boolean(
+    process.env.UNSPLASH_ACCESS_KEY?.trim() || process.env.PEXELS_API_KEY?.trim(),
+  );
 
   return (
     <ContentPieceClient
       pieceId={pieceIdStr}
       initialPiece={piece}
-      initialCmsConnections={cmsConnections}
-      stockImagesConfigured={isStockSearchAvailable(stockCredentials)}
+      initialCmsConnections={{}}
+      stockImagesConfigured={stockImagesConfigured}
       brandTailoring={
         bp
           ? {

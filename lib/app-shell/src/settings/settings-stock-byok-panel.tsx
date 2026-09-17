@@ -105,7 +105,7 @@ export function SettingsStockByokPanel({
                   {provider.searchImplemented ? " · search enabled" : " · not available"}
                 </p>
                 {existing ? (
-                  <p className="mt-1 text-xs text-emerald-700">
+                  <p className="mt-1 text-xs text-foreground">
                     Connected · key ending ••••{existing.apiKeyLastFour}
                   </p>
                 ) : null}
@@ -170,7 +170,7 @@ export function SettingsStockByokPanel({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
             type="button"
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/45"
             aria-label="Close dialog"
             onClick={() => setDialogOpen(false)}
           />
@@ -178,7 +178,7 @@ export function SettingsStockByokPanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby="stock-key-dialog-title"
-            className="paper-card relative z-10 w-full max-w-md p-6 shadow-lg"
+            className="paper-card relative z-10 w-full max-w-md p-6"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 id="stock-key-dialog-title" className="flex items-center gap-2 text-lg font-semibold">
@@ -210,13 +210,13 @@ export function SettingsStockByokPanel({
                   }}
                   placeholder={`${activeProvider.label} API key`}
                   autoComplete="off"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-sm border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
               {testResult ? (
                 testResult.ok ? (
-                  <div className="flex items-start gap-2 text-sm text-emerald-700">
+                  <div className="flex items-start gap-2 text-sm text-foreground">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                     <span>{testResult.note ?? "Connection successful"}</span>
                   </div>

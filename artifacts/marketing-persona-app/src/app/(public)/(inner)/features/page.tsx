@@ -3,7 +3,8 @@ import { FeaturesPageDynamic } from "@/components/marketing/layout/marketing-cli
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Research-driven content studio: SEO briefs, cross-platform publishing, GEO audits, keyword tracking, and editorial review.",
+  description:
+    "SEO Chat, Content Studio, Action Queue, GEO audits, 12-month roadmaps, and WordPress-first publish — with approve-before-live gates.",
 };
 
 export default function FeaturesPage() {

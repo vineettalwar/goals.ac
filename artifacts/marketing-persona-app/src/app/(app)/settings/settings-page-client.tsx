@@ -49,7 +49,10 @@ export function SettingsPageClient({ initialData }: SettingsPageClientProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get("tab")));
   const [name, setName] = useState(session?.user.name ?? "");
   // Account field: HTTPS (R2 / Google) or pending local data URI before save; empty → Gravatar.
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(() => {
+    const stored = initialData.me?.avatarUrl ?? "";
+    return /^https:\/\//i.test(stored) ? stored : "";
+  });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -75,20 +78,6 @@ export function SettingsPageClient({ initialData }: SettingsPageClientProps) {
       setName(session.user.name ?? "");
     }
   }, [session]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body: { user?: { avatarUrl?: string | null } } | null) => {
-        if (cancelled || !body?.user) return;
-        const stored = body.user.avatarUrl ?? "";
-        setAvatarUrl(/^https:\/\//i.test(stored) ? stored : "");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function changeTab(tab: SettingsTab) {
     setActiveTab(tab);

@@ -1,17 +1,10 @@
-"use client";
-
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { projectIntegrationsPath } from "@workspace/app-shell/project-paths";
+import type { VoiceGateStatus } from "./voice-gate";
 
-export type VoiceGateStatus = {
-  voiceReady: boolean;
-  voiceBuilding: boolean;
-  hasBrandVoice: boolean;
-  hasPlatformVoice: boolean;
-  scrapeStatus: string | null;
-};
+export type { VoiceGateStatus };
 
 export function VoiceRequiredBanner({
   projectId,
@@ -81,14 +74,4 @@ export function VoiceRequiredBanner({
       </div>
     </div>
   );
-}
-
-export function parseVoiceGateFromBrandProfile(data: Record<string, unknown> | null): VoiceGateStatus {
-  return {
-    voiceReady: Boolean(data?.voiceReady),
-    voiceBuilding: Boolean(data?.voiceBuilding),
-    hasBrandVoice: Boolean(data?.hasBrandVoice),
-    hasPlatformVoice: Boolean(data?.hasPlatformVoice),
-    scrapeStatus: typeof data?.scrapeStatus === "string" ? data.scrapeStatus : null,
-  };
 }

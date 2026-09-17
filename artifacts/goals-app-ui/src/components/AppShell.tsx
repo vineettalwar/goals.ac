@@ -8,12 +8,14 @@ import {
   projectIdFromPathname,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
+import { useTheme } from "@/context/theme";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { MfaComplianceGate } from "@/components/mfa/MfaComplianceGate";
 
 export function AppShell() {
   const { user, loading, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { projectId: activeProjectIdRaw } = useActiveProject();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,6 +53,8 @@ export function AppShell() {
         userEmail={user.email}
         userImage={user.avatarUrl}
         userRole={user.role}
+        theme={theme}
+        onToggleTheme={toggleTheme}
         projectSwitcher={<ProjectSwitcher />}
         onSignOut={() => void logout().then(() => navigate("/login", { replace: true }))}
         renderLink={({ href, className, children, onClick, onMouseEnter, onFocus }) => (

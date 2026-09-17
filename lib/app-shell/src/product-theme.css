@@ -51,7 +51,8 @@
   --secondary: #1a1a1c;
   --secondary-foreground: #f3efe6;
   --muted: #1a1a1c;
-  --muted-foreground: #a39e94;
+  /* Secondary copy on ink — was #a39e94 (too dim at text-xs). */
+  --muted-foreground: #c9c4ba;
   --accent: #1a1a1c;
   --accent-foreground: #f3efe6;
   --destructive: #e5736a;
@@ -64,7 +65,7 @@
   --sidebar-border: #2e2c28;
   --chart-1: #f59e0b;
   --chart-2: #f3efe6;
-  --chart-3: #a39e94;
+  --chart-3: #c9c4ba;
   --chart-4: #78716c;
   --chart-5: #f87171;
   --chart-grid: #2e2c28;
@@ -105,7 +106,7 @@
   color-scheme: dark;
   color: var(--studio-chrome-fg);
   --foreground: var(--studio-chrome-fg);
-  --muted-foreground: #a39e94;
+  --muted-foreground: #c9c4ba;
   --border: var(--sidebar-border);
   --input: var(--sidebar-border);
   --secondary: #1a1a1c;
@@ -176,25 +177,23 @@
 .seo-chat-composer-dock {
   position: relative;
   z-index: 1;
-  background: linear-gradient(180deg, transparent 0%, var(--background) 42%);
+  background: var(--background);
 }
 
 .seo-chat-composer {
   background: var(--card);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
 .seo-chat-user {
-  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  background: var(--secondary);
 }
 
 .dark .seo-chat-composer {
-  background: color-mix(in srgb, var(--foreground) 8%, var(--background));
-  box-shadow: inset 0 1px 0 rgba(243, 239, 230, 0.08);
+  background: var(--card);
 }
 
 .dark .seo-chat-user {
-  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  background: var(--secondary);
 }
 
 .score-signal {

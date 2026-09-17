@@ -68,7 +68,7 @@ export function PartnerWorkspaceView({
         <button
           type="button"
           onClick={() => window.print()}
-          className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-secondary/50"
+          className="inline-flex h-8 items-center rounded-sm border border-border px-3 text-xs font-medium hover:bg-secondary/50"
         >
           Print / Save as PDF
         </button>
@@ -117,24 +117,24 @@ export function PartnerWorkspaceView({
                 <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                   <div>
                     <p className="text-muted-foreground">GEO</p>
-                    <p className="font-semibold tabular-nums">{project.geoScore ?? "—"}</p>
+                    <p className="font-semibold tabular-nums text-foreground">{project.geoScore ?? "—"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Cited</p>
-                    <p className="font-semibold tabular-nums">
+                    <p className="font-semibold tabular-nums text-foreground">
                       {project.llmCitationRate != null ? `${project.llmCitationRate}%` : "—"}
                       {deltaLabel(project.visibilityDelta) ? (
-                        <span className="ml-1 text-emerald-600">{deltaLabel(project.visibilityDelta)}</span>
+                        <span className="ml-1 text-emerald-600 dark:text-emerald-400">{deltaLabel(project.visibilityDelta)}</span>
                       ) : null}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Published</p>
-                    <p className="font-semibold tabular-nums">{project.publishedCount}</p>
+                    <p className="font-semibold tabular-nums text-foreground">{project.publishedCount}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Publish health</p>
-                    <p className="flex items-center gap-1 font-semibold tabular-nums">
+                    <p className="flex items-center gap-1 font-semibold tabular-nums text-foreground">
                       {publishHealth ?? (
                         <>
                           <Link2 className="h-3 w-3" />

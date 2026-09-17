@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queries/keys";
+import { dashboardQueryLoading } from "./dashboard-query-loading";
 import type {
   DashboardArticleUsage,
   DashboardAutopilotSettings,
@@ -42,8 +43,6 @@ type DashboardData = {
   activeProject: DashboardProject | null;
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
-  commandCenter: DashboardCommandCenter | null;
-  articleUsage: DashboardArticleUsage | null;
 };
 
 async function fetchDashboardData(
@@ -56,25 +55,18 @@ async function fetchDashboardData(
 
   let pieces: DashboardPiece[] = [];
   let autopilotSettings: DashboardAutopilotSettings | null = null;
-  let commandCenter: DashboardCommandCenter | null = null;
-
-  const usagePromise = apiFetch<{ usage?: UsageSummary }>("/api/usage")
-    .then((res) => mapArticleUsage(res.usage))
-    .catch(() => null);
 
   if (active) {
-    const [pieceRows, autopilot, command] = await Promise.all([
-      apiFetch<ContentPiece[]>(`/api/website-projects/${active.id}/content-pieces`),
+    const [pieceRows, autopilot] = await Promise.all([
+      apiFetch<ContentPiece[]>(`/api/website-projects/${active.id}/content-pieces`).catch(
+        () => [] as ContentPiece[],
+      ),
       apiFetch<DashboardAutopilotSettings>(
         `/api/website-projects/${active.id}/autopilot-settings`,
-      ).catch(() => null),
-      apiFetch<DashboardCommandCenter>(
-        `/api/website-projects/${active.id}/command-center`,
       ).catch(() => null),
     ]);
     pieces = pieceRows.map((piece) => mapPiece(piece, active.name));
     autopilotSettings = autopilot;
-    commandCenter = command;
   } else if (allProjects.length > 0) {
     const allPieces = await apiFetch<ContentPiece[]>("/api/content-pieces").catch(() => []);
     const nameById = new Map(allProjects.map((project) => [project.id, project.name]));
@@ -86,22 +78,42 @@ async function fetchDashboardData(
     activeProject: active,
     pieces,
     autopilotSettings,
-    commandCenter,
-    articleUsage: await usagePromise,
   };
 }
 
+async function fetchDashboardExtras(activeProjectId: string): Promise<{
+  commandCenter: DashboardCommandCenter | null;
+  articleUsage: DashboardArticleUsage | null;
+}> {
+  const [commandCenter, articleUsage] = await Promise.all([
+    apiFetch<DashboardCommandCenter>(
+      `/api/website-projects/${activeProjectId}/command-center`,
+    ).catch(() => null),
+    apiFetch<{ usage?: UsageSummary }>("/api/usage")
+      .then((res) => mapArticleUsage(res.usage))
+      .catch(() => null),
+  ]);
+  return { commandCenter, articleUsage };
+}
+
 export function useDashboardData(activeProjectId: string | null, allProjects: WebsiteProject[]) {
+  const enabled = allProjects.length > 0;
   const query = useQuery({
     queryKey: queryKeys.dashboard(activeProjectId),
     queryFn: () => fetchDashboardData(activeProjectId, allProjects),
-    enabled: allProjects.length > 0,
+    enabled,
     staleTime: 30_000,
     placeholderData: (previousData) => previousData,
   });
+  const extrasQuery = useQuery({
+    queryKey: queryKeys.dashboardExtras(activeProjectId),
+    queryFn: () => fetchDashboardExtras(activeProjectId!),
+    enabled: enabled && Boolean(activeProjectId),
+    staleTime: 30_000,
+  });
 
   return {
-    loading: query.isPending && !query.data,
+    loading: dashboardQueryLoading(enabled, query.isPending, Boolean(query.data)),
     error:
       query.error instanceof Error
         ? query.error.message
@@ -112,7 +124,7 @@ export function useDashboardData(activeProjectId: string | null, allProjects: We
     activeProject: query.data?.activeProject ?? null,
     pieces: query.data?.pieces ?? [],
     autopilotSettings: query.data?.autopilotSettings ?? null,
-    commandCenter: query.data?.commandCenter ?? null,
-    articleUsage: query.data?.articleUsage ?? null,
+    commandCenter: extrasQuery.data?.commandCenter ?? null,
+    articleUsage: extrasQuery.data?.articleUsage ?? null,
   };
 }

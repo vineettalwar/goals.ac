@@ -99,7 +99,7 @@ export function SettingsProviderKeyDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/45"
         aria-label="Close dialog"
         onClick={close}
       />
@@ -107,7 +107,7 @@ export function SettingsProviderKeyDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={config.dialogTitleId}
-        className="paper-card relative z-10 w-full max-w-md p-6 shadow-lg"
+        className="paper-card relative z-10 w-full max-w-md p-6"
       >
         <div className="mb-5 flex items-center justify-between">
           <h2 id={config.dialogTitleId} className="flex items-center gap-2 text-lg font-semibold">
@@ -167,7 +167,7 @@ export function SettingsProviderKeyDialog({
             </div>
 
             {testResult === "ok" ? (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-sm text-emerald-700">
+              <div className="flex items-center gap-2 rounded-sm border border-border bg-secondary p-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
                 Key is valid and working
               </div>

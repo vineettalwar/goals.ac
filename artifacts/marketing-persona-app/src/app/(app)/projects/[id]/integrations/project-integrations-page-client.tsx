@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,13 +13,30 @@ import {
 import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useActiveProject } from "@/context/use-active-project";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
-import { ProjectPublishingTab } from "@/components/projects/project-publishing-tab";
-import { SearchPropertyConnectionsPanel } from "@/components/integrations/search-property-connections-panel";
-import { AnalyticsPropertyConnectionsPanel } from "@/components/integrations/analytics-property-connections-panel";
 import { IntegrationTabBadge } from "@/components/integrations/integration-tile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIntegrationCounts } from "@/hooks/use-integration-counts";
 import { contentStudioPath } from "@workspace/app-shell/project-paths";
+
+const ProjectPublishingTab = dynamic(
+  () =>
+    import("@/components/projects/project-publishing-tab").then((m) => m.ProjectPublishingTab),
+  { loading: () => <PageSkeleton /> },
+);
+const SearchPropertyConnectionsPanel = dynamic(
+  () =>
+    import("@/components/integrations/search-property-connections-panel").then(
+      (m) => m.SearchPropertyConnectionsPanel,
+    ),
+  { loading: () => <PageSkeleton /> },
+);
+const AnalyticsPropertyConnectionsPanel = dynamic(
+  () =>
+    import("@/components/integrations/analytics-property-connections-panel").then(
+      (m) => m.AnalyticsPropertyConnectionsPanel,
+    ),
+  { loading: () => <PageSkeleton /> },
+);
 
 const VALID_TABS: ProjectIntegrationsTab[] = ["cms", "social", "esp", "search"];
 const SOCIAL_STATUS_KEYS = ["linkedin", "twitter", "meta", "bluesky", "mastodon"] as const;

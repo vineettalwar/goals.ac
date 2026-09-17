@@ -8,12 +8,13 @@ import {
   Eye,
   FileText,
   Globe,
-  Layers,
-  LayoutGrid,
   Link2,
+  Map as MapIcon,
+  MessageCircle,
   MessageSquare,
-  Network,
+  PenLine,
   Search,
+  Target,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -28,8 +29,6 @@ import { FeatureStatusBadge } from "@/components/shared/feature-status-badge";
 import { WaitlistForm } from "@/components/shared/waitlist-form";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import {
-  CONTACT_CTA_LABEL,
-  CONTACT_HREF,
   PRODUCT_CTA_HREF,
   PRODUCT_CTA_PRIMARY,
 } from "@/lib/marketing/site/marketing-contact";
@@ -40,58 +39,59 @@ const glassCard = cardSurfaceClass("glass");
 
 const FEATURE_PILLARS = [
   {
-    title: "Plan",
+    title: "Desk",
     features: [
       {
-        icon: Search,
-        title: "Keyword & competitor research",
-        desc: "Briefs grounded in search intent, gaps, and what competitors already rank for.",
-        href: "/search-analytics",
-      },
-      {
-        icon: LayoutGrid,
-        title: "30-day content strategy",
-        desc: "Prioritized calendar with formats, owners, and rationale from your research.",
-        href: "/content-strategy",
-      },
-      {
-        icon: Layers,
-        title: "Content Agent workflow",
-        desc: "Goals, topic ideas, angles, and articles in one flow.",
+        icon: MessageCircle,
+        title: "SEO Chat",
+        desc: "Onboard from a URL, scan opportunities, draft with ask-before-draft, queue Actions, approve publish. Grounded replies only.",
         href: "/content-engine",
       },
       {
-        icon: Network,
-        title: "Topical authority map",
-        desc: "Cluster coverage, gaps, and recommended next articles.",
+        icon: MapIcon,
+        title: "12-month roadmaps",
+        desc: "Sequential plan from brand facts, GSC, and goals — plus calendar and topical map.",
+        href: "/content-strategy",
+      },
+      {
+        icon: PenLine,
+        title: "Brand voice",
+        desc: "Scrape → editable skill doc → topic passages at draft time.",
+        href: "/brand-voice",
+      },
+      {
+        icon: Search,
+        title: "Competitor research",
+        desc: "Real crawl (fails if the homepage is blocked). Evidence pages stored — no fake analyses.",
+        href: "/search-analytics",
       },
     ],
   },
   {
-    title: "Publish",
+    title: "Studio",
     features: [
       {
         icon: FileText,
-        title: "Humanized long-form articles",
-        desc: "1,400 to 1,800 word drafts with citations, FAQ, and quality scores.",
+        title: "Content Studio",
+        desc: "Brief → draft → humanize → dual score → publish. Formats include comparison, listicle, and case study.",
         href: "/content-engine",
       },
       {
         icon: Zap,
         title: "Content Autopilot",
-        desc: "Daily or weekly queue with manual, draft, or live publish modes.",
+        desc: "Daily or weekly on the same Studio path. Manual or draft by default; live auto-publish optional.",
         href: "/content-autopilot",
       },
       {
         icon: Globe,
-        title: "CMS publishing",
-        desc: "WordPress, Shopify, Drupal, Joomla, Notion, Webflow, Ghost.",
+        title: "WordPress-first CMS",
+        desc: "Deep WordPress (plugin, Rank Math, featured image, draft-first). Ghost and Shopify deep; others Basic.",
         href: "/cms-publishing",
       },
       {
         icon: Link2,
         title: "Internal link hub",
-        desc: "Site-wide link graph and contextual suggestions, not link schemes.",
+        desc: "Site-wide link graph and contextual suggestions on publish — not link schemes.",
         href: "/link-building",
       },
     ],
@@ -100,26 +100,33 @@ const FEATURE_PILLARS = [
     title: "Measure",
     features: [
       {
+        icon: Target,
+        title: "Action Queue",
+        desc: "GSC-grounded CTR gaps, slip, and decay. Run, approve, or dismiss — then measure.",
+        href: "/search-analytics",
+      },
+      {
         icon: Eye,
-        title: "AI visibility tracking",
-        desc: "Citation rates across ChatGPT, Perplexity, Claude, and Gemini.",
+        title: "AI visibility",
+        desc: "Citation snapshots across ChatGPT, Perplexity, Claude, and Gemini when provider creds are set.",
         href: "/llm-visibility",
       },
       {
         icon: Search,
         title: "GEO audit",
-        desc: "Schema, metadata, and structure checks for AI crawlers.",
+        desc: "Schema, meta, llms.txt, AI robots, citations, citability — free on marketing, same engine in-app.",
         href: "/geo-audit",
       },
       {
         icon: BarChart3,
-        title: "Keyword tracking",
-        desc: "SERP positions, content gaps, and rank alerts.",
+        title: "Search analytics",
+        desc: "GSC + GA4 article performance. Rank snapshots when DataForSEO is configured.",
+        href: "/search-analytics",
       },
       {
         icon: Wallet,
-        title: "BYOK and platform AI",
-        desc: "Bring your Gemini, OpenAI, or Bedrock key for platform AI cost control when your plan allows BYOK.",
+        title: "BYOK",
+        desc: "Bring Gemini or Bedrock keys for cost control when your plan allows.",
       },
     ],
   },
@@ -129,42 +136,40 @@ const BETA_FEATURES = [
   {
     icon: Link2,
     title: "Internal Link Hub",
-    desc: "Orphan pages, link suggestions, and cluster coverage.",
+    desc: "Orphan pages, link suggestions, and cluster coverage on WordPress publish.",
   },
   {
     icon: MessageSquare,
     title: "Reddit Discovery",
-    desc: "Thread finder and draft replies. No auto-posting.",
+    desc: "Live thread search and draft replies. You post yourself — no auto-posting.",
   },
   {
     icon: Globe,
-    title: "25+ languages",
-    desc: "Native-quality B2B content in major European languages.",
+    title: "Multilingual drafts",
+    desc: "Major locales in beta. Localized keyword research is waitlist — not native-quality at scale yet.",
   },
 ] as const;
 
 const COMING_SOON = [
   { title: "AI article hero images", key: "ai-images" },
   { title: "Agency white-label reseller", key: "agency-reseller" },
-  { title: "50+ languages", key: "multilingual-50" },
+  { title: "Localized keyword research + more locales", key: "multilingual-50" },
   { title: "Link outreach playbook", key: "link-building-playbook" },
+  { title: "Dedicated SEO strategist (retainer)", key: "dedicated-strategist" },
 ] as const;
 
 const WORKFLOW_STEPS = [
   {
-    step: "01",
-    title: "Set your brand context",
-    desc: "Add market, audience, voice, and CMS connections once.",
+    title: "Ground the brand",
+    desc: "Add market, audience, voice, GSC, and CMS once — or onboard from a URL in SEO Chat.",
   },
   {
-    step: "02",
     title: "Plan and draft",
-    desc: "Choose priorities, review briefs, and generate structured drafts.",
+    desc: "Roadmaps, Action Queue, or Studio. Briefs first; drafts inherit voice and citations.",
   },
   {
-    step: "03",
     title: "Review and publish",
-    desc: "Approve work, push to your CMS, and track AI citations.",
+    desc: "Approve work, push WordPress draft-first, track AI citations and search slip.",
   },
 ] as const;
 
@@ -175,40 +180,42 @@ function FeaturesCapabilitiesSection() {
 
   return (
     <section className="relative bg-black">
-      <div className="py-24 text-white border-b border-white/10">
-        <div className="max-w-5xl mx-auto px-6">
+      <div className="border-b border-white/10 py-24 text-white">
+        <div className="mx-auto max-w-5xl px-6">
           <EditorialHeading
-            line1="Everything in one"
-            line2="workflow"
-            description="From 12-month strategy to published article, without switching tools."
+            line1="Everything on one"
+            line2="desk"
+            description="Chat, Studio, Action Queue, GEO, and WordPress-first publish — without switching tools."
             theme="dark"
           />
         </div>
       </div>
 
-      <div ref={paperRef} className="py-20 bg-black border-t border-white/10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-12 md:gap-10">
+      <div ref={paperRef} className="border-t border-white/10 bg-black py-20">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="grid gap-12 md:grid-cols-3 md:gap-10">
             {FEATURE_PILLARS.map((pillar) => (
               <div key={pillar.title} className="feature-pillar">
-                <h3 className="text-xl font-bold tracking-tight mb-6 text-white">{pillar.title}</h3>
+                <h3 className="mb-6 font-mono text-[11px] uppercase tracking-[0.12em] text-white/50">
+                  {pillar.title}
+                </h3>
                 <ul className="space-y-6">
                   {pillar.features.map((feature) => {
                     const { title, desc } = feature;
                     const href = "href" in feature ? feature.href : undefined;
                     return (
-                    <li key={title} className="feature-row">
-                      <h4 className="mb-1.5 font-semibold text-white">{title}</h4>
-                      <p className="text-sm leading-relaxed text-white/65">{desc}</p>
-                      {href ? (
-                        <Link
-                          href={href}
-                          className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-(--accent-warm) hover:underline"
-                        >
-                          Learn more <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                      ) : null}
-                    </li>
+                      <li key={title} className="feature-row">
+                        <h4 className="mb-1.5 font-semibold text-white">{title}</h4>
+                        <p className="text-sm leading-relaxed text-white/65">{desc}</p>
+                        {href ? (
+                          <Link
+                            href={href}
+                            className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-(--accent-warm) hover:underline"
+                          >
+                            Learn more <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+                        ) : null}
+                      </li>
                     );
                   })}
                 </ul>
@@ -233,9 +240,9 @@ function BetaComingSoonSection() {
       titleLine2="coming soon"
       animate={false}
     >
-      <div ref={contentRef} className="grid md:grid-cols-2 gap-12">
+      <div ref={contentRef} className="grid gap-12 md:grid-cols-2">
         <div className="scroll-reveal">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="mb-6 flex items-center gap-2">
             <FeatureStatusBadge status="beta" />
             <span className="text-base font-medium text-white">Live with limits</span>
           </div>
@@ -250,11 +257,11 @@ function BetaComingSoonSection() {
         </div>
 
         <div className="scroll-reveal">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="mb-6 flex items-center gap-2">
             <FeatureStatusBadge status="coming-soon" />
             <span className="text-base font-medium text-white">Join the waitlist</span>
           </div>
-          <ul className="space-y-3 mb-6">
+          <ul className="mb-6 space-y-3">
             {COMING_SOON.map((item) => (
               <li key={item.key} className={`${glassCard} px-5 py-4 text-base font-medium text-white`}>
                 {item.title}
@@ -269,8 +276,8 @@ function BetaComingSoonSection() {
 }
 
 function WorkflowStepsSection() {
-  const gridRef = useRef<HTMLDivElement>(null);
-  useMarketingScrollReveal(gridRef, ".scroll-reveal");
+  const listRef = useRef<HTMLOListElement>(null);
+  useMarketingScrollReveal(listRef, ".scroll-reveal");
 
   return (
     <MarketingSection
@@ -280,7 +287,7 @@ function WorkflowStepsSection() {
       className="py-24"
       animate={false}
     >
-      <ol ref={gridRef} className="max-w-2xl space-y-8">
+      <ol ref={listRef} className="max-w-2xl space-y-8">
         {WORKFLOW_STEPS.map((item) => (
           <li key={item.title} className="scroll-reveal">
             <h3 className="font-semibold text-white">{item.title}</h3>
@@ -297,9 +304,9 @@ export function FeaturesPageClient() {
     <MarketingPageShell
       hero={
         <PageHero
-          titleLine1="The Content Studio"
+          titleLine1="The content desk"
           titleLine2="for research to publish"
-          description="Research, drafts, cross-platform publishing, and AI visibility. One workspace — you sign off before anything goes live. Hands-on GEO programs are optional."
+          description="SEO Chat, Content Studio, Action Queue, GEO, and WordPress-first CMS. You sign off before anything goes live. Hands-on GEO programs are optional."
           backgroundImage={HERO_IMAGES.features.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
@@ -315,7 +322,7 @@ export function FeaturesPageClient() {
       <DarkCTABand
         titleLine1="Ready to test"
         titleLine2="your first workflow?"
-        description="Sign up and see how research-driven content production fits your team."
+        description="Sign up and run Chat or Studio on one keyword. Free GEO audit and article quality demo need no account."
         primaryCta={{ label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF }}
         secondaryCta={{ label: "Free tools", href: "/free-tools" }}
       />
@@ -332,17 +339,17 @@ export function FeaturesPageClient() {
           {
             question: "Can I use my own AI API key?",
             answer:
-              "Yes. Scoped programs include platform access with BYOK support and editorial oversight from your strategist.",
+              "Yes. Bring Gemini or Bedrock keys when your plan allows BYOK. Retainer programs can add editorial oversight.",
           },
           {
             question: "What's included before a scoped program?",
             answer:
-              "Free GEO audit, article quality demo, and SEO tools. No credit card. Sign up to open the full content studio.",
+              "Free GEO audit, article quality demo, and SEO tools. No credit card. Sign up to open the full content desk.",
           },
           {
             question: "How do social integrations work?",
             answer:
-              "Connect OAuth per project on the Publishing tab, generate social-format content, and publish in one click from Content Studio.",
+              "Connect OAuth per project on the Publishing tab, generate social-format content from an approved article, and publish from Social Hub.",
             helpHref: "/help/publish-social-content",
           },
         ]}
@@ -351,7 +358,7 @@ export function FeaturesPageClient() {
       <MarketingCTA
         titleLine1="Compare with"
         titleLine2="autopilot SEO tools"
-        description="See how Content Studio stacks up on strategy, control, and editorial oversight versus volume-only autopilot tools."
+        description="See how the desk stacks up on strategy, control, and editorial oversight versus volume-only autopilot tools."
         variant="dark"
         secondaryHref="/compare/ai-seo-tools"
         secondaryLabel="View comparison →"

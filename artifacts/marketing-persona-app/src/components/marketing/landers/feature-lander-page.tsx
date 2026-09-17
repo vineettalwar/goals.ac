@@ -94,8 +94,8 @@ export function FeatureLanderPage({
       <DarkCTABand
         badge="Content Studio"
         titleLine1="Ready to"
-        titleLine2="start creating?"
-        description="Request access, connect your CMS, and publish research-driven content across every channel."
+        titleLine2="run the desk?"
+        description="Request access, connect WordPress (or another CMS), and ship with approve-before-live gates."
         primaryCta={{ label: primaryCta.label, href: primaryCta.href }}
         secondaryCta={secondaryCta ?? { label: CONTACT_CTA_LABEL, href: "/contact" }}
       />

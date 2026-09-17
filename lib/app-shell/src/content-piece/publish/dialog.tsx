@@ -236,7 +236,7 @@ export function ContentPiecePublishDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/45"
         aria-label="Close dialog"
         onClick={() => !publishing && onClose()}
       />
@@ -244,7 +244,7 @@ export function ContentPiecePublishDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="publish-content-title"
-        className="paper-card relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 shadow-lg"
+        className="paper-card relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto p-6"
       >
         <div className="flex items-start justify-between gap-3">
           <div>

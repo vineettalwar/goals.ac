@@ -12,10 +12,7 @@ import {
   decryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/publishing/cms-integrations";
-import { getOrgAiSettingsForUser, hasOrgAnthropicCredentials, hasOrgBedrockCredentials, hasOrgOpenAICredentials, hasOrgOpenRouterCredentials, hasOrgGroqCredentials, hasOrgNvidiaCredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
-import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/billing/usage";
-import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { WebsiteProject } from "@/lib/projects/project-detail-types";
 import { getAccessibleProject, getOrgMembership, isSuperAdmin, requireProjectAccess } from "@/lib/org/org-access";
@@ -154,156 +151,33 @@ export const loadWebsiteProjectForUser = cache(async (
 export interface SettingsInitialData {
   usage: Awaited<ReturnType<typeof getUsageSummaryForUser>> | null;
   me: {
-    hasGeminiKey: boolean;
+    email: string;
+    role: string;
+    orgRole: string | null;
+    avatarUrl: string | null;
     hasGoogleId: boolean;
     hasPassword: boolean;
   } | null;
-  apiKey: { hasKey: boolean; lastFour: string | null };
-  openaiCredentials: { hasKey: boolean; lastFour: string | null };
-  openrouterCredentials: { hasKey: boolean; lastFour: string | null };
-  groqCredentials: { hasKey: boolean; lastFour: string | null };
-  nvidiaCredentials: { hasKey: boolean; lastFour: string | null };
-  anthropicCredentials: { hasKey: boolean; lastFour: string | null };
-  bedrockCredentials: {
-    hasCredentials: boolean;
-    accessKeyLastFour: string | null;
-    region: string | null;
-    model: string | null;
-  };
-  semrushCredentials: {
-    hasCredentials: boolean;
-    apiKeyLastFour: string | null;
-    database: string | null;
-  };
-  aiStatus: Awaited<ReturnType<typeof buildAiProviderStatus>> | null;
   canManageAiSettings: boolean;
 }
 
 export const loadSettingsInitialData = cache(async (userId: number): Promise<SettingsInitialData> => {
-  const [user, usage, orgSettings, membership] = await Promise.all([
+  const [user, usage, membership] = await Promise.all([
     db
       .select({
+        email: usersTable.email,
         googleId: usersTable.googleId,
         passwordHash: usersTable.passwordHash,
         role: usersTable.role,
+        avatarUrl: usersTable.avatarUrl,
       })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1)
       .then((rows) => rows[0]),
     getUsageSummaryForUser(userId),
-    getOrgAiSettingsForUser(userId),
     getOrgMembership(userId),
   ]);
-
-  const hasKey = Boolean(orgSettings?.encryptedGeminiKey);
-  let lastFour: string | null = null;
-  if (orgSettings?.encryptedGeminiKey) {
-    try {
-      lastFour = decryptSecret(orgSettings.encryptedGeminiKey).slice(-4);
-    } catch {
-      lastFour = "••••";
-    }
-  }
-
-  const hasOpenAIKey = hasOrgOpenAICredentials(orgSettings);
-  let openaiLastFour: string | null = null;
-  if (orgSettings?.encryptedOpenaiApiKey) {
-    try {
-      openaiLastFour = decryptSecret(orgSettings.encryptedOpenaiApiKey).slice(-4);
-    } catch {
-      openaiLastFour = "••••";
-    }
-  }
-
-  const hasOpenRouterKey = hasOrgOpenRouterCredentials(orgSettings);
-  let openrouterLastFour: string | null = null;
-  if (orgSettings?.encryptedOpenrouterApiKey) {
-    try {
-      openrouterLastFour = decryptSecret(orgSettings.encryptedOpenrouterApiKey).slice(-4);
-    } catch {
-      openrouterLastFour = "••••";
-    }
-  }
-
-  const hasGroqKey = hasOrgGroqCredentials(orgSettings);
-  let groqLastFour: string | null = null;
-  if (orgSettings?.encryptedGroqApiKey) {
-    try {
-      groqLastFour = decryptSecret(orgSettings.encryptedGroqApiKey).slice(-4);
-    } catch {
-      groqLastFour = "••••";
-    }
-  }
-
-  const hasNvidiaKey = hasOrgNvidiaCredentials(orgSettings);
-  let nvidiaLastFour: string | null = null;
-  if (orgSettings?.encryptedNvidiaApiKey) {
-    try {
-      nvidiaLastFour = decryptSecret(orgSettings.encryptedNvidiaApiKey).slice(-4);
-    } catch {
-      nvidiaLastFour = "••••";
-    }
-  }
-
-  const hasAnthropicKey = hasOrgAnthropicCredentials(orgSettings);
-  let anthropicLastFour: string | null = null;
-  if (orgSettings?.encryptedAnthropicApiKey) {
-    try {
-      anthropicLastFour = decryptSecret(orgSettings.encryptedAnthropicApiKey).slice(-4);
-    } catch {
-      anthropicLastFour = "••••";
-    }
-  }
-
-  const hasBedrockCredentials = hasOrgBedrockCredentials(orgSettings);
-  let bedrockAccessKeyLastFour: string | null = null;
-  if (orgSettings?.encryptedBedrockSecretAccessKey) {
-    try {
-      bedrockAccessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockSecretAccessKey).slice(-4);
-    } catch {
-      bedrockAccessKeyLastFour = "••••";
-    }
-  } else if (orgSettings?.encryptedBedrockAccessKeyId) {
-    try {
-      bedrockAccessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockAccessKeyId).slice(-4);
-    } catch {
-      bedrockAccessKeyLastFour = "••••";
-    }
-  }
-
-  const hasSemrushCredentials = hasOrgSemrushCredentials(orgSettings);
-  let semrushApiKeyLastFour: string | null = null;
-  if (orgSettings?.encryptedSemrushApiKey) {
-    try {
-      semrushApiKeyLastFour = decryptSecret(orgSettings.encryptedSemrushApiKey).slice(-4);
-    } catch {
-      semrushApiKeyLastFour = "••••";
-    }
-  }
-
-  const statusInput = orgSettings
-    ? {
-        aiProvider: orgSettings.aiProvider,
-        ollamaBaseUrl: orgSettings.ollamaBaseUrl,
-        ollamaModel: orgSettings.ollamaModel,
-        openrouterModel: orgSettings.openrouterModel,
-        nvidiaModel: orgSettings.nvidiaModel,
-      }
-    : undefined;
-  const aiStatusPayload = buildAiProviderStatus(statusInput);
-  await enrichOllamaStatus(aiStatusPayload, toAiProviderOptions(statusInput));
-  const aiStatus = finalizeAiProviderStatus(aiStatusPayload, {
-    hasUserGeminiKey: hasKey,
-    hasOrgBedrockKey: hasBedrockCredentials,
-    hasOrgOpenAIKey: hasOpenAIKey,
-    hasOrgOpenRouterKey: hasOpenRouterKey,
-    hasOrgGroqKey: hasGroqKey,
-    hasOrgNvidiaKey: hasNvidiaKey,
-    hasOrgAnthropicKey: hasAnthropicKey,
-    orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
-    orgBedrockModel: orgSettings?.bedrockModel ?? null,
-  });
 
   const canManageAiSettings =
     isSiteAdmin(membership?.orgRole) || isSuperAdmin(user?.role);
@@ -312,29 +186,14 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
     usage,
     me: user
       ? {
-          hasGeminiKey: hasKey,
+          email: user.email,
+          role: user.role,
+          orgRole: membership?.orgRole ?? null,
+          avatarUrl: user.avatarUrl ?? null,
           hasGoogleId: Boolean(user.googleId),
           hasPassword: Boolean(user.passwordHash),
         }
       : null,
-    apiKey: { hasKey, lastFour },
-    openaiCredentials: { hasKey: hasOpenAIKey, lastFour: openaiLastFour },
-    openrouterCredentials: { hasKey: hasOpenRouterKey, lastFour: openrouterLastFour },
-    groqCredentials: { hasKey: hasGroqKey, lastFour: groqLastFour },
-    nvidiaCredentials: { hasKey: hasNvidiaKey, lastFour: nvidiaLastFour },
-    anthropicCredentials: { hasKey: hasAnthropicKey, lastFour: anthropicLastFour },
-    bedrockCredentials: {
-      hasCredentials: hasBedrockCredentials,
-      accessKeyLastFour: bedrockAccessKeyLastFour,
-      region: orgSettings?.bedrockRegion ?? null,
-      model: orgSettings?.bedrockModel ?? null,
-    },
-    semrushCredentials: {
-      hasCredentials: hasSemrushCredentials,
-      apiKeyLastFour: semrushApiKeyLastFour,
-      database: orgSettings?.semrushDatabase ?? "us",
-    },
-    aiStatus,
     canManageAiSettings,
   };
 });

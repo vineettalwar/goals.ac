@@ -16,10 +16,12 @@ const glassCard = cardSurfaceClass("glass");
 const glassCardStatic = cardSurfaceClass("glass", false);
 
 const SHIPPED = [
+  { name: "SEO Chat control plane", href: "/content-engine" },
+  { name: "Action Queue (GSC opportunities)", href: "/search-analytics" },
   { name: "Social Hub (6 platforms)", href: "/social-distribution" },
   { name: "Search analytics (GSC + GA4)", href: "/search-analytics" },
   { name: "Brand voice RAG", href: "/brand-voice" },
-  { name: "CMS + social publish (deep + Basic)", href: "/integrations" },
+  { name: "CMS + social publish (WordPress-first)", href: "/integrations" },
   { name: "Public API keys (gac_)", href: "/features" },
   { name: "CmsAdapter render preview", href: "/cms-publishing" },
 ];
@@ -27,7 +29,7 @@ const SHIPPED = [
 const ROADMAP = [
   { name: "Internal Link Hub", status: "beta" as const, href: "/link-building" },
   { name: "Reddit Discovery", status: "beta" as const, href: "/reddit-visibility" },
-  { name: "25+ languages", status: "beta" as const, href: "/multilingual-content" },
+  { name: "Multilingual drafts", status: "beta" as const, href: "/multilingual-content" },
   { name: "AI article hero images", status: "coming-soon" as const, key: "ai-images" },
   { name: "Agency white-label reseller", status: "coming-soon" as const, key: "agency-reseller" },
   { name: "50+ languages", status: "coming-soon" as const, key: "multilingual-50" },

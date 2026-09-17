@@ -1,95 +1,79 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, PenLine } from "lucide-react";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
-import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
-import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
+import { PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 
-const glassCard = cardSurfaceClass("glass", false);
+const SKILL_DOC = `Voice
+- Direct. Short sentences. No "leverage" or "synergy."
+- Founder talking to a peer, not a vendor pitch.
 
-const DEMO = {
-  brandName: "Northwind CRM",
-  colors: ["#0F172A", "#3B82F6", "#93C5FD", "#F1F5F9"],
-  voiceTags: ["confident", "founder-friendly", "no jargon"],
-  offerings: ["Pipeline analytics", "Revenue forecasting", "HubSpot sync"],
-  excerpt: `Most CRM reporting still lives in spreadsheets because dashboards show numbers, not decisions. Northwind ties pipeline stages to forecast confidence so revenue leaders see which deals actually close, not just which reps logged activity last week.`,
-  internalLinks: [
-    { label: "Pipeline analytics", href: "#" },
-    { label: "Revenue forecasting", href: "#" },
-    { label: "HubSpot integration", href: "#" },
-  ],
-};
+Never
+- Fake urgency ("limited time")
+- Invented customer quotes
+
+Glossary
+- "desk" = the content workflow, not furniture
+- "Action Queue" = GSC-grounded next work`;
+
+const RETRIEVED = [
+  {
+    source: "About · /about",
+    passage:
+      "We write for operators who already know the category. Skip the 400-word preamble.",
+  },
+  {
+    source: "Blog · /blog/pipeline-forecasting",
+    passage:
+      "Forecast confidence beats activity metrics. Name the stage, then the risk.",
+  },
+];
 
 export function BrandVoiceShowcase() {
   return (
     <MarketingSection
       bordered
       className="py-16"
-      badge="Written like you"
-      titleLine1="Brand tailoring"
-      titleLine2="in every draft"
-      description="We pull colors, tone, and product links from your site, then weave offerings into each article."
+      badge="In the product"
+      titleLine1="Skill doc in,"
+      titleLine2="passages out"
+      description="Scrape builds an editable markdown guide. At draft time we retrieve a few on-topic passages — not a vibe slider."
     >
-      <div className="grid gap-8 lg:grid-cols-2 items-start">
-        <div className={`${glassCard} p-6 space-y-5`}>
-          <p className="text-sm font-semibold text-white">How we tailored this for {DEMO.brandName}</p>
-          <div>
-            <p className="text-xs text-white/50 mb-2">1 · Brand colors</p>
-            <div className="flex gap-2">
-              {DEMO.colors.map((c) => (
-                <span
-                  key={c}
-                  className="h-10 w-10 rounded-lg border border-white/10 shadow-sm"
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-14 items-start">
+        <div className="min-w-0 border border-border bg-background">
+          <div className="border-b border-border px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            brand-voice.md · editable
           </div>
-          <div>
-            <p className="text-xs text-white/50 mb-2">2 · Voice & tone</p>
-            <div className="flex flex-wrap gap-2">
-              {DEMO.voiceTags.map((t) => (
-                <span key={t} className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/80">
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-white/50 mb-2">3 · Cross-linked offerings</p>
-            <div className="flex flex-wrap gap-2">
-              {DEMO.offerings.map((o) => (
-                <span key={o} className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs text-primary">
-                  {o}
-                </span>
-              ))}
-            </div>
-          </div>
-          <Link
-            href={CONTACT_HREF}
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            <PenLine className="h-4 w-4" />
-            {PRODUCT_CTA_PRIMARY}
-          </Link>
+          <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap">
+            {SKILL_DOC}
+          </pre>
         </div>
 
-        <div className={`${glassCard} overflow-hidden`}>
-          <div className="border-b border-white/10 px-5 py-3 flex items-center gap-2 text-xs text-white/50">
-            <FileText className="h-3.5 w-3.5 text-primary" />
-            Generated excerpt · humanized
-          </div>
-          <div className="p-5 space-y-4">
-            <p className="text-sm leading-relaxed text-white/80">{DEMO.excerpt}</p>
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
-              {DEMO.internalLinks.map((link) => (
-                <span key={link.label} className="text-xs text-primary underline-offset-2 hover:underline">
-                  {link.label}
-                </span>
-              ))}
-            </div>
-          </div>
+        <div className="min-w-0 space-y-6">
+          <p className="text-sm text-muted-foreground">
+            For keyword <span className="font-medium text-foreground">pipeline forecasting</span>,
+            retrieval might surface:
+          </p>
+          <ul className="space-y-5">
+            {RETRIEVED.map((item) => (
+              <li key={item.source} className="border-t border-border pt-4 first:border-t-0 first:pt-0">
+                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+                  {item.source}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/85">{item.passage}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Studio and SEO Chat both read this. You can paste overrides, edit the skill, or re-ingest from
+            sitemap / CMS when the site changes.
+          </p>
+          <Link
+            href={PRODUCT_CTA_HREF}
+            className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {PRODUCT_CTA_PRIMARY}
+          </Link>
         </div>
       </div>
     </MarketingSection>

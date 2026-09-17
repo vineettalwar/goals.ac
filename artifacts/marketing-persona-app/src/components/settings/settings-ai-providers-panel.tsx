@@ -26,7 +26,6 @@ import { SettingsAiBedrockSection } from "@/components/settings/settings-ai-bedr
 import { SettingsAiSemrushSection } from "@/components/settings/settings-ai-semrush-section";
 import { useActiveProject } from "@/context/use-active-project";
 import type { AiProviderStatus } from "@/components/settings/settings-types";
-import type { SettingsInitialData } from "@/lib/server/loaders";
 
 type AiProviderChoice = "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia";
 
@@ -43,38 +42,20 @@ function normalizeProviderChoice(value: string | null | undefined): AiProviderCh
 
 interface AiProvidersPanelProps {
   canManage: boolean;
-  initialData?: SettingsInitialData | null;
 }
 
-export function SettingsAiProvidersPanel({ canManage, initialData }: AiProvidersPanelProps) {
+export function SettingsAiProvidersPanel({ canManage }: AiProvidersPanelProps) {
   const { activeProject } = useActiveProject();
 
-  const [aiStatus, setAiStatus] = useState<AiProviderStatus | null>(initialData?.aiStatus ?? null);
-  const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>(() => {
-    if (!initialData?.aiStatus) return "gemini";
-    const saved = initialData.aiStatus.settings?.provider;
-    return normalizeProviderChoice(saved ?? initialData.aiStatus.activeProvider);
-  });
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState(
-    initialData?.aiStatus?.settings?.ollamaBaseUrl ??
-      initialData?.aiStatus?.envFallback?.ollamaBaseUrl ??
-      "http://localhost:11434",
-  );
-  const [ollamaModel, setOllamaModel] = useState(
-    initialData?.aiStatus?.settings?.ollamaModel ??
-      initialData?.aiStatus?.envFallback?.ollamaModel ??
-      "",
-  );
-  const [openrouterModel, setOpenrouterModel] = useState(
-    initialData?.aiStatus?.settings?.openrouterModel ?? "",
-  );
-  const [nvidiaModel, setNvidiaModel] = useState(
-    initialData?.aiStatus?.settings?.nvidiaModel ?? "",
-  );
+  const [aiStatus, setAiStatus] = useState<AiProviderStatus | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>("gemini");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
+  const [ollamaModel, setOllamaModel] = useState("");
+  const [openrouterModel, setOpenrouterModel] = useState("");
+  const [nvidiaModel, setNvidiaModel] = useState("");
   const [providerSaving, setProviderSaving] = useState(false);
 
   useEffect(() => {
-    if (initialData) return;
     fetch("/api/ai-providers/status")
       .then((r) => (r.ok ? r.json() : null))
       .then((aiData) => {
@@ -86,7 +67,7 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
         setOpenrouterModel(aiData.settings?.openrouterModel ?? "");
         setNvidiaModel(aiData.settings?.nvidiaModel ?? "");
       });
-  }, [initialData]);
+  }, []);
 
   async function saveAiProvider() {
     setProviderSaving(true);
@@ -235,55 +216,14 @@ export function SettingsAiProvidersPanel({ canManage, initialData }: AiProviders
         </div>
       </div>
 
-      <SettingsAiGeminiSection
-        canManage={canManage}
-        initialHasKey={initialData?.me?.hasGeminiKey}
-        initialLastFour={initialData?.apiKey?.lastFour}
-      />
-      <SettingsAiOpenAISection
-        canManage={canManage}
-        initialHasKey={initialData?.openaiCredentials?.hasKey}
-        initialLastFour={initialData?.openaiCredentials?.lastFour}
-        onAiStatusChange={setAiStatus}
-      />
-      <SettingsAiAnthropicSection
-        canManage={canManage}
-        initialHasKey={initialData?.anthropicCredentials?.hasKey}
-        initialLastFour={initialData?.anthropicCredentials?.lastFour}
-        onAiStatusChange={setAiStatus}
-      />
-      <SettingsAiOpenRouterSection
-        canManage={canManage}
-        initialHasKey={initialData?.openrouterCredentials?.hasKey}
-        initialLastFour={initialData?.openrouterCredentials?.lastFour}
-        onAiStatusChange={setAiStatus}
-      />
-      <SettingsAiGroqSection
-        canManage={canManage}
-        initialHasKey={initialData?.groqCredentials?.hasKey}
-        initialLastFour={initialData?.groqCredentials?.lastFour}
-        onAiStatusChange={setAiStatus}
-      />
-      <SettingsAiNvidiaSection
-        canManage={canManage}
-        initialHasKey={initialData?.nvidiaCredentials?.hasKey}
-        initialLastFour={initialData?.nvidiaCredentials?.lastFour}
-        onAiStatusChange={setAiStatus}
-      />
-      <SettingsAiBedrockSection
-        canManage={canManage}
-        initialHasCredentials={initialData?.bedrockCredentials?.hasCredentials}
-        initialAccessKeyLastFour={initialData?.bedrockCredentials?.accessKeyLastFour}
-        initialModel={initialData?.bedrockCredentials?.model ?? ""}
-        onAiStatusChange={setAiStatus}
-      />
-      <SettingsAiSemrushSection
-        canManage={canManage}
-        initialHasCredentials={initialData?.semrushCredentials?.hasCredentials}
-        initialApiKeyLastFour={initialData?.semrushCredentials?.apiKeyLastFour}
-        initialDatabase={initialData?.semrushCredentials?.database ?? "us"}
-        activeProject={activeProject}
-      />
+      <SettingsAiGeminiSection canManage={canManage} />
+      <SettingsAiOpenAISection canManage={canManage} onAiStatusChange={setAiStatus} />
+      <SettingsAiAnthropicSection canManage={canManage} onAiStatusChange={setAiStatus} />
+      <SettingsAiOpenRouterSection canManage={canManage} onAiStatusChange={setAiStatus} />
+      <SettingsAiGroqSection canManage={canManage} onAiStatusChange={setAiStatus} />
+      <SettingsAiNvidiaSection canManage={canManage} onAiStatusChange={setAiStatus} />
+      <SettingsAiBedrockSection canManage={canManage} onAiStatusChange={setAiStatus} />
+      <SettingsAiSemrushSection canManage={canManage} activeProject={activeProject} />
 
       <DeeplByokPanel scope="org" canManage={canManage} />
       <PublicApiKeysPanel canManage={canManage} />

@@ -1,5 +1,43 @@
 # Session Handoff
 
+## Latest (2026-09-17) — Dashboard stuck on Loading
+
+`app.goals.ac/dashboard` never left `Loading…` after sign-in. TanStack Query v5 keeps a **disabled** query `isPending` (no projects, or `/api/website-projects` failed). The page also waited on that flag **and** on command-center/usage before first paint.
+
+**Fix (goals-app-ui, not deployed):** render once auth + project list settle (empty list is a real state); `dashboardQueryLoading` ignores disabled queries; command-center + usage load in a follow-up query.
+
+**Verify:** `npx tsx src/hooks/use-dashboard-data.test.ts` from `artifacts/goals-app-ui` · `pnpm exec tsc -p tsconfig.json --noEmit` · deploy Pages, hard-refresh `/dashboard` signed in (zero projects and with a project). Logged-out already redirects to `/login`.
+
+## Prior (2026-09-17) — Light mode switch on live
+
+`app.goals.ac` sidebar never got `theme` / `onToggleTheme` — HTML was hard-locked `class="dark"`. Wired ThemeProvider + FOUC boot in `goals-app-ui` and deployed Pages (`pnpm run cf:pages:app`). **Light mode** sits under Admin.
+
+**Verify:** hard-refresh `app.goals.ac`, sign in, sidebar footer → Light mode.
+
+## Latest (2026-09-17) — Product UI anti-slop distill
+
+Logged-in product only. Palette/fonts/article canvas unchanged. Hairline radius on Vite tokens; square StatusPill/btns; no-glass dialogs (no blur, no paper-card shadow); integration tiles without emerald wash; SEO chat is hairline cards + square send, not ChatGPT bubbles; studio status dots/badges amber-or-muted; social calendar dropped brand left rails.
+
+**Verify:** `/chat`, `/dashboard`, `/projects/:id/content-studio`, `/projects/:id/integrations`, `/integrations/ai`, `/settings`. Studio 500 fixed: `parseVoiceGateFromBrandProfile` lives in `voice-gate.ts` (server-safe), not the client banner.
+
+## Latest (2026-09-17) — Brand voice lander de-slop
+
+`/brand-voice`: killed Northwind glass demo / pill tags; showcase is skill-doc + retrieval passages. Hero/meta/FAQ match scrape → editable skill → topic retrieval (no "RAG-Backed" / "Sounds Like You" SEO title).
+
+**Verify:** `/brand-voice`
+
+## Latest (2026-09-17) — Pricing + lander heroes honesty
+
+`/pricing`: self-serve desk first (Chat, Studio, Action Queue, WordPress-first); strategist only on Full GEO; invite-only + free tools FAQ; hairline cards (no pill CTAs). All `LANDER_CONFIG` heroes/features softened to shipped truth (snapshots need creds, Autopilot review gates, Social from approved articles, Search = Action Queue).
+
+**Verify:** `/pricing`, `/search-analytics`, `/cms-publishing`, `/content-autopilot`, `/brand-voice`
+
+## Latest (2026-09-17) — Marketing honesty + desk voice
+
+Homepage / features / content-engine / compare / roadmap / multilingual lander now match shipped product: SEO Chat, Action Queue, WordPress-first CMS, approve-before-live; multilingual softened (beta, no native-quality claim); dedicated strategist = retainer / coming soon (not a free checkmark). Pillars renamed Desk / Studio / Measure. Palette unchanged (newsprint/ink).
+
+**Verify:** load `/`, `/features`, `/content-engine`, `/compare/ai-seo-tools` locally · skim hero + feature pillars for overclaims.
+
 ## Latest (2026-09-17) — Deepen thin research tools
 
 Competitor analysis uses the site-audit crawler (`runSiteAuditCrawl`, max 6 pages) and **fails** if the homepage is blocked; stores `evidencePages` / `crawlPartial`. GEO audit stays one URL and now checks llms.txt, AI robots, sameAs/author/dates, outbound citations, citability length. Keyword gaps no longer invent `500-1,500/mo` — unmeasured volume until Semrush overlays. Reddit discovery uses live search + post selftext/comments; shared `runRedditDiscovery` for Next and CF.

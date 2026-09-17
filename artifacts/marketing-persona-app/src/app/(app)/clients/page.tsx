@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { getSession } from "@/auth";
-import { db } from "@workspace/db";
-import { contentPiecesTable } from "@workspace/db/schema";
-import { inArray, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { isSiteAdmin, isSuperAdmin, listAccessibleProjects } from "@/lib/org/org-access";
 import { getSupportOrganizationId } from "@/lib/org/project-scope";
-import { loadPartnerOutcomesByProjectId } from "@/lib/org/partner-report";
+import { loadPartnerOutcomesByProjectId } from "@/lib/org/partner-outcomes";
 import {
   PartnerWorkspaceClient,
   type PartnerProjectRow,
@@ -31,43 +28,17 @@ export default async function ClientsPage() {
 
   const projects = await listAccessibleProjects(userId, supportOrganizationId);
   const cappedProjects = projects.slice(0, 20);
-  const projectIds = cappedProjects.map((p) => p.id);
-  const [pieceCounts, outcomesById] = await Promise.all([
-    projectIds.length === 0
-      ? Promise.resolve([])
-      : db
-          .select({
-            projectId: contentPiecesTable.websiteProjectId,
-            publishedCount: sql<number>`count(*) filter (where ${contentPiecesTable.status} = 'published')`.mapWith(
-              Number,
-            ),
-            draftCount: sql<number>`count(*) filter (where ${contentPiecesTable.status} != 'published')`.mapWith(
-              Number,
-            ),
-          })
-          .from(contentPiecesTable)
-          .where(inArray(contentPiecesTable.websiteProjectId, projectIds))
-          .groupBy(contentPiecesTable.websiteProjectId),
-    loadPartnerOutcomesByProjectId(projectIds),
-  ]);
-
-  const countByProject = new Map(
-    pieceCounts.map((row) => [
-      row.projectId,
-      { published: row.publishedCount, draft: row.draftCount },
-    ]),
-  );
+  const outcomesById = await loadPartnerOutcomesByProjectId(cappedProjects.map((p) => p.id));
 
   const rows: PartnerProjectRow[] = cappedProjects
     .map((project) => {
-      const counts = countByProject.get(project.id) ?? { published: 0, draft: 0 };
       const outcomes = outcomesById.get(project.id);
       return {
         id: project.id,
         name: project.name,
         url: project.url,
-        publishedCount: counts.published,
-        draftCount: counts.draft,
+        publishedCount: outcomes?.publishedCount ?? 0,
+        draftCount: outcomes?.draftCount ?? 0,
         draftsNeedingReview: outcomes?.draftsNeedingReview ?? 0,
         generatingPieces: outcomes?.generatingPieces ?? 0,
         recentPublishFail: outcomes?.recentPublishFail ?? 0,

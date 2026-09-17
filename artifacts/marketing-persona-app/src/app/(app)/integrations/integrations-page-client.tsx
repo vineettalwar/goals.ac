@@ -18,6 +18,7 @@ import { useActiveProject } from "@/context/use-active-project";
 import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
 import { useSettingsData } from "@/hooks/use-settings-data";
 import { useOrgByokControllers } from "@/hooks/use-org-byok-controllers";
+import type { IntegrationsInitialData } from "@/lib/server/load-integrations-initial-data";
 
 const VALID_TABS: OrgIntegrationsTab[] = ["ai", "tools"];
 
@@ -28,7 +29,13 @@ function parseTab(value: string | undefined): OrgIntegrationsTab {
   return "ai";
 }
 
-export function IntegrationsPageClient({ tab }: { tab: string }) {
+export function IntegrationsPageClient({
+  tab,
+  initialData,
+}: {
+  tab: string;
+  initialData: IntegrationsInitialData;
+}) {
   const { data: session } = useSession();
   const router = useRouter();
   const { activeProjectId } = useActiveProject();
@@ -39,7 +46,7 @@ export function IntegrationsPageClient({ tab }: { tab: string }) {
     userRole,
     orgRole,
     canManageAiSettings: initialCanManage,
-  } = useSettingsData();
+  } = useSettingsData(initialData);
   const byok = useOrgByokControllers(reload);
 
   const canManageProviderKeys =

@@ -25,12 +25,12 @@ export function StudioLink({
 }
 
 const STATUS_DOT_COLORS: Record<string, string> = {
-  draft: "bg-amber-500",
-  ready: "bg-emerald-500",
-  published: "bg-blue-500",
-  prepared: "bg-violet-500",
-  generating: "bg-amber-400",
-  failed: "bg-red-500",
+  draft: "bg-muted-foreground",
+  ready: "bg-foreground",
+  published: "bg-primary",
+  prepared: "bg-muted-foreground",
+  generating: "bg-primary",
+  failed: "bg-destructive",
 };
 
 function StatusBadge({ status }: { status: string }) {

@@ -36,12 +36,12 @@ export function IntegrationTile({
       disabled={locked}
       aria-disabled={locked}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card text-left transition-all",
+        "group flex w-full items-center gap-3 rounded-sm border border-border bg-card text-left",
         compact ? "px-3 py-2.5" : "p-4",
-        !locked && "hover:border-border hover:bg-muted/20 hover:shadow-sm",
+        !locked && "hover:bg-muted/20",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-        status === "connected" && "border-emerald-500/25 bg-emerald-500/3",
-        status === "pending" && "border-amber-500/25 bg-amber-500/3",
+        status === "connected" && "border-foreground/40",
+        status === "pending" && "border-primary/40",
         locked && "cursor-not-allowed opacity-70",
       )}
     >
@@ -57,8 +57,8 @@ export function IntegrationTile({
           <span
             className={cn(
               "h-1.5 w-1.5 shrink-0 rounded-full",
-              status === "connected" && "bg-emerald-500",
-              status === "pending" && "bg-amber-500",
+              status === "connected" && "bg-foreground",
+              status === "pending" && "bg-primary",
               status === "idle" && "bg-muted-foreground/25",
             )}
             aria-hidden

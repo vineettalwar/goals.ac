@@ -57,7 +57,7 @@ export function StockImagePickerDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
-        className="paper-card flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl shadow-xl"
+        className="paper-card flex max-h-[85vh] w-full max-w-3xl flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="stock-picker-title"

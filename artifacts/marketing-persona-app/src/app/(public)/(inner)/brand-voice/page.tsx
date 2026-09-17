@@ -3,8 +3,9 @@ import { FeatureLanderDynamic } from "@/components/marketing/landers/feature-lan
 import { BrandVoiceShowcase } from "@/components/marketing/sections/brand-voice-showcase";
 
 export const metadata: Metadata = {
-  title: "Brand Voice | RAG-Backed Content That Sounds Like You",
-  description: "Ingest your site and docs; generate on-brand SEO content with editable voice skill docs.",
+  title: "Brand Voice | goals.ac",
+  description:
+    "Scrape your site into an editable voice skill doc. Chat and Studio retrieve topic passages at draft time — not a tone slider.",
 };
 
 export default function Page() {

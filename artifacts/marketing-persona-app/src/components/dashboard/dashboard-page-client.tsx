@@ -30,17 +30,63 @@ export function DashboardPageClient({
   activeProject,
   pieces,
   autopilotSettings,
-  commandCenter,
-  articleUsage,
+  commandCenter: initialCommandCenter,
+  articleUsage: initialArticleUsage,
 }: DashboardPageClientProps) {
   const activeProjectId = activeProject?.id ?? null;
   const [settings, setSettings] = useState<DashboardAutopilotSettings | null>(autopilotSettings);
+  const [commandCenter, setCommandCenter] = useState<DashboardCommandCenter | null>(
+    initialCommandCenter,
+  );
+  const [articleUsage, setArticleUsage] = useState<DashboardArticleUsage | null>(
+    initialArticleUsage,
+  );
   const [savingAutopilot, setSavingAutopilot] = useState(false);
   const [saveAutopilotError, setSaveAutopilotError] = useState<string | null>(null);
 
   useEffect(() => {
     setSettings(autopilotSettings);
   }, [autopilotSettings, activeProjectId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/usage")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body: { usage?: {
+        articlesThisMonth?: number;
+        quota?: number | null;
+        quotaRemaining?: number | null;
+        usesByok?: boolean;
+      } } | null) => {
+        if (cancelled || !body?.usage) return;
+        setArticleUsage({
+          articlesThisMonth: body.usage.articlesThisMonth ?? 0,
+          articleQuotaLimit: body.usage.quota ?? null,
+          articlesRemaining: body.usage.quotaRemaining ?? null,
+          usesByok: Boolean(body.usage.usesByok),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeProjectId == null) {
+      setCommandCenter(null);
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/website-projects/${activeProjectId}/command-center`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled || !body) return;
+        setCommandCenter(body as DashboardCommandCenter);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProjectId]);
 
   const onSaveAutopilot = useCallback(
     async (payload: DashboardAutopilotSavePayload) => {

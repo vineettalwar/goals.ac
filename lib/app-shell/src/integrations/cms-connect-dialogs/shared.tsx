@@ -17,7 +17,7 @@ function isValidUrl(value: string): boolean {
 }
 
 export const inputClassName =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20";
+  "h-10 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20";
 
 type SimpleDialogProps = {
   open: boolean;
@@ -61,7 +61,7 @@ export function SimpleDialog({
       id={titleId}
       aria-labelledby={titleId}
       className={cn(
-        "paper-card fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border p-6 shadow-lg backdrop:bg-black/20 backdrop:backdrop-blur-sm",
+        "paper-card fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 border border-border p-6 backdrop:bg-black/45",
         className,
       )}
       onClose={handleClose}

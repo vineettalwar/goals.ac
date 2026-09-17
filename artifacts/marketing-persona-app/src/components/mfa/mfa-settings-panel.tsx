@@ -8,6 +8,7 @@ import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { invalidateMfaStatusCache } from "@/components/mfa/mfa-compliance-gate";
 
 type MfaStatus = {
   enabled: boolean;
@@ -83,6 +84,7 @@ export function MfaSettingsPanel() {
       toast.success("Two-factor authentication enabled");
       setSetup(null);
       setCode("");
+      invalidateMfaStatusCache();
       await load();
     } finally {
       setConfirming(false);

@@ -6,9 +6,9 @@ import { HomePageClient } from "@/components/marketing/pages/home/home-page-clie
 import type { ShowcaseArticle } from "@/components/marketing/sections/home-marketing-sections";
 
 export const metadata: Metadata = {
-  title: "goals.ac | Research-driven SEO content studio",
+  title: "goals.ac | SEO content desk for B2B growth",
   description:
-    "Cross-platform content studio for B2B teams. Research-backed SEO briefs, drafts you approve, and publishing to CMS, social, and email — saving you time end to end.",
+    "SEO Chat and Content Studio for B2B teams: research-backed briefs, humanized drafts, dual scores, Action Queue, GEO audits, and WordPress-first publish — you approve before live.",
 };
 
 async function loadShowcaseArticle(): Promise<ShowcaseArticle | null> {

@@ -167,7 +167,7 @@ export function StudioView({
           >
             Hub
             {pieces.length > 0 ? (
-              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+              <span className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {pieces.length}
               </span>
             ) : null}
@@ -185,7 +185,7 @@ export function StudioView({
             >
               Ideas
               {ideasCount ? (
-                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                <span className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   {ideasCount}
                 </span>
               ) : null}
@@ -203,7 +203,7 @@ export function StudioView({
           >
             Calendar
             {scheduledCount > 0 ? (
-              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+              <span className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                 {scheduledCount}
               </span>
             ) : null}

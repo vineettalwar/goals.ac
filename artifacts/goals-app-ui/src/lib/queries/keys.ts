@@ -1,6 +1,7 @@
 export const queryKeys = {
   websiteProjects: ["website-projects"] as const,
   dashboard: (projectId: string | null) => ["dashboard", projectId] as const,
+  dashboardExtras: (projectId: string | null) => ["dashboard-extras", projectId] as const,
   settings: ["settings"] as const,
   studio: (projectId: string | null) => ["studio", projectId] as const,
   contentPieces: (projectId: string | null) => ["content-pieces", projectId] as const,

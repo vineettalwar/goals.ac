@@ -8,6 +8,13 @@ import type {
   UsageSummary,
 } from "@workspace/app-shell/settings";
 import type { SettingsInitialData } from "@/lib/server/loaders";
+import type { IntegrationsInitialData } from "@/lib/server/load-integrations-initial-data";
+
+type SettingsHookSeed = SettingsInitialData | IntegrationsInitialData;
+
+function isIntegrationsSeed(data: SettingsHookSeed): data is IntegrationsInitialData {
+  return "aiSummary" in data && data.aiSummary != null;
+}
 
 type MeResponse = {
   user?: {
@@ -71,73 +78,23 @@ type AiStatusResponse = {
   };
 };
 
-function aiSummaryFromInitial(data: SettingsInitialData): SettingsAiSummary {
-  const ai = data.aiStatus;
-  return {
-    activeProvider: ai?.activeProvider ?? "gemini",
-    hasGeminiKey: data.apiKey.hasKey,
-    geminiLastFour: data.apiKey.lastFour,
-    hasOpenaiKey: data.openaiCredentials.hasKey,
-    openaiLastFour: data.openaiCredentials.lastFour,
-    hasOpenrouterKey: data.openrouterCredentials.hasKey,
-    openrouterLastFour: data.openrouterCredentials.lastFour,
-    hasAnthropicKey: data.anthropicCredentials.hasKey,
-    anthropicLastFour: data.anthropicCredentials.lastFour,
-    hasGroqKey: data.groqCredentials.hasKey,
-    groqLastFour: data.groqCredentials.lastFour,
-    hasNvidiaKey: data.nvidiaCredentials.hasKey,
-    nvidiaLastFour: data.nvidiaCredentials.lastFour,
-    hasBedrockCredentials: data.bedrockCredentials.hasCredentials,
-    bedrockAccessKeyLastFour: data.bedrockCredentials.accessKeyLastFour,
-    bedrockRegion: data.bedrockCredentials.region,
-    bedrockModel: data.bedrockCredentials.model,
-    bedrockHasSessionToken: false,
-    source: ai?.source,
-    settings: {
-      provider: ai?.settings?.provider ?? null,
-      ollamaBaseUrl: ai?.settings?.ollamaBaseUrl ?? null,
-      ollamaModel: ai?.settings?.ollamaModel ?? null,
-      openrouterModel: ai?.settings?.openrouterModel ?? null,
-      nvidiaModel: ai?.settings?.nvidiaModel ?? null,
-    },
-    ollama: ai?.ollama,
-  };
-}
-
-function integrationsFromInitial(data: SettingsInitialData): SettingsIntegrationsSummary {
-  return {
-    semrush: {
-      hasCredentials: data.semrushCredentials.hasCredentials,
-      apiKeyLastFour: data.semrushCredentials.apiKeyLastFour,
-      database: data.semrushCredentials.database ?? "us",
-    },
-    deepl: {
-      configured: false,
-      apiKeyLastFour: null,
-    },
-    stock: {
-      org: [],
-      providers: [],
-    },
-  };
-}
-
-export function useSettingsData(initialData?: SettingsInitialData) {
+export function useSettingsData(initialData?: SettingsHookSeed) {
+  const integrationsSeed = initialData && isIntegrationsSeed(initialData) ? initialData : null;
   const [loading, setLoading] = useState(!initialData);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialData?.me?.email ?? "");
   const [hasGoogleId, setHasGoogleId] = useState(initialData?.me?.hasGoogleId ?? false);
   const [hasPassword, setHasPassword] = useState(initialData?.me?.hasPassword ?? false);
   const [usage, setUsage] = useState<UsageSummary | null>(initialData?.usage ?? null);
   const [usageLoading, setUsageLoading] = useState(!initialData);
-  const [aiSummary, setAiSummary] = useState<SettingsAiSummary | null>(() =>
-    initialData ? aiSummaryFromInitial(initialData) : null,
+  const [aiSummary, setAiSummary] = useState<SettingsAiSummary | null>(
+    () => integrationsSeed?.aiSummary ?? null,
   );
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [orgRole, setOrgRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(initialData?.me?.role ?? null);
+  const [orgRole, setOrgRole] = useState<string | null>(initialData?.me?.orgRole ?? null);
   const [billingSummary, setBillingSummary] = useState<SettingsBillingSummary | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [integrationsSummary, setIntegrationsSummary] = useState<SettingsIntegrationsSummary | null>(
-    () => (initialData ? integrationsFromInitial(initialData) : null),
+    () => integrationsSeed?.integrationsSummary ?? null,
   );
 
   const loadBillingSummary = useCallback(async () => {
@@ -281,7 +238,9 @@ export function useSettingsData(initialData?: SettingsInitialData) {
   }, []);
 
   useEffect(() => {
-    void reload(!initialData);
+    // Settings / integrations SSR hydrate — skip the 13-fetch mount storm.
+    if (initialData) return;
+    void reload(true);
   }, [initialData, reload]);
 
   return {

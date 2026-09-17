@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   countCmsConnections,
   countEspConnections,
@@ -29,61 +29,54 @@ function countAnalyticsConnections(data: AnalyticsPropertyConnectionsResponse | 
   return data.connections.filter((c) => c.connected && c.propertyVerified).length;
 }
 
+async function fetchIntegrationCounts(projectId: string): Promise<Omit<IntegrationCounts, "loading">> {
+  const [cmsRes, searchRes, analyticsRes] = await Promise.all([
+    fetch(`/api/website-projects/${projectId}/cms-integrations`),
+    fetch(`/api/website-projects/${projectId}/search-properties`),
+    fetch(`/api/website-projects/${projectId}/analytics-properties`),
+  ]);
+
+  const cms = cmsRes.ok ? ((await cmsRes.json()) as CmsConnectionSnapshot) : {};
+  const search = searchRes.ok
+    ? ((await searchRes.json()) as SearchPropertyConnectionsResponse)
+    : null;
+  const analytics = analyticsRes.ok
+    ? ((await analyticsRes.json()) as AnalyticsPropertyConnectionsResponse)
+    : null;
+
+  const cmsCount = countCmsConnections(cms);
+  const espCount = countEspConnections(cms);
+  const socialCount = countSocialConnections(cms);
+  const searchCount = countSearchConnections(search) + countAnalyticsConnections(analytics);
+
+  return {
+    cms: cmsCount,
+    esp: espCount,
+    social: socialCount,
+    search: searchCount,
+    total: cmsCount + espCount + socialCount + searchCount,
+  };
+}
+
+/** Cached across tab soft-nav remounts (staleTime matches app QueryClient default). */
 export function useIntegrationCounts(projectId: string): IntegrationCounts {
-  const [counts, setCounts] = useState<IntegrationCounts>({
-    cms: 0,
-    esp: 0,
-    social: 0,
-    search: 0,
-    total: 0,
-    loading: true,
+  const query = useQuery({
+    queryKey: ["integration-counts", projectId],
+    queryFn: () => fetchIntegrationCounts(projectId),
+    enabled: Boolean(projectId),
+    staleTime: 60_000,
   });
 
-  const load = useCallback(async () => {
-    if (!projectId) {
-      setCounts({ cms: 0, esp: 0, social: 0, search: 0, total: 0, loading: false });
-      return;
-    }
+  if (!projectId) {
+    return { cms: 0, esp: 0, social: 0, search: 0, total: 0, loading: false };
+  }
 
-    try {
-      const [cmsRes, searchRes, analyticsRes] = await Promise.all([
-        fetch(`/api/website-projects/${projectId}/cms-integrations`),
-        fetch(`/api/website-projects/${projectId}/search-properties`),
-        fetch(`/api/website-projects/${projectId}/analytics-properties`),
-      ]);
-
-      const cms = cmsRes.ok
-        ? ((await cmsRes.json()) as CmsConnectionSnapshot)
-        : {};
-      const search = searchRes.ok
-        ? ((await searchRes.json()) as SearchPropertyConnectionsResponse)
-        : null;
-      const analytics = analyticsRes.ok
-        ? ((await analyticsRes.json()) as AnalyticsPropertyConnectionsResponse)
-        : null;
-
-      const cmsCount = countCmsConnections(cms);
-      const espCount = countEspConnections(cms);
-      const socialCount = countSocialConnections(cms);
-      const searchCount =
-        countSearchConnections(search) + countAnalyticsConnections(analytics);
-
-      setCounts({
-        cms: cmsCount,
-        esp: espCount,
-        social: socialCount,
-        search: searchCount,
-        total: cmsCount + espCount + socialCount + searchCount,
-        loading: false,
-      });
-    } catch {
-      setCounts((prev) => ({ ...prev, loading: false }));
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return counts;
+  return {
+    cms: query.data?.cms ?? 0,
+    esp: query.data?.esp ?? 0,
+    social: query.data?.social ?? 0,
+    search: query.data?.search ?? 0,
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+  };
 }

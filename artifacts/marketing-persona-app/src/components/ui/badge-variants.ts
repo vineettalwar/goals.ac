@@ -1,16 +1,16 @@
 import { cva } from "class-variance-authority";
 
 export const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+  "inline-flex items-center rounded-sm border px-2.5 py-0.5 text-xs font-semibold transition-colors",
   {
     variants: {
       variant: {
         default: "border-transparent bg-primary text-primary-foreground",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "border-border text-foreground bg-transparent",
-        success: "border-transparent bg-emerald-100 text-emerald-800",
-        warning: "border-transparent bg-amber-100 text-amber-800",
-        destructive: "border-transparent bg-red-100 text-red-800",
+        success: "border-border bg-secondary text-foreground",
+        warning: "border-primary/40 bg-primary/10 text-primary",
+        destructive: "border-destructive/40 bg-destructive/10 text-destructive",
         muted: "border-border bg-muted text-muted-foreground",
       },
     },

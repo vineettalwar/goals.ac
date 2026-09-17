@@ -103,7 +103,7 @@ export function CreateContentDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/45"
         aria-label="Close dialog"
         onClick={() => !submitting && onClose()}
       />
@@ -111,7 +111,7 @@ export function CreateContentDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-content-title"
-        className="paper-card relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-xl flex-col overflow-hidden shadow-lg"
+        className="paper-card relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-xl flex-col overflow-hidden"
       >
         <div className="h-1 w-full shrink-0 bg-muted">
           <div

@@ -348,7 +348,7 @@ export function SeoChatWorkspace({
                       <button
                         key={prompt}
                         type="button"
-                        className="rounded-full bg-secondary/80 px-3.5 py-1.5 text-xs text-foreground transition-colors duration-150 ease-out hover:bg-secondary active:scale-[0.97]"
+                        className="rounded-sm border border-border bg-secondary px-3.5 py-1.5 text-xs text-foreground hover:bg-muted"
                         onClick={() => void send(prompt)}
                       >
                         {prompt}
@@ -371,7 +371,7 @@ export function SeoChatWorkspace({
                 {messages.map((message) => (
                   <article key={String(message.id)} className="space-y-2">
                     {message.role === "user" ? (
-                      <p className="seo-chat-user ml-auto max-w-[85%] rounded-3xl px-4 py-2.5 text-[15px] leading-relaxed">
+                      <p className="seo-chat-user ml-auto max-w-[85%] rounded-sm border border-border px-4 py-2.5 text-[15px] leading-relaxed">
                         {message.content}
                       </p>
                     ) : (
@@ -381,7 +381,7 @@ export function SeoChatWorkspace({
                             {message.chips.map((chip) => (
                               <span
                                 key={`${chip.tool}-${chip.label}`}
-                                className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] text-muted-foreground"
+                                className="rounded-sm border border-border bg-secondary px-2.5 py-0.5 text-[11px] text-muted-foreground"
                               >
                                 {chip.label}
                               </span>
@@ -402,7 +402,7 @@ export function SeoChatWorkspace({
                         <div className="flex flex-wrap gap-2 pt-1">
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            className="inline-flex items-center gap-1 rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                             onClick={() => void send("Draft this")}
                           >
                             <PenLine className="h-3 w-3" />
@@ -410,7 +410,7 @@ export function SeoChatWorkspace({
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            className="inline-flex items-center gap-1 rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                             onClick={() => void send("Add to Action Queue")}
                           >
                             <ListPlus className="h-3 w-3" />
@@ -418,7 +418,7 @@ export function SeoChatWorkspace({
                           </button>
                           <button
                             type="button"
-                            className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                             onClick={() => void send("Show trajectory")}
                           >
                             Show trajectory
@@ -427,14 +427,14 @@ export function SeoChatWorkspace({
                             <>
                               <button
                                 type="button"
-                                className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                                className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                                 onClick={() => void inspectRun(message.agentRunId!)}
                               >
                                 Inspect run
                               </button>
                               <a
                                 href={runInspectorHref(actionsHref, message.agentRunId)}
-                                className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                                className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                               >
                                 Open in Actions
                               </a>
@@ -442,14 +442,14 @@ export function SeoChatWorkspace({
                           ) : (
                             <a
                               href={actionsHref}
-                              className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                              className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                             >
                               Open in Actions
                             </a>
                           )}
                           <a
                             href={studioHref()}
-                            className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
+                            className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground transition-colors duration-150 ease-out hover:bg-secondary hover:text-foreground"
                           >
                             Continue in Studio
                           </a>
@@ -464,7 +464,7 @@ export function SeoChatWorkspace({
                     {liveChips.map((chip) => (
                       <span
                         key={`${chip.tool}-${chip.label}`}
-                        className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] text-foreground"
+                        className="rounded-sm border border-border bg-secondary px-2.5 py-0.5 text-[11px] text-foreground"
                       >
                         {chip.label}
                       </span>
@@ -472,7 +472,7 @@ export function SeoChatWorkspace({
                     {liveRunId ? (
                       <button
                         type="button"
-                        className="rounded-full px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
                         onClick={() => void inspectRun(liveRunId)}
                       >
                         Inspect run {liveRunId}
@@ -535,7 +535,7 @@ function ChatComposer({
 
   return (
     <form
-      className="seo-chat-composer flex items-end gap-2 rounded-full px-3 py-2.5 ring-1 ring-border"
+      className="seo-chat-composer flex items-end gap-2 rounded-sm px-3 py-2.5 ring-1 ring-border"
       onSubmit={(event) => {
         event.preventDefault();
         onSend();
@@ -543,7 +543,7 @@ function ChatComposer({
     >
       <details className="relative mb-0.5 shrink-0">
         <summary
-          className="inline-flex size-11 cursor-pointer list-none items-center justify-center rounded-full text-foreground transition-colors duration-150 ease-out hover:bg-secondary active:scale-[0.97] [&::-webkit-details-marker]:hidden"
+          className="inline-flex size-11 cursor-pointer list-none items-center justify-center rounded-sm text-foreground hover:bg-secondary [&::-webkit-details-marker]:hidden"
           aria-label="Conversations"
         >
           <Plus className="h-5 w-5" />
@@ -619,7 +619,7 @@ function ChatComposer({
       <button
         type="submit"
         disabled={!canSend}
-        className="mb-0.5 inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-transform duration-150 ease-out enabled:active:scale-[0.97] disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-40"
+        className="mb-0.5 inline-flex size-11 shrink-0 items-center justify-center rounded-sm bg-foreground text-background disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-40"
         aria-label="Send"
       >
         <ArrowUp className="h-4 w-4" />
@@ -644,7 +644,7 @@ function ChatCard({
   const inspectId = cardRunId(card);
   if (card.kind === "choice") {
     return (
-      <div className="rounded-2xl bg-secondary p-3 text-sm">
+      <div className="hairline-panel p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
         <p className="mt-1 text-muted-foreground">{card.prompt}</p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -664,7 +664,7 @@ function ChatCard({
   }
   if (card.kind === "learn_summary") {
     return (
-      <div className="rounded-2xl bg-secondary p-3 text-sm">
+      <div className="hairline-panel p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
         <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
           {card.bullets.map((bullet) => (
@@ -676,7 +676,7 @@ function ChatCard({
   }
   if (card.kind === "opportunity") {
     return (
-      <div className="rounded-2xl bg-secondary p-3 text-sm">
+      <div className="hairline-panel p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Opportunity</p>
         <p className="mt-1 font-medium">{card.title}</p>
         <p className="text-muted-foreground">{card.keyword}</p>
@@ -696,7 +696,7 @@ function ChatCard({
   }
   if (card.kind === "draft_preview") {
     return (
-      <div className="rounded-2xl bg-secondary p-3 text-sm">
+      <div className="hairline-panel p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Draft</p>
         <p className="mt-1 font-medium">{card.title}</p>
         <p className="mt-2 font-serif text-[15px] leading-relaxed text-foreground/90">{card.excerpt}</p>
@@ -716,7 +716,7 @@ function ChatCard({
   }
   if (card.kind === "nav_link") {
     return (
-      <div className="rounded-2xl bg-secondary p-3 text-sm">
+      <div className="hairline-panel p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
         <p className="mt-1 text-muted-foreground">{card.reason}</p>
         <div className="mt-2">
@@ -729,7 +729,7 @@ function ChatCard({
   }
   if (card.kind === "readiness") {
     return (
-      <div className="rounded-2xl bg-secondary p-3 text-sm">
+      <div className="hairline-panel p-3 text-sm">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Readiness</p>
         <p className="mt-1 font-medium">{card.label}</p>
         {card.blockers.length > 0 ? <p className="text-muted-foreground">{card.blockers.join(" · ")}</p> : null}
@@ -748,7 +748,7 @@ function ChatCard({
     );
   }
   return (
-    <div className="rounded-2xl bg-secondary p-3 text-sm ring-1 ring-primary/40">
+    <div className="hairline-panel border-primary p-3 text-sm">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Live publish gate</p>
       <p className="mt-1">Approve-first. Approve here to enqueue a live WordPress publish.</p>
       <div className="mt-2 flex flex-wrap gap-2">

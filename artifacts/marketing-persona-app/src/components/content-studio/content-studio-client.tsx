@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -24,26 +25,26 @@ import {
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
-import { ArticleIdeasHub } from "@/components/panels/article-ideas-hub";
 import { useKeywordIntelligence } from "@/lib/queries";
 import { ArticlePerformanceBadge } from "./article-performance-badge";
-import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
+import type { BriefContentDraft } from "./create-content-modal";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
 import { isRefreshPiece } from "./content-studio-utils";
 import { VoiceRequiredBanner, type VoiceGateStatus } from "./voice-required-banner";
 import { BRAND_SCRAPE_SKIPPED } from "@workspace/content-engine/brand/project-voice-ready";
 
+const CreateContentModal = dynamic(
+  () => import("./create-content-modal").then((m) => m.CreateContentModal),
+  { ssr: false },
+);
+const ArticleIdeasHub = dynamic(
+  () => import("@/components/panels/article-ideas-hub").then((m) => m.ArticleIdeasHub),
+  { loading: () => null },
+);
+
 export { FORMAT_OPTIONS };
 export type { ContentPieceRow };
-
-interface Props {
-  projectId: string;
-  initialBriefDraft?: BriefContentDraft | null;
-  initialCreateOpen?: boolean;
-  initialOptimize?: { url: string; keyword: string } | null;
-  initialTab?: "hub" | "calendar" | "ideas";
-}
 
 type StudioLoadState = {
   projectName: string;
@@ -56,6 +57,15 @@ type StudioLoadState = {
   brandProfile: BrandProfileSummary | null;
   voiceGate: VoiceGateStatus;
 };
+
+interface Props {
+  projectId: string;
+  initialBriefDraft?: BriefContentDraft | null;
+  initialCreateOpen?: boolean;
+  initialOptimize?: { url: string; keyword: string } | null;
+  initialTab?: "hub" | "calendar" | "ideas";
+  initialStudioData?: StudioLoadState | null;
+}
 
 const emptyVoiceGate: VoiceGateStatus = {
   voiceReady: false,
@@ -110,8 +120,12 @@ export function ContentStudioClient({
   initialCreateOpen = false,
   initialOptimize = null,
   initialTab = "hub",
+  initialStudioData = null,
 }: Props) {
-  const [studioData, dispatchStudioData] = useReducer(studioLoadReducer, initialStudioLoadState);
+  const [studioData, dispatchStudioData] = useReducer(
+    studioLoadReducer,
+    initialStudioData ?? initialStudioLoadState,
+  );
   const {
     projectName,
     aiReady,
@@ -123,7 +137,7 @@ export function ContentStudioClient({
     brandProfile,
     voiceGate,
   } = studioData;
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialStudioData);
   const [createOpen, setCreateOpen] = useState(initialCreateOpen);
   const [briefDraft, setBriefDraft] = useState<BriefContentDraft | null>(initialBriefDraft);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -152,8 +166,12 @@ export function ContentStudioClient({
   }, [projectId]);
 
   useEffect(() => {
+    if (initialStudioData) {
+      setLoading(false);
+      return;
+    }
     loadData().finally(() => setLoading(false));
-  }, [loadData]);
+  }, [loadData, initialStudioData]);
 
   const { opportunities } = useKeywordIntelligence(projectId);
 

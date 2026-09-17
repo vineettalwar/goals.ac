@@ -26,11 +26,11 @@ const SEO_FORMATS = [
 const PIPELINE_STEPS = [
   {
     title: "Brief",
-    desc: "Keywords, competitors, and intent become a brief before generation starts.",
+    desc: "Keywords, competitors, and intent become a brief before generation starts — from Studio or SEO Chat.",
   },
   {
     title: "Draft",
-    desc: "Long-form SEO drafts in your brand voice from Content Studio.",
+    desc: "Long-form SEO drafts in your brand voice. Same generators for Studio, Autopilot, Daily Five, and Chat.",
   },
   {
     title: "Review",
@@ -38,7 +38,7 @@ const PIPELINE_STEPS = [
   },
   {
     title: "Publish",
-    desc: "Readiness gates, then publish to your CMS. Measure and refresh what slips.",
+    desc: "Readiness gates, then WordPress draft-first (or Ghost/Shopify deep). Measure slip in Action Queue.",
   },
 ] as const;
 
@@ -53,7 +53,7 @@ export function ContentEngineMarketing() {
           badge="Content Studio"
           titleLine1="Research to publish"
           titleLine2="in one workspace"
-          description="SEO articles drafted from real briefs, humanized and scored, then published to your CMS with human review. Autopilot is an optional cadence on the same path."
+          description="SEO articles from real briefs — Chat or Studio — humanized and scored, then WordPress-first publish with human review. Autopilot is an optional cadence on the same path."
           backgroundImage={HERO_IMAGES.contentEngine.hero}
           ctas={[
             { label: appLabel, href: appCta, variant: "primary" },
@@ -67,7 +67,7 @@ export function ContentEngineMarketing() {
         bridgeTop
         titleLine1="The Studio"
         titleLine2="loop"
-        description="Brief, draft, review, publish. Same path whether you click Generate or run Autopilot."
+        description="Brief, draft, review, publish. Same path whether you click Generate, run Autopilot, or ask SEO Chat."
       >
         <ol className="max-w-2xl space-y-8">
           {PIPELINE_STEPS.map(({ title, desc }) => (
@@ -120,13 +120,13 @@ export function ContentEngineMarketing() {
       <MarketingSection
         titleLine1="Publish where"
         titleLine2="you already work"
-        description="Connect once. Keep one review process. Deep paths for WordPress, Ghost, and Shopify; Basic publish elsewhere."
+        description="Connect once. Keep one review process. Deep WordPress (plugin, Rank Math, featured image, draft-first); Ghost and Shopify deep; Basic publish elsewhere."
         bordered
         className="py-20"
       >
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
           WordPress, Ghost, Shopify (deep). Drupal, Joomla, Notion, Webflow, webhook (Basic). After the article,
-          repurpose to LinkedIn, X, Instagram, Facebook, Bluesky, and Mastodon.
+          Social Hub covers LinkedIn, X, Instagram, Facebook, Bluesky, and Mastodon.
         </p>
         <p className="mt-4 text-sm text-muted-foreground">
           See{" "}

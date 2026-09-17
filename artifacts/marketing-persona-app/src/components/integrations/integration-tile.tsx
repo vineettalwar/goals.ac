@@ -66,12 +66,12 @@ export function IntegrationTile({
       disabled={locked}
       aria-label={`${title}, ${statusLabel}`}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card text-left transition-all",
+        "group flex w-full items-center gap-3 rounded-sm border border-border bg-card text-left",
         compact ? "px-3 py-2.5" : "px-4 py-3.5",
-        !locked && "hover:border-border hover:bg-muted/20 hover:shadow-sm",
+        !locked && "hover:bg-muted/20",
         "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-        status === "connected" && "border-emerald-500/25 bg-emerald-500/3",
-        status === "pending" && "border-amber-500/25 bg-amber-500/3",
+        status === "connected" && "border-foreground/40",
+        status === "pending" && "border-primary/40",
         locked && "cursor-not-allowed opacity-70",
         className,
       )}
@@ -93,8 +93,8 @@ export function IntegrationTile({
           <span
             className={cn(
               "h-1.5 w-1.5 shrink-0 rounded-full",
-              status === "connected" && "bg-emerald-500",
-              status === "pending" && "bg-amber-500",
+              status === "connected" && "bg-foreground",
+              status === "pending" && "bg-primary",
               status === "idle" && "bg-muted-foreground/25",
             )}
             aria-hidden
@@ -156,7 +156,7 @@ export function IntegrationTabBadge({
   return (
     <span
       className={cn(
-        "ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-primary",
+        "ml-1.5 inline-flex min-w-5 items-center justify-center rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-primary",
         loading && "invisible",
       )}
       aria-hidden={loading}
@@ -172,7 +172,7 @@ export function IntegrationTilesSkeleton({ count = 6 }: { count?: number }) {
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
-          className="flex h-15.5 animate-pulse items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-4"
+          className="flex h-15.5 animate-pulse items-center gap-3 rounded-sm border border-border bg-muted/20 px-4"
         >
           <div className="h-9 w-9 shrink-0 rounded-lg bg-muted" />
           <div className="min-w-0 flex-1 space-y-1.5">

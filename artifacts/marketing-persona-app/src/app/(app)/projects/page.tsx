@@ -1,7 +1,7 @@
 import { getSession } from "@/auth";
 import { db } from "@workspace/db";
 import { brandProfilesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import {
   countOrganizationProjects,
@@ -52,15 +52,19 @@ export default async function ProjectsPage() {
         ? await resolvePlanProjectQuota(membership.organizationPlan)
         : null;
 
-  const rows = await Promise.all(
-    projects.map(async (project) => {
-      const [brand] = await db
-        .select()
-        .from(brandProfilesTable)
-        .where(eq(brandProfilesTable.websiteProjectId, project.id))
-        .limit(1);
-      return { project, brand: brand ?? null };
-    }),
+  const projectIds = projects.map((p) => p.id);
+  const brandRows =
+    projectIds.length === 0
+      ? []
+      : await db
+          .select({
+            websiteProjectId: brandProfilesTable.websiteProjectId,
+            industry: brandProfilesTable.industry,
+          })
+          .from(brandProfilesTable)
+          .where(inArray(brandProfilesTable.websiteProjectId, projectIds));
+  const industryByProject = new Map(
+    brandRows.map((row) => [row.websiteProjectId, row.industry ?? null]),
   );
 
   const quotaLabel =
@@ -74,12 +78,12 @@ export default async function ProjectsPage() {
         </div>
       ) : null}
       <ProjectsPageClient
-        projects={rows.map(({ project, brand }) => ({
+        projects={projects.map((project) => ({
           id: project.id,
           name: project.name,
           url: project.url,
           scrapeStatus: project.scrapeStatus,
-          industry: brand?.industry ?? null,
+          industry: industryByProject.get(project.id) ?? null,
         }))}
         quotaLabel={quotaLabel}
       />

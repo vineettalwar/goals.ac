@@ -6,25 +6,22 @@ import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
 
 const WORKFLOW_STEPS = [
   {
-    title: "Brief",
-    desc: "Keywords, competitors, and intent become a brief before anything is drafted.",
+    title: "Ground the brand",
+    desc: "Scrape the site, set voice memory, connect GSC. SEO Chat can onboard from a URL — no blank workspace.",
   },
   {
-    title: "Draft",
-    desc: "Long-form SEO articles in your brand voice from Content Studio.",
+    title: "Brief, then draft",
+    desc: "Keywords, competitors, and intent become a brief. Studio (or Chat) drafts long-form in that voice — comparison, listicle, case study included.",
   },
   {
-    title: "Review",
-    desc: "Humanize, score, and approve. Readiness gates block sloppy meta and structure.",
+    title: "Humanize, score, approve",
+    desc: "Editorial + SERP scores, readiness gates, approve-first live publish. Autopilot is the same path on a schedule.",
   },
   {
-    title: "Publish",
-    desc: "Push to your CMS. Then measure search and AI citations, and refresh pages that slip.",
+    title: "Publish and act",
+    desc: "WordPress draft-first (plugin + Rank Math). Action Queue surfaces CTR gaps and slip so the next piece is not a guess.",
   },
 ] as const;
-
-const CMS_PLATFORMS =
-  "WordPress, Shopify, Drupal, Joomla, Notion, Webflow, Ghost, LinkedIn, X, Bluesky, and Mastodon";
 
 export function WorkflowSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -35,8 +32,8 @@ export function WorkflowSection() {
       <div className="mx-auto max-w-5xl px-6">
         <div className="mb-14">
           <EditorialHeading
-            line1="One workflow, end to end"
-            description="Research to publish with human review. Autopilot is an optional cadence on this same path."
+            line1="One desk, end to end"
+            description="Research to publish with human review. Chat, Studio, Autopilot, and Daily Five share the same generators — not a fire-and-forget content farm."
             theme="light"
             align="left"
           />
@@ -51,8 +48,9 @@ export function WorkflowSection() {
           ))}
         </ol>
 
-        <p className="scroll-reveal mt-12 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Works with {CMS_PLATFORMS}.
+        <p className="scroll-reveal mt-12 max-w-3xl border-t border-border pt-8 text-sm leading-relaxed text-muted-foreground">
+          Deep publish: WordPress, Ghost, Shopify. Basic publish elsewhere. After the article, Social Hub
+          covers LinkedIn, X, Meta, Bluesky, and Mastodon.
         </p>
       </div>
     </section>

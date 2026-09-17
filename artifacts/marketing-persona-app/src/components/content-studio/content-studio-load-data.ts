@@ -3,10 +3,7 @@ import type { BrandProfileSummary } from "@workspace/app-shell/studio";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-utils";
 import { isRefreshPiece } from "./content-studio-utils";
-import {
-  parseVoiceGateFromBrandProfile,
-  type VoiceGateStatus,
-} from "./voice-required-banner";
+import { parseVoiceGateFromBrandProfile, type VoiceGateStatus } from "./voice-gate";
 
 export type StudioLoadResult = {
   projectName: string;

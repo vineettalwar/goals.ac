@@ -7,7 +7,6 @@ import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsBillingPanel } from "@/components/settings/settings-billing-panel";
 import { SettingsProfilePanel } from "@/components/settings/settings-profile-panel";
-import { SettingsAiProvidersPanel } from "@/components/settings/settings-ai-providers-panel";
 import { SettingsSecurityPanel } from "@/components/settings/settings-security-panel";
 import { SettingsAccountPanel } from "@/components/settings/settings-account-panel";
 
@@ -81,10 +80,6 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
 
         <TabsContent value="profile" className="space-y-6">
           <SettingsProfilePanel initialData={initialData} />
-        </TabsContent>
-
-        <TabsContent value="ai" className="space-y-6">
-          <SettingsAiProvidersPanel canManage={canManageAiSettings} initialData={initialData} />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6">

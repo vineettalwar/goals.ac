@@ -27,69 +27,94 @@ const SAAS_PLANS = [
   {
     name: "Growth",
     price: "$49/mo",
-    description: "Self-serve studio for founders and small teams",
+    description: "Self-serve desk for founders and small teams",
     features: [
+      "SEO Chat + Content Studio",
       "30 articles / month",
       "12 roadmaps",
       "3 connected sites",
       "500 platform AI credits / month",
-      "WordPress, Ghost, Shopify, and more",
-      "GEO & AEO tracking",
+      "WordPress-first publish (Ghost & Shopify deep)",
+      "GEO audit + Action Queue",
+      "GSC / GA4 when connected",
     ],
-    cta: { label: "Start free trial", href: "/signup" },
+    cta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
   },
   {
     name: "Scale",
     price: "€500/mo",
-    description: "High-volume content operations for scaling B2B teams",
+    description: "High-volume operations for multi-site B2B teams",
     featured: true,
     features: [
+      "Everything in Growth",
       "Unlimited articles & roadmaps",
       "Unlimited connected sites",
       "5,000 platform AI credits / month",
-      "Priority content queue",
-      "Multi-site CMS publishing",
+      "Priority generation queue",
+      "Multi-site CMS publish",
       "Dedicated support",
     ],
     cta: { label: "Get started", href: "/signup?plan=scale" },
-    note: "VAT auto-calculated at checkout. Tax ID collection for B2B reverse charge.",
+    note: "VAT at checkout when applicable. Tax ID for B2B reverse charge.",
   },
 ];
 
 const ENGAGEMENTS = [
   {
     name: "GEO Audit Sprint",
-    description: "Baseline assessment of your AI search visibility",
+    description: "Baseline of your AI-search and page readiness",
     features: [
-      "AI visibility audit across ChatGPT, Perplexity, and Google AI Overviews",
-      "Competitor GEO scan",
+      "Technical GEO scan (schema, meta, llms.txt, citability)",
+      "Competitor crawl when pages are reachable",
       "90-day action plan",
-      "Executive summary and recommendations",
+      "Executive summary",
     ],
   },
   {
     name: "AEO Foundation",
-    description: "Strategy and content program for answer-engine visibility",
+    description: "Strategy and production on the same desk you can run alone",
     featured: true,
     features: [
-      "30-day content calendar and SEO briefs",
-      "GEO and AEO performance reporting",
-      "CMS publishing setup and support",
-      "Editorial review before every publish",
+      "30-day calendar + SEO briefs",
+      "Studio drafts with editorial review before live",
+      "WordPress-first CMS setup",
+      "GEO / visibility reporting",
     ],
   },
   {
     name: "Full GEO Program",
-    description: "End-to-end visibility management for scaling teams",
+    description: "Ongoing desk + retainer strategist",
     features: [
       "Everything in AEO Foundation",
-      "Ongoing content production and repurposing",
-      "Multi-site CMS publishing",
-      "Keyword and AI citation tracking",
+      "Ongoing production and social repurpose",
+      "Action Queue + keyword / AI citation tracking",
       "Dedicated strategist and priority support",
     ],
   },
 ];
+
+function PlanCta({
+  href,
+  label,
+  featured,
+}: {
+  href: string;
+  label: string;
+  featured?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={
+        featured
+          ? "hero-cta-primary block text-center"
+          : "block rounded-sm border border-white/30 bg-white/10 px-6 py-3 text-center font-medium text-white transition-colors hover:bg-white/20"
+      }
+    >
+      {label}
+    </Link>
+  );
+}
 
 export function PricingPageClient() {
   return (
@@ -97,9 +122,9 @@ export function PricingPageClient() {
       hero={
         <PageHero
           badge="Plans"
-          titleLine1="Hands-on"
-          titleLine2="content programs"
-          description="Scoped GEO/AEO programs for research, production, editorial review, and cross-platform publishing."
+          titleLine1="Self-serve desk."
+          titleLine2="Programs when you want hands-on."
+          description="Growth and Scale open Chat, Studio, Action Queue, and WordPress-first publish. Scoped GEO programs add our team — including a dedicated strategist on Full GEO."
           backgroundImage={HERO_IMAGES.pricing.hero}
           persistCtas
           ctas={[
@@ -109,64 +134,51 @@ export function PricingPageClient() {
         />
       }
     >
-      {/* ── Self-serve SaaS plans ─────────────────────────────── */}
-      <section className="py-16 bg-black relative z-20 border-t border-white/10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-12">
+      <section className="relative z-20 border-t border-white/10 bg-black py-16">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-12">
             <EditorialHeading
               line1="Self-serve"
               line2="platform"
-              description="Pick a plan, connect your CMS, and start publishing — no sales call required."
+              description="Request access, connect CMS + GSC, and ship. Billing lives in Settings after you're in. Access is invite-only today."
               theme="dark"
+              align="left"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
             {SAAS_PLANS.map((plan) => (
               <div
                 key={plan.name}
-                className={`rounded-2xl p-8 flex flex-col ${
-                  plan.featured
-                    ? `${glassCard} ring-2 ring-(--accent-warm) shadow-lg shadow-black/40`
-                    : glassCard
+                className={`flex flex-col rounded-sm p-8 ${
+                  plan.featured ? `${glassCard} ring-2 ring-(--accent-warm)` : glassCard
                 }`}
               >
-                {plan.featured && (
-                  <span className="text-xs font-semibold uppercase tracking-wide mb-4 text-(--accent-warm)">
+                {plan.featured ? (
+                  <span className="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-(--accent-warm)">
                     Most popular
                   </span>
-                )}
-                <h2 className="text-xl font-bold text-white">{plan.name}</h2>
-                <p className="text-3xl font-bold text-white mt-2">
+                ) : null}
+                <h2 className="text-xl font-semibold text-white">{plan.name}</h2>
+                <p className="mt-2 text-3xl font-semibold text-white">
                   {plan.price}
-                  <span className="text-sm font-normal text-white/50 ml-1">billed monthly</span>
+                  <span className="ml-1 text-sm font-normal text-white/50">billed monthly</span>
                 </p>
-                <p className="text-sm mt-2 mb-6 text-white/65">{plan.description}</p>
-                <ul className="space-y-3 flex-1 mb-8">
+                <p className="mb-6 mt-2 text-sm text-white/65">{plan.description}</p>
+                <ul className="mb-8 flex-1 space-y-3">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-sm text-white/80">
-                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-(--accent-warm)" aria-hidden="true" />
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-(--accent-warm)" aria-hidden="true" />
                       {feature}
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={plan.cta.href}
-                  className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
-                    plan.featured
-                      ? "bg-(--accent-warm) text-(--accent-warm-foreground) hover:bg-(--accent-warm-hover)"
-                      : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
-                  }`}
-                >
-                  {plan.cta.label}
-                </Link>
-                {plan.note && (
-                  <p className="text-xs text-white/40 mt-4 text-center">{plan.note}</p>
-                )}
+                <PlanCta href={plan.cta.href} label={plan.cta.label} featured={plan.featured} />
+                {plan.note ? <p className="mt-4 text-center text-xs text-white/40">{plan.note}</p> : null}
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-white/50 mt-10">
-            Need custom volume or a dedicated strategist?{" "}
+          <p className="mt-10 text-center text-sm text-white/50">
+            Need custom volume or a retainer strategist?{" "}
             <Link href={CONTACT_HREF} className="text-white/80 hover:text-white hover:underline">
               {CONTACT_CTA_LABEL}
             </Link>
@@ -174,102 +186,105 @@ export function PricingPageClient() {
         </div>
       </section>
 
-      {/* ── Hands-on content programs ─────────────────────────── */}
-      <section className="py-16 bg-black relative z-20 border-t border-white/10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-12">
+      <section className="relative z-20 border-t border-white/10 bg-black py-16">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-12">
             <EditorialHeading
               line1="Hands-on"
               line2="programs"
-              description="Optional scoped programs if you want us running the studio with you."
+              description="Optional. Same desk tools — we run research, production, and review with you."
               theme="dark"
+              align="left"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {ENGAGEMENTS.map((engagement) => (
               <div
                 key={engagement.name}
-                className={`rounded-2xl p-8 flex flex-col ${
-                  engagement.featured
-                    ? `${glassCard} ring-2 ring-(--accent-warm) shadow-lg shadow-black/40`
-                    : glassCard
+                className={`flex flex-col rounded-sm p-8 ${
+                  engagement.featured ? `${glassCard} ring-2 ring-(--accent-warm)` : glassCard
                 }`}
               >
-                {engagement.featured && (
-                  <span className="text-xs font-semibold uppercase tracking-wide mb-4 text-(--accent-warm)">
-                    Recommended starting point
+                {engagement.featured ? (
+                  <span className="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-(--accent-warm)">
+                    Recommended start
                   </span>
-                )}
-                <h2 className="text-xl font-bold text-white">{engagement.name}</h2>
-                <p className="text-sm mt-2 mb-6 text-white/65">{engagement.description}</p>
-                <ul className="space-y-3 flex-1 mb-8">
+                ) : null}
+                <h2 className="text-xl font-semibold text-white">{engagement.name}</h2>
+                <p className="mb-6 mt-2 text-sm text-white/65">{engagement.description}</p>
+                <ul className="mb-8 flex-1 space-y-3">
                   {engagement.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-sm text-white/80">
-                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-(--accent-warm)" aria-hidden="true" />
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-(--accent-warm)" aria-hidden="true" />
                       {feature}
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={CONTACT_HREF}
-                  className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
-                    engagement.featured
-                      ? "bg-(--accent-warm) text-(--accent-warm-foreground) hover:bg-(--accent-warm-hover)"
-                      : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
-                  }`}
-                >
-                  {CONTACT_CTA_LABEL}
-                </Link>
+                <PlanCta href={CONTACT_HREF} label={CONTACT_CTA_LABEL} featured={engagement.featured} />
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-white/50 mt-10">
-            Need a custom scope?{" "}
+          <p className="mt-10 text-center text-sm text-white/50">
+            Custom scope?{" "}
             <Link href={CONTACT_HREF} className="text-white/80 hover:text-white hover:underline">
               {CONTACT_CTA_LABEL}
-            </Link>{" "}
-            and we&apos;ll figure out what fits.
+            </Link>
           </p>
 
           <div className={`mt-16 ${glassCardStatic} p-8`}>
-            <h2 className="text-lg font-semibold mb-6 text-white">Typical program timeline</h2>
+            <h2 className="mb-6 text-lg font-semibold text-white">Typical program timeline</h2>
             <ol className="space-y-4 text-sm text-white/65">
-              <li><strong className="text-white">Week 1 (Setup):</strong> Brand scan, CMS + GSC/GA4 connections, keyword and competitor review.</li>
-              <li><strong className="text-white">Weeks 2–4 (Foundation):</strong> 30-day calendar, first pillar draft, GEO fixes on priority pages.</li>
-              <li><strong className="text-white">Month 2+ (Production):</strong> Weekly drafts with editorial review, publish to your CMS, monthly reporting.</li>
+              <li>
+                <strong className="text-white">Week 1:</strong> Brand scan, WordPress + GSC/GA4, keyword and
+                competitor review (crawl fails if the homepage is blocked — we say so).
+              </li>
+              <li>
+                <strong className="text-white">Weeks 2–4:</strong> Calendar, first pillar draft, GEO fixes on
+                priority URLs, Action Queue seeded from GSC.
+              </li>
+              <li>
+                <strong className="text-white">Month 2+:</strong> Weekly Studio drafts with approve-before-live,
+                CMS publish, monthly search + AI citation reporting.
+              </li>
             </ol>
           </div>
-          <p className="text-center text-sm text-white/50 mt-6">
+          <p className="mt-6 text-center text-sm text-white/50">
             Or{" "}
             <a href={CONTACT_MAILTO} className="text-white/80 hover:text-white hover:underline">
               email {CONTACT_EMAIL}
             </a>
           </p>
 
-          <div className={`mt-16 ${glassCardStatic} p-8 overflow-x-auto`}>
-            <h3 className="text-lg font-bold mb-6 text-center text-white">Why productized content programs?</h3>
+          <div className={`mt-16 overflow-x-auto ${glassCardStatic} p-8`}>
+            <h3 className="mb-6 text-center text-lg font-semibold text-white">Desk vs agency vs autopilot</h3>
             <table className="w-full text-sm">
               <caption className="sr-only">
                 Comparison of goals.ac capabilities versus typical agencies or AI tools
               </caption>
               <thead>
                 <tr className="border-b border-white/10 text-left">
-                  <th scope="col" className="py-3 pr-4 font-medium text-white/50">Capability</th>
-                  <th scope="col" className="py-3 px-4 font-medium text-white">goals.ac</th>
-                  <th scope="col" className="py-3 pl-4 font-medium text-white/50">Typical agency or AI tool</th>
+                  <th scope="col" className="py-3 pr-4 font-medium text-white/50">
+                    Capability
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium text-white">
+                    goals.ac
+                  </th>
+                  <th scope="col" className="py-3 pl-4 font-medium text-white/50">
+                    Typical agency or AI tool
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
                 {[
-                  ["Research-backed SEO briefs", "Built in", "Custom SOW, weeks to start"],
-                  ["Editorial review before publish", "Always", "Varies"],
-                  ["AI visibility (GEO/AEO) tracking", "Included", "Often separate vendor"],
-                  ["CMS + social (deep stacks + Basic publish)", "Included", "Manual or limited"],
-                  ["Dedicated strategist", "On retainer programs", "Rotating account manager"],
+                  ["SEO Chat + Studio loop", "Built in", "SOW or volume drafts"],
+                  ["Approve before live", "Always", "Varies"],
+                  ["Action Queue from GSC", "Included", "Separate SEO stack"],
+                  ["WordPress-first CMS", "Deep + Basic elsewhere", "Manual or limited"],
+                  ["Dedicated strategist", "Full GEO retainer", "Rotating AM"],
                 ].map(([cap, us, them]) => (
                   <tr key={cap} className="even:bg-white/5">
                     <td className="py-3 pr-4 text-white/80">{cap}</td>
-                    <td className="py-3 px-4 font-medium text-(--accent-warm)">
+                    <td className="px-4 py-3 font-medium text-(--accent-warm)">
                       <span className="sr-only">Yes: </span>
                       {us}
                     </td>
@@ -279,7 +294,7 @@ export function PricingPageClient() {
               </tbody>
             </table>
           </div>
-          <p className="text-center text-sm text-white/50 mt-6">
+          <p className="mt-6 text-center text-sm text-white/50">
             <Link href="/compare/ai-seo-tools" className="text-white/80 hover:text-white hover:underline">
               Compare vs autopilot SEO tools →
             </Link>
@@ -292,9 +307,9 @@ export function PricingPageClient() {
         titleLine2="questions"
         items={[
           {
-            question: "Can I use the studio without a program?",
+            question: "Can I use the desk without a program?",
             answer:
-              "Access is invite-only today. Request access, connect WordPress/Ghost/Shopify or another destination, and create content with us. Self-serve billing is in Settings → Billing after you're in. Add a hands-on program when you want our team involved in research, production, and publishing.",
+              "Yes after invite. Request access, connect WordPress (or Ghost/Shopify), and use Chat or Studio. Self-serve billing is in Settings → Billing. Add a program when you want our team on research, production, and publish.",
           },
           {
             question: "What can I try before signing up?",
@@ -312,23 +327,28 @@ export function PricingPageClient() {
                 <Link href="/free-tools" className="text-white/80 hover:text-white hover:underline">
                   free SEO tools
                 </Link>
-                . No credit card required.
+                . No credit card.
               </>
             ),
           },
           {
             question: "Which platforms can you publish to?",
             answer:
-              "Deep paths for WordPress, Ghost, and Shopify, plus Drupal, Joomla, Notion, Webflow, webhooks, and social (LinkedIn, X, Meta, Bluesky, Mastodon). Headless and site builders support Basic publish — create wrappers, not full plugin depth.",
+              "Deep: WordPress (plugin, Rank Math, featured image, draft-first), Ghost, Shopify. Basic publish elsewhere. Social Hub after the article: LinkedIn, X, Meta, Bluesky, Mastodon.",
             helpHref: "/help/publish-social-content",
+          },
+          {
+            question: "Is a dedicated strategist included in Growth?",
+            answer:
+              "No. Strategist support is on the Full GEO Program retainer (and custom scopes). Growth and Scale are self-serve with support channels.",
           },
         ]}
       />
 
       <MarketingCTA
-        titleLine1="Ready to create"
-        titleLine2="your first draft?"
-        description="Request access and connect your CMS in minutes."
+        titleLine1="Ready to run"
+        titleLine2="the desk?"
+        description="Request access and connect your CMS. Free GEO audit and article quality demo need no account."
         secondaryHref={CONTACT_HREF}
         secondaryLabel={`${CONTACT_CTA_LABEL} →`}
         variant="dark"

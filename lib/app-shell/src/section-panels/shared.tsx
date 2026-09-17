@@ -71,14 +71,14 @@ export function StatusPill({
   tone?: "muted" | "success" | "warning" | "danger" | "primary";
 }) {
   const styles = {
-    muted: "bg-muted text-muted-foreground",
-    success: "bg-emerald-50 text-emerald-800",
-    warning: "bg-amber-50 text-amber-800",
-    danger: "bg-red-50 text-red-800",
-    primary: "bg-primary/10 text-primary",
+    muted: "border-border bg-muted text-muted-foreground",
+    success: "border-border bg-secondary text-foreground",
+    warning: "border-primary/40 bg-primary/10 text-primary",
+    danger: "border-destructive/40 bg-destructive/10 text-destructive",
+    primary: "border-primary/40 bg-primary/10 text-primary",
   };
   return (
-    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize", styles[tone])}>
+    <span className={cn("inline-flex rounded-sm border px-2 py-0.5 text-xs font-medium capitalize", styles[tone])}>
       {label}
     </span>
   );
@@ -126,13 +126,13 @@ export function ToggleRow({
 }
 
 export const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20";
+  "h-10 w-full rounded-sm border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20";
 
 export const btnPrimary =
-  "inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50";
+  "inline-flex h-10 items-center justify-center rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50";
 
 export const btnOutline =
-  "inline-flex h-9 items-center justify-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50";
+  "inline-flex h-9 items-center justify-center rounded-sm border border-border px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50";
 
 export function SectionTabs({
   tabs,

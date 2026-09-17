@@ -19,7 +19,6 @@ import {
   resolveSocialPlatformId,
   socialPostCharCount,
   WEEK_DAY_LABELS,
-  type SocialPlatformId,
   type SocialQueueItem,
 } from "./types";
 import type { SocialHubLinkProps } from "./social-queue-panel";
@@ -28,20 +27,6 @@ export type SocialCalendarItem = Pick<
   SocialQueueItem,
   "id" | "title" | "platform" | "scheduledAt" | "bodyMarkdown" | "formatType"
 >;
-
-/** Subtle Buffer-style platform accents for calendar cards. */
-function platformCardClass(platformId: SocialPlatformId | null): string {
-  if (platformId === "linkedin") {
-    return "border-l-[3px] border-l-[#0A66C2] border-y border-r border-y-border border-r-border";
-  }
-  if (platformId === "twitter") {
-    return "border-l-[3px] border-l-neutral-900 border-y border-r border-y-border border-r-border dark:border-l-neutral-100";
-  }
-  if (platformId === "instagram") {
-    return "border border-transparent [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(135deg,#f09433_0%,#e6683c_25%,#dc2743_50%,#cc2366_75%,#bc1888_100%)_border-box]";
-  }
-  return "border border-border";
-}
 
 function formatYmd(d: Date): string {
   const y = d.getFullYear();
@@ -281,14 +266,8 @@ export function SocialCalendarPanel({
           {activeDragId ? (() => {
             const active = items.find((item) => item.id === activeDragId);
             if (!active) return null;
-            const platformId = resolveSocialPlatformId(active);
             return (
-              <div
-                className={cn(
-                  "paper-card max-w-35 truncate rounded bg-card px-2 py-1 text-xs opacity-95 shadow-lg",
-                  platformCardClass(platformId),
-                )}
-              >
+              <div className="paper-card max-w-35 truncate px-2 py-1 text-xs">
                 {active.title}
               </div>
             );
@@ -362,8 +341,7 @@ function DraggablePost({
       {...listeners}
       {...attributes}
       className={cn(
-        "cursor-grab rounded bg-card px-1.5 py-1 text-[10px] active:cursor-grabbing",
-        platformCardClass(platformId),
+        "cursor-grab rounded-sm border border-border bg-card px-1.5 py-1 text-[10px] active:cursor-grabbing",
         rescheduling && "opacity-50",
         overLimit && "ring-1 ring-destructive/35",
       )}

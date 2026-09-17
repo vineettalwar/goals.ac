@@ -22,23 +22,54 @@ type MfaStatus = {
   verified: boolean;
 };
 
+// Module cache — MFA status rarely changes; avoid refetch on every soft-nav.
+let mfaStatusCache: { status: MfaStatus; at: number } | null = null;
+const MFA_STATUS_TTL_MS = 60_000;
+
+function readMfaCache(): MfaStatus | null {
+  if (!mfaStatusCache) return null;
+  if (Date.now() - mfaStatusCache.at > MFA_STATUS_TTL_MS) {
+    mfaStatusCache = null;
+    return null;
+  }
+  return mfaStatusCache.status;
+}
+
+function writeMfaCache(status: MfaStatus) {
+  mfaStatusCache = { status, at: Date.now() };
+}
+
+export function invalidateMfaStatusCache() {
+  mfaStatusCache = null;
+}
+
 export function MfaComplianceGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session, status: sessionStatus, update } = useSession();
-  const [status, setStatus] = useState<MfaStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<MfaStatus | null>(() => readMfaCache());
+  const [loading, setLoading] = useState(() => readMfaCache() == null);
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const onSettingsPage = pathname.startsWith("/settings");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
+    if (!force) {
+      const cached = readMfaCache();
+      if (cached) {
+        setStatus(cached);
+        setLoading(false);
+        return;
+      }
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/mfa/setup");
       if (!res.ok) return;
-      setStatus(await res.json());
+      const next = (await res.json()) as MfaStatus;
+      writeMfaCache(next);
+      setStatus(next);
     } finally {
       setLoading(false);
     }
@@ -46,7 +77,7 @@ export function MfaComplianceGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (sessionStatus === "authenticated") {
-      void load();
+      void load(false);
     }
   }, [sessionStatus, load, session?.mfaVerified]);
 
@@ -67,7 +98,8 @@ export function MfaComplianceGate({ children }: { children: React.ReactNode }) {
       }
       await update({ mfaVerified: true });
       setCode("");
-      await load();
+      invalidateMfaStatusCache();
+      await load(true);
     } finally {
       setVerifying(false);
     }

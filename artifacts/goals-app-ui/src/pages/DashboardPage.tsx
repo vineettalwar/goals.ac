@@ -35,9 +35,15 @@ export function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { projectId, projects, loading: projectsLoading } = useActiveProject();
-  const { loading, error, activeProject, pieces, autopilotSettings, commandCenter, articleUsage } =
+  const { projectId, projects, loading: projectsLoading, activeProject: contextProject } =
+    useActiveProject();
+  const { error, activeProject: loadedProject, pieces, autopilotSettings, commandCenter, articleUsage } =
     useDashboardData(projectId, projects);
+  const activeProject =
+    loadedProject ??
+    (contextProject
+      ? { id: contextProject.id, name: contextProject.name, url: contextProject.url }
+      : null);
 
   const [settings, setSettings] = useState<DashboardAutopilotSettings | null>(autopilotSettings);
   const [savingAutopilot, setSavingAutopilot] = useState(false);
@@ -67,6 +73,7 @@ export function DashboardPage() {
         );
         setSettings(updated);
         void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(projectId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardExtras(projectId) });
         void queryClient.invalidateQueries({
           queryKey: queryKeys.autopilot(String(activeProject.id)),
         });
@@ -81,7 +88,7 @@ export function DashboardPage() {
     [activeProject?.id, projectId, queryClient],
   );
 
-  if ((authLoading && !user) || (projectsLoading && projects.length === 0) || (loading && !activeProject && pieces.length === 0)) {
+  if ((authLoading && !user) || (projectsLoading && projects.length === 0)) {
     return <p className="p-8 text-muted-foreground">Loading…</p>;
   }
 

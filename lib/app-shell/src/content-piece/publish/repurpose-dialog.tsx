@@ -75,7 +75,7 @@ export function ContentPieceRepurposeDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
-        className="paper-card w-full max-w-lg rounded-xl p-6 shadow-xl"
+        className="paper-card w-full max-w-lg p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="repurpose-title"

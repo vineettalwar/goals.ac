@@ -69,11 +69,11 @@ function formatDuration(ms: number): string {
 }
 
 function StatusIcon({ status }: { status: AgentStatus }) {
-  if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
+  if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-primary" />;
   if (status === "working" || status === "starting") {
     return <Loader2 className="h-4 w-4 motion-safe:animate-spin text-primary" />;
   }
-  if (status === "failed") return <XCircle className="h-4 w-4 text-red-600" />;
+  if (status === "failed") return <XCircle className="h-4 w-4 text-destructive" />;
   if (status === "skipped") return <SkipForward className="h-4 w-4 text-muted-foreground" />;
   return <Clock className="h-4 w-4 text-muted-foreground" />;
 }
@@ -151,7 +151,7 @@ export function AgentTeamStage({
         <p className="text-base font-semibold text-foreground">Agent Team</p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {isRunning ? (
-            <span className="rounded-full bg-secondary px-2 py-0.5 font-medium text-foreground">
+            <span className="rounded-sm border border-border bg-secondary px-2 py-0.5 font-medium text-foreground">
               Working
             </span>
           ) : null}
@@ -174,7 +174,7 @@ export function AgentTeamStage({
               <span
                 className={
                   active
-                    ? "mx-auto block w-fit rounded-full ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    ? "mx-auto block w-fit ring-1 ring-primary"
                     : done
                       ? "mx-auto block w-fit opacity-100"
                       : "mx-auto block w-fit opacity-40"
@@ -192,7 +192,7 @@ export function AgentTeamStage({
       </ul>
 
       {focusDef && focusState ? (
-        <div className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3">
+        <div className="border border-border px-4 py-3">
           <div className="flex items-center gap-3">
             <span className={isFocusLive ? "agent-portrait-live inline-flex" : "inline-flex"}>
               <AgentPortrait
@@ -251,10 +251,10 @@ export function AgentTeamStage({
               key={id}
               className={
                 active
-                  ? "h-1.5 flex-1 rounded-full bg-primary agent-bar-live"
+                  ? "h-1.5 flex-1 rounded-sm bg-primary agent-bar-live"
                   : done
-                    ? "h-1.5 flex-1 rounded-full bg-emerald-500/70"
-                    : "h-1.5 flex-1 rounded-full bg-border"
+                    ? "h-1.5 flex-1 rounded-sm bg-foreground"
+                    : "h-1.5 flex-1 rounded-sm bg-border"
               }
             />
           );

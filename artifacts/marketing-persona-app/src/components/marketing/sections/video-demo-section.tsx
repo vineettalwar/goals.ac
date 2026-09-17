@@ -15,7 +15,7 @@ import {
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
-const TOUR_STEPS = ["Brand setup", "30-day plan", "Quality score", "CMS publish"];
+const TOUR_STEPS = ["Brand + voice", "Studio or Chat", "Dual score", "Approve → CMS"];
 const glassCard = cardSurfaceClass("glass", false);
 
 const COLLAGE = [
@@ -54,8 +54,8 @@ export function VideoDemoSection() {
       <div className="mx-auto max-w-5xl px-6">
         <div className="mb-12">
           <EditorialHeading
-            line1="See it live"
-            description="Skip the placeholder walkthrough. Try the article quality demo, tour the content studio, or start creating in your account."
+            line1="Proof, not pitch decks"
+            description="Open a real draft score, tour the Studio path, or start creating. Customer stories stay empty until we have permissioned results."
             theme="light"
           />
         </div>

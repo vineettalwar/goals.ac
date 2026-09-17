@@ -254,7 +254,7 @@ export function StudioCalendarView({
 
         <DragOverlay>
           {activeDragId ? (
-            <div className="paper-card max-w-35 truncate rounded px-2 py-1 text-xs opacity-95 shadow-lg">
+            <div className="paper-card max-w-35 truncate px-2 py-1 text-xs">
               {pieces.find((piece) => piece.id === activeDragId)?.title}
             </div>
           ) : null}
