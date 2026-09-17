@@ -36,6 +36,7 @@ export function useAdminIntegrationsCredentialActions(deps: {
   const [savingUnsplash, setSavingUnsplash] = useState(false);
   const [savingPexels, setSavingPexels] = useState(false);
   const [disconnectingStripe, setDisconnectingStripe] = useState(false);
+  const [savingAiProvider, setSavingAiProvider] = useState(false);
 
   async function toggle(key: ToggleKey, checked: boolean) {
     setSavingToggle(key);
@@ -207,6 +208,70 @@ export function useAdminIntegrationsCredentialActions(deps: {
     }
   }
 
+  async function saveAiProvider(
+    integration: "gemini" | "openai" | "anthropic" | "openrouter" | "groq" | "nvidia",
+  ) {
+    const payload: Record<string, string | null> = {};
+    if (form.aiApiKey.trim()) payload.apiKey = form.aiApiKey.trim();
+    if (form.aiModel.trim()) payload.model = form.aiModel.trim();
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter an API key or model to save");
+      return;
+    }
+    setSavingAiProvider(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ integration, ...payload }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      form.setAiApiKey("");
+      form.setAiModel("");
+      toast.success("AI provider credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save AI provider credentials");
+    } finally {
+      setSavingAiProvider(false);
+    }
+  }
+
+  async function saveOllama() {
+    const payload: Record<string, string | null> = {};
+    if (form.ollamaBaseUrl.trim()) payload.baseUrl = form.ollamaBaseUrl.trim();
+    if (form.aiModel.trim()) payload.model = form.aiModel.trim();
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a base URL or model to save");
+      return;
+    }
+    setSavingAiProvider(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ integration: "ollama", ...payload }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      form.setOllamaBaseUrl("");
+      form.setAiModel("");
+      toast.success("Ollama settings saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Ollama settings");
+    } finally {
+      setSavingAiProvider(false);
+    }
+  }
+
   async function clearStored(
     integration:
       | "stripe"
@@ -220,7 +285,14 @@ export function useAdminIntegrationsCredentialActions(deps: {
       | "bing"
       | "google"
       | "dataforseo"
-      | "bedrock",
+      | "bedrock"
+      | "gemini"
+      | "openai"
+      | "anthropic"
+      | "openrouter"
+      | "groq"
+      | "nvidia"
+      | "ollama",
   ) {
     try {
       const res = await fetch("/api/admin/platform-integrations", {
@@ -262,6 +334,18 @@ export function useAdminIntegrationsCredentialActions(deps: {
         form.setDataforseoPassword("");
       } else if (integration === "bedrock") {
         form.setBedrockApiKey("");
+      } else if (
+        integration === "gemini" ||
+        integration === "openai" ||
+        integration === "anthropic" ||
+        integration === "openrouter" ||
+        integration === "groq" ||
+        integration === "nvidia" ||
+        integration === "ollama"
+      ) {
+        form.setAiApiKey("");
+        form.setAiModel("");
+        form.setOllamaBaseUrl("");
       }
       toast.success("Stored credentials removed");
     } catch (err) {
@@ -275,6 +359,8 @@ export function useAdminIntegrationsCredentialActions(deps: {
     saveResend,
     saveUnsplash,
     savePexels,
+    saveAiProvider,
+    saveOllama,
     disconnectStripeOAuth,
     clearStored,
     savingToggle,
@@ -282,6 +368,7 @@ export function useAdminIntegrationsCredentialActions(deps: {
     savingResend,
     savingUnsplash,
     savingPexels,
+    savingAiProvider,
     disconnectingStripe,
   };
 }

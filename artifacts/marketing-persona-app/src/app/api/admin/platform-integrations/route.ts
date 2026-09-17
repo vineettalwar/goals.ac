@@ -30,6 +30,12 @@ import {
   saveGoogleOAuthCredentials,
   setPlatformBedrockOrgGrants,
 } from "@/lib/platform/platform-integration-secrets";
+import {
+  clearStoredPlatformAiKeyCredentials,
+  clearStoredPlatformOllamaCredentials,
+  savePlatformAiKeyCredentials,
+  savePlatformOllamaCredentials,
+} from "@/lib/platform/platform-ai-credentials";
 
 const stripeBodySchema = z.object({
   integration: z.literal("stripe"),
@@ -108,6 +114,18 @@ const bedrockBodySchema = z.object({
   organizationIds: z.array(z.number().int().positive()).optional(),
 });
 
+const aiKeyBodySchema = z.object({
+  integration: z.enum(["gemini", "openai", "anthropic", "openrouter", "groq", "nvidia"]),
+  apiKey: z.string().min(8).optional(),
+  model: z.string().trim().min(1).optional().nullable(),
+});
+
+const ollamaBodySchema = z.object({
+  integration: z.literal("ollama"),
+  baseUrl: z.string().trim().min(1).optional().nullable(),
+  model: z.string().trim().min(1).optional().nullable(),
+});
+
 const patchSchema = z.discriminatedUnion("integration", [
   stripeBodySchema,
   resendBodySchema,
@@ -121,6 +139,8 @@ const patchSchema = z.discriminatedUnion("integration", [
   googleBodySchema,
   dataforseoBodySchema,
   bedrockBodySchema,
+  aiKeyBodySchema,
+  ollamaBodySchema,
 ]);
 
 const deleteSchema = z.object({
@@ -138,6 +158,13 @@ const deleteSchema = z.object({
     "google",
     "dataforseo",
     "bedrock",
+    "gemini",
+    "openai",
+    "anthropic",
+    "openrouter",
+    "groq",
+    "nvidia",
+    "ollama",
   ]),
 });
 
@@ -277,7 +304,33 @@ export async function PATCH(req: Request) {
         password: data.password,
         updatedBy: admin.userId!,
       });
-    } else {
+    } else if (data.integration === "ollama") {
+      if (data.baseUrl === undefined && data.model === undefined) {
+        return NextResponse.json({ error: "No Ollama fields to update" }, { status: 400 });
+      }
+      await savePlatformOllamaCredentials({
+        baseUrl: data.baseUrl,
+        model: data.model,
+        updatedBy: admin.userId!,
+      });
+    } else if (
+      data.integration === "gemini" ||
+      data.integration === "openai" ||
+      data.integration === "anthropic" ||
+      data.integration === "openrouter" ||
+      data.integration === "groq" ||
+      data.integration === "nvidia"
+    ) {
+      if (data.apiKey === undefined && data.model === undefined) {
+        return NextResponse.json({ error: "No AI provider fields to update" }, { status: 400 });
+      }
+      await savePlatformAiKeyCredentials({
+        integration: data.integration,
+        apiKey: data.apiKey,
+        model: data.model,
+        updatedBy: admin.userId!,
+      });
+    } else if (data.integration === "bedrock") {
       const hasCredFields =
         data.apiKey !== undefined ||
         data.accessKeyId !== undefined ||
@@ -365,6 +418,17 @@ export async function DELETE(req: Request) {
         break;
       case "bedrock":
         await clearStoredPlatformBedrockCredentials(admin.userId!);
+        break;
+      case "gemini":
+      case "openai":
+      case "anthropic":
+      case "openrouter":
+      case "groq":
+      case "nvidia":
+        await clearStoredPlatformAiKeyCredentials(parsed.data.integration, admin.userId!);
+        break;
+      case "ollama":
+        await clearStoredPlatformOllamaCredentials(admin.userId!);
         break;
     }
   } catch (err) {

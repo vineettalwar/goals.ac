@@ -91,5 +91,12 @@ export type PlatformIntegrationStatus = {
     login: IntegrationFieldStatus;
     password: IntegrationFieldStatus;
   };
+  gemini: import("./platform-ai-credentials").PlatformAiKeyStatus;
+  openai: import("./platform-ai-credentials").PlatformAiKeyStatus;
+  anthropic: import("./platform-ai-credentials").PlatformAiKeyStatus;
+  openrouter: import("./platform-ai-credentials").PlatformAiKeyStatus;
+  groq: import("./platform-ai-credentials").PlatformAiKeyStatus;
+  nvidia: import("./platform-ai-credentials").PlatformAiKeyStatus;
+  ollama: import("./platform-ai-credentials").PlatformOllamaStatus;
   bedrock: PlatformBedrockStatus;
 };

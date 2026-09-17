@@ -405,10 +405,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "gemini",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "Google Gemini",
       description:
-        "Platform Gemini key used when organizations do not bring their own. Set GEMINI_API_KEY as a Worker secret.",
+        "Platform Gemini key used when organizations do not bring their own.",
       docsUrl: "https://aistudio.google.com/apikey",
       envVars: [
         {
@@ -426,10 +426,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "openai",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "OpenAI",
       description:
-        "Platform OpenAI key used when organizations do not bring their own. Set OPENAI_API_KEY as a Worker secret.",
+        "Platform OpenAI key used when organizations do not bring their own.",
       docsUrl: "https://platform.openai.com/api-keys",
       envVars: [
         { name: "OPENAI_API_KEY", configured: envConfigured("OPENAI_API_KEY"), required: true },
@@ -438,10 +438,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "anthropic",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "Anthropic",
       description:
-        "Platform Anthropic key used when organizations do not bring their own. Set ANTHROPIC_API_KEY as a Worker secret.",
+        "Platform Anthropic key used when organizations do not bring their own.",
       docsUrl: "https://console.anthropic.com/settings/keys",
       envVars: [
         {
@@ -454,10 +454,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "openrouter",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "OpenRouter",
       description:
-        "Platform OpenRouter key used when organizations do not bring their own. Set OPENROUTER_API_KEY as a Worker secret.",
+        "Platform OpenRouter key used when organizations do not bring their own.",
       docsUrl: "https://openrouter.ai/keys",
       envVars: [
         {
@@ -475,10 +475,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "groq",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "Groq",
       description:
-        "Platform Groq key used when organizations do not bring their own. Set GROQ_API_KEY as a Worker secret.",
+        "Platform Groq key used when organizations do not bring their own.",
       docsUrl: "https://console.groq.com/keys",
       envVars: [
         { name: "GROQ_API_KEY", configured: envConfigured("GROQ_API_KEY"), required: true },
@@ -488,10 +488,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "nvidia",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "NVIDIA NIM",
       description:
-        "Platform NVIDIA NIM key used when organizations do not bring their own. Set NVIDIA_API_KEY as a Worker secret.",
+        "Platform NVIDIA NIM key used when organizations do not bring their own.",
       docsUrl: "https://build.nvidia.com/settings",
       envVars: [
         { name: "NVIDIA_API_KEY", configured: envConfigured("NVIDIA_API_KEY"), required: true },
@@ -501,10 +501,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "ollama",
       category: "ai",
-      kind: "env",
+      kind: "credentials",
       label: "Ollama",
       description:
-        "Local or self-hosted Ollama for platform fallback. Point OLLAMA_BASE_URL at a reachable host (not loopback in production Workers).",
+        "Local or self-hosted Ollama for platform fallback. Use a reachable host (not loopback in production Workers).",
       docsUrl: "https://ollama.com/",
       envVars: [
         {

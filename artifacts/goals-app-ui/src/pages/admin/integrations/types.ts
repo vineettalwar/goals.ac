@@ -105,6 +105,22 @@ export type PlatformBedrockStatus = {
   grantedOrganizations: Array<{ id: number; name: string }>;
 };
 
+export type PlatformAiKeyStatus = {
+  managedByEnv: boolean;
+  envVars: string[];
+  apiKey: IntegrationFieldStatus;
+  model: { configured: boolean; value: string | null; source: "db" | "env" | null } | null;
+  configured: boolean;
+};
+
+export type PlatformOllamaStatus = {
+  managedByEnv: boolean;
+  envVars: string[];
+  baseUrl: { configured: boolean; value: string | null; source: "db" | "env" | null };
+  model: { configured: boolean; value: string | null; source: "db" | "env" | null };
+  configured: boolean;
+};
+
 export type PlatformIntegrationStatus = {
   stripe: {
     managedByEnv: boolean;
@@ -174,6 +190,13 @@ export type PlatformIntegrationStatus = {
     clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
     clientSecret: IntegrationFieldStatus;
   };
+  gemini: PlatformAiKeyStatus;
+  openai: PlatformAiKeyStatus;
+  anthropic: PlatformAiKeyStatus;
+  openrouter: PlatformAiKeyStatus;
+  groq: PlatformAiKeyStatus;
+  nvidia: PlatformAiKeyStatus;
+  ollama: PlatformOllamaStatus;
   bedrock: PlatformBedrockStatus;
 };
 

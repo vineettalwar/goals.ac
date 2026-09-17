@@ -1,12 +1,12 @@
-import { Loader2 } from "lucide-react";
 import { IntegrationIconBox } from "@workspace/app-shell";
 import { inputClassName } from "@workspace/app-shell";
 import { PlatformIntegrationBrandIcon } from "./brand-icon";
-import { EnvManagedBanner, EnvVarChecklist, SecretField, SourceNote } from "./shared";
+import { EnvManagedBanner, SecretField, SourceNote } from "./shared";
 import { ToggleSwitch, btnOutline, btnPrimary, DialogFooterRow } from "./dialogs-shared";
 import type { AdminIntegrationsController } from "./use-controller";
+import { Loader2 } from "lucide-react";
 
-/** Env-managed AI (or similar) integration — reads activeDefinition from the controller. */
+/** @deprecated Env-only AI dialog — replaced by AiProviderDialog in dialogs-ai.tsx */
 export function EnvAiProviderDialog({ controller }: { controller: AdminIntegrationsController }) {
   const { closeDialog, activeDefinition } = controller;
   if (!activeDefinition || activeDefinition.kind !== "env") return null;
@@ -24,7 +24,6 @@ export function EnvAiProviderDialog({ controller }: { controller: AdminIntegrati
       </div>
 
       <EnvManagedBanner envVars={activeDefinition.envVars.map((item) => item.name)} />
-      <EnvVarChecklist envVars={activeDefinition.envVars} />
 
       <div className="flex justify-end">
         <button type="button" className={btnOutline} onClick={closeDialog}>

@@ -32,6 +32,9 @@ export function useAdminIntegrationsFormState() {
     [],
   );
   const [bedrockGrantedOrgIds, setBedrockGrantedOrgIds] = useState<Set<number>>(new Set());
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiModel, setAiModel] = useState("");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("");
 
   const resetFormFields = useCallback((dialog: ActiveDialog) => {
     if (dialog === "stripe") {
@@ -57,6 +60,19 @@ export function useAdminIntegrationsFormState() {
       setGoogleClientSecret("");
     } else if (dialog === "bedrock") {
       setBedrockApiKey("");
+    } else if (
+      dialog === "gemini" ||
+      dialog === "openai" ||
+      dialog === "anthropic" ||
+      dialog === "openrouter" ||
+      dialog === "groq" ||
+      dialog === "nvidia"
+    ) {
+      setAiApiKey("");
+      setAiModel("");
+    } else if (dialog === "ollama") {
+      setOllamaBaseUrl("");
+      setAiModel("");
     }
   }, []);
 
@@ -113,6 +129,12 @@ export function useAdminIntegrationsFormState() {
     setBedrockOrgOptions,
     bedrockGrantedOrgIds,
     setBedrockGrantedOrgIds,
+    aiApiKey,
+    setAiApiKey,
+    aiModel,
+    setAiModel,
+    ollamaBaseUrl,
+    setOllamaBaseUrl,
     resetFormFields,
   };
 }

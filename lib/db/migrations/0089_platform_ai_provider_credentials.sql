@@ -1,0 +1,11 @@
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "encrypted_gemini_api_key" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "encrypted_openai_api_key" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "encrypted_anthropic_api_key" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "encrypted_openrouter_api_key" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "openrouter_model" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "encrypted_groq_api_key" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "groq_model" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "encrypted_nvidia_api_key" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "nvidia_model" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "ollama_base_url" text;
+ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "ollama_model" text;

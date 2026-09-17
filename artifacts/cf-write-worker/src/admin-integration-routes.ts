@@ -20,6 +20,13 @@ import {
   saveDataForSeoCredentials,
   clearStoredDataForSeoCredentials,
   getPlatformIntegrationStatus,
+  savePlatformAiKeyCredentials,
+  clearStoredPlatformAiKeyCredentials,
+  savePlatformOllamaCredentials,
+  clearStoredPlatformOllamaCredentials,
+  isPlatformAiKeyManagedByEnv,
+  isOllamaManagedByEnv,
+  type PlatformAiKeyProviderId,
 } from "@workspace/platform-admin";
 import { invalidateStripeClientCache } from "@workspace/billing";
 import { encryptSecret } from "@workspace/security/encryption";
@@ -94,6 +101,16 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
     model: z.string().trim().min(1).optional().nullable(),
     organizationIds: z.array(z.number().int().positive()).optional(),
   }),
+  z.object({
+    integration: z.enum(["gemini", "openai", "anthropic", "openrouter", "groq", "nvidia"]),
+    apiKey: z.string().min(8).optional(),
+    model: z.string().trim().min(1).optional().nullable(),
+  }),
+  z.object({
+    integration: z.literal("ollama"),
+    baseUrl: z.string().trim().min(1).optional().nullable(),
+    model: z.string().trim().min(1).optional().nullable(),
+  }),
 ]);
 
 const deleteIntegrationSchema = z.object({
@@ -111,6 +128,13 @@ const deleteIntegrationSchema = z.object({
     "google",
     "dataforseo",
     "bedrock",
+    "gemini",
+    "openai",
+    "anthropic",
+    "openrouter",
+    "groq",
+    "nvidia",
+    "ollama",
   ]),
 });
 
@@ -253,7 +277,51 @@ export async function handleAdminIntegrationRoutes(
           password: data.password,
           updatedBy: userId,
         });
-      } else {
+      } else if (data.integration === "ollama") {
+        if (data.baseUrl === undefined && data.model === undefined) {
+          return badRequest(request, "No Ollama fields to update");
+        }
+        if (isOllamaManagedByEnv()) {
+          return withCors(
+            request,
+            Response.json(
+              { error: "Ollama settings are managed via server environment variables" },
+              { status: 403 },
+            ),
+          );
+        }
+        await savePlatformOllamaCredentials({
+          baseUrl: data.baseUrl,
+          model: data.model,
+          updatedBy: userId,
+        });
+      } else if (
+        data.integration === "gemini" ||
+        data.integration === "openai" ||
+        data.integration === "anthropic" ||
+        data.integration === "openrouter" ||
+        data.integration === "groq" ||
+        data.integration === "nvidia"
+      ) {
+        if (data.apiKey === undefined && data.model === undefined) {
+          return badRequest(request, "No AI provider fields to update");
+        }
+        if (isPlatformAiKeyManagedByEnv(data.integration)) {
+          return withCors(
+            request,
+            Response.json(
+              { error: "AI provider credentials are managed via server environment variables" },
+              { status: 403 },
+            ),
+          );
+        }
+        await savePlatformAiKeyCredentials({
+          integration: data.integration as PlatformAiKeyProviderId,
+          apiKey: data.apiKey,
+          model: data.model,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "bedrock") {
         const hasCredFields =
           data.apiKey !== undefined ||
           data.accessKeyId !== undefined ||
@@ -366,6 +434,17 @@ export async function handleAdminIntegrationRoutes(
           break;
         case "bedrock":
           await clearStoredPlatformBedrockCredentials(userId);
+          break;
+        case "gemini":
+        case "openai":
+        case "anthropic":
+        case "openrouter":
+        case "groq":
+        case "nvidia":
+          await clearStoredPlatformAiKeyCredentials(parsed.data.integration, userId);
+          break;
+        case "ollama":
+          await clearStoredPlatformOllamaCredentials(userId);
           break;
       }
     } catch (err) {

@@ -84,6 +84,8 @@ export function useAdminIntegrationsController() {
         new Set(statusData.bedrock.grantedOrganizations.map((org) => org.id)),
       );
       form.setBedrockOrgOptions(orgsData.organizations ?? []);
+      form.setOllamaBaseUrl(statusData.ollama.baseUrl.value ?? "");
+      form.setAiModel("");
     } catch {
       setLoadError(true);
       setNotice({ type: "error", message: "Could not load platform integrations" });
@@ -192,6 +194,8 @@ export function useAdminIntegrationsController() {
     saveResend: credentials.saveResend,
     saveUnsplash: credentials.saveUnsplash,
     savePexels: credentials.savePexels,
+    saveAiProvider: credentials.saveAiProvider,
+    saveOllama: credentials.saveOllama,
     saveLinkedIn: oauth.saveLinkedIn,
     saveTwitter: oauth.saveTwitter,
     saveMeta: oauth.saveMeta,
@@ -208,6 +212,7 @@ export function useAdminIntegrationsController() {
     savingResend: credentials.savingResend,
     savingUnsplash: credentials.savingUnsplash,
     savingPexels: credentials.savingPexels,
+    savingAiProvider: credentials.savingAiProvider,
     savingLinkedIn: oauth.savingLinkedIn,
     savingTwitter: oauth.savingTwitter,
     savingMeta: oauth.savingMeta,
@@ -268,6 +273,12 @@ export function useAdminIntegrationsController() {
     setBedrockOrgSearch: form.setBedrockOrgSearch,
     bedrockOrgOptions: form.bedrockOrgOptions,
     bedrockGrantedOrgIds: form.bedrockGrantedOrgIds,
+    aiApiKey: form.aiApiKey,
+    setAiApiKey: form.setAiApiKey,
+    aiModel: form.aiModel,
+    setAiModel: form.setAiModel,
+    ollamaBaseUrl: form.ollamaBaseUrl,
+    setOllamaBaseUrl: form.setOllamaBaseUrl,
   };
 }
 

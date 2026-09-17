@@ -169,6 +169,13 @@
       "when": 1789700000000,
       "tag": "0023_platform_google_oauth_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1789800000000,
+      "tag": "0024_platform_ai_provider_credentials",
+      "breakpoints": true
     }
   ]
 }

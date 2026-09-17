@@ -5,6 +5,7 @@ import { lastFour } from "@workspace/billing";
 import { eq } from "drizzle-orm";
 import { toIsoStringOrNull } from "./dates";
 import type { PlatformBedrockStatus } from "./platform-bedrock";
+import type { PlatformAiKeyStatus, PlatformOllamaStatus } from "./platform-ai-credentials";
 import {
   envTrim,
   activeEnvVars,
@@ -128,6 +129,13 @@ export type PlatformIntegrationStatus = {
     login: IntegrationFieldStatus;
     password: IntegrationFieldStatus;
   };
+  gemini: PlatformAiKeyStatus;
+  openai: PlatformAiKeyStatus;
+  anthropic: PlatformAiKeyStatus;
+  openrouter: PlatformAiKeyStatus;
+  groq: PlatformAiKeyStatus;
+  nvidia: PlatformAiKeyStatus;
+  ollama: PlatformOllamaStatus;
   bedrock: PlatformBedrockStatus;
 };
 
@@ -163,7 +171,8 @@ function plainFieldStatus(
 
 export async function getPlatformIntegrationStatus(): Promise<PlatformIntegrationStatus> {
   const { getPlatformBedrockStatus } = await import("./platform-bedrock");
-  const [row, bedrock] = await Promise.all([
+  const { getAllPlatformAiProviderStatuses } = await import("./platform-ai-credentials");
+  const [row, bedrock, aiProviders] = await Promise.all([
     db
       .select({
         encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
@@ -200,6 +209,7 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       .limit(1)
       .then((rows) => rows[0]),
     getPlatformBedrockStatus(),
+    getAllPlatformAiProviderStatuses(),
   ]);
 
   const connectToken = safeDecrypt(row?.encryptedStripeConnectAccessToken);
@@ -291,6 +301,13 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       login: fieldStatus(row?.encryptedDataforseoLogin, "DATAFORSEO_LOGIN"),
       password: fieldStatus(row?.encryptedDataforseoPassword, "DATAFORSEO_PASSWORD"),
     },
+    gemini: aiProviders.gemini,
+    openai: aiProviders.openai,
+    anthropic: aiProviders.anthropic,
+    openrouter: aiProviders.openrouter,
+    groq: aiProviders.groq,
+    nvidia: aiProviders.nvidia,
+    ollama: aiProviders.ollama,
     bedrock,
   };
 }

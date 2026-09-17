@@ -10,6 +10,7 @@ import { getDecryptedUserGeminiKey } from "./user-api-key";
 import { getUserAiProviderOptions } from "./user-ai-provider";
 import { resolveOrganizationIdForUser } from "./org-ai-settings";
 import { resolvePlatformBedrockCredentialsForOrg } from "./platform-bedrock";
+import { loadPlatformAiCredentials } from "./platform-ai";
 
 export type AiClientSource = "user-key" | "platform";
 
@@ -156,8 +157,92 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
   }
 
   if (providerId === "ollama") {
-    const client = await resolveAiClient(userApiKey, aiProviderOptions);
-    return { client, providerId, usingUserKey: true, source: "user-key" };
+    const platform = await loadPlatformAiCredentials("ollama");
+    const merged = {
+      ...aiProviderOptions,
+      ollamaBaseUrl: aiProviderOptions.ollamaBaseUrl || platform?.baseUrl,
+      ollamaModel: aiProviderOptions.ollamaModel || platform?.model,
+    };
+    const client = await resolveAiClient(userApiKey, merged);
+    return {
+      client,
+      providerId,
+      usingUserKey: Boolean(aiProviderOptions.ollamaBaseUrl),
+      source: aiProviderOptions.ollamaBaseUrl ? "user-key" : "platform",
+    };
+  }
+
+  // Platform DB/env fallback for key-based providers (when org has no BYOK).
+  if (
+    providerId === "gemini" ||
+    providerId === "openai" ||
+    providerId === "anthropic" ||
+    providerId === "openrouter" ||
+    providerId === "groq" ||
+    providerId === "nvidia"
+  ) {
+    const platform = await loadPlatformAiCredentials(providerId);
+    if (platform?.apiKey) {
+      try {
+        if (providerId === "gemini") {
+          const client = wrapGeminiClient(await createUserGeminiClient(platform.apiKey));
+          return { client, providerId, usingUserKey: false, source: "platform" };
+        }
+        if (providerId === "openai") {
+          const { OpenAIClient } = await import("@workspace/ai-providers/openai");
+          return {
+            client: OpenAIClient.create({ apiKey: platform.apiKey }),
+            providerId,
+            usingUserKey: false,
+            source: "platform",
+          };
+        }
+        if (providerId === "anthropic") {
+          const { AnthropicClient } = await import("@workspace/ai-providers/anthropic");
+          return {
+            client: AnthropicClient.create({ apiKey: platform.apiKey }),
+            providerId,
+            usingUserKey: false,
+            source: "platform",
+          };
+        }
+        if (providerId === "openrouter") {
+          const { OpenRouterClient } = await import("@workspace/ai-providers/openrouter");
+          return {
+            client: OpenRouterClient.create({
+              apiKey: platform.apiKey,
+              model: aiProviderOptions.openrouter?.model || platform.model,
+            }),
+            providerId,
+            usingUserKey: false,
+            source: "platform",
+          };
+        }
+        if (providerId === "groq") {
+          const { GroqClient } = await import("@workspace/ai-providers/groq");
+          return {
+            client: GroqClient.create({ apiKey: platform.apiKey }),
+            providerId,
+            usingUserKey: false,
+            source: "platform",
+          };
+        }
+        if (providerId === "nvidia") {
+          const { NvidiaClient } = await import("@workspace/ai-providers/nvidia");
+          return {
+            client: NvidiaClient.create({
+              apiKey: platform.apiKey,
+              model: aiProviderOptions.nvidia?.model || platform.model,
+            }),
+            providerId,
+            usingUserKey: false,
+            source: "platform",
+          };
+        }
+      } catch {
+        // Fall through to resolveAiClient (env-only path).
+      }
+    }
   }
 
   const client = await resolveAiClient(userApiKey, aiProviderOptions);

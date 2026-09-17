@@ -17,7 +17,17 @@ import { AdminBingDialog } from "./admin-bing-dialog";
 import { AdminGoogleDialog } from "./admin-google-dialog";
 import { AdminDataForSeoDialog } from "./admin-dataforseo-dialog";
 import { AdminBedrockDialog } from "./admin-bedrock-dialog";
+import { AdminAiProviderDialog, AdminOllamaDialog } from "./admin-ai-provider-dialog";
 import { AdminEnvIntegrationDialog } from "./admin-env-integration-dialog";
+
+const AI_KEY_DIALOGS = new Set([
+  "gemini",
+  "openai",
+  "anthropic",
+  "openrouter",
+  "groq",
+  "nvidia",
+]);
 
 export function AdminIntegrationsDialogs({
   controller,
@@ -55,6 +65,10 @@ export function AdminIntegrationsDialogs({
           </div>
         ) : null}
         {activeDialog === "bedrock" ? <AdminBedrockDialog controller={controller} /> : null}
+        {activeDialog && AI_KEY_DIALOGS.has(activeDialog) ? (
+          <AdminAiProviderDialog controller={controller} />
+        ) : null}
+        {activeDialog === "ollama" ? <AdminOllamaDialog controller={controller} /> : null}
         <AdminEnvIntegrationDialog controller={controller} />
       </DialogContent>
     </Dialog>

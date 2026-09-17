@@ -124,6 +124,24 @@ export {
   type SavePlatformBedrockCredentialsInput,
 } from "./platform-bedrock";
 export {
+  clearStoredPlatformAiKeyCredentials,
+  clearStoredPlatformOllamaCredentials,
+  getAllPlatformAiProviderStatuses,
+  isOllamaManagedByEnv,
+  isPlatformAiIntegrationId,
+  isPlatformAiKeyManagedByEnv,
+  resolvePlatformAiCredentials,
+  savePlatformAiKeyCredentials,
+  savePlatformOllamaCredentials,
+  PLATFORM_AI_KEY_PROVIDERS,
+  type PlatformAiKeyProviderId,
+  type PlatformAiKeyStatus,
+  type PlatformAiResolvedCredentials,
+  type PlatformOllamaStatus,
+  type SavePlatformAiKeyInput,
+  type SavePlatformOllamaInput,
+} from "./platform-ai-credentials";
+export {
   buildStripeConnectAuthorizeUrl,
   decodeStripeConnectState,
   exchangeStripeConnectCode,

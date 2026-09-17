@@ -13,6 +13,7 @@ import { isGoogleManagedByEnv } from "@/lib/platform/google-oauth-credentials";
 import { isDataForSeoManagedByEnv } from "@/lib/platform/dataforseo-credentials";
 import { eq } from "drizzle-orm";
 import { getPlatformBedrockStatus } from "@/lib/platform/platform-bedrock-admin";
+import { getAllPlatformAiProviderStatuses } from "@/lib/platform/platform-ai-credentials";
 import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-types";
 import {
   activeEnvVars,
@@ -37,7 +38,7 @@ import {
 } from "./shared";
 
 export async function getPlatformIntegrationStatus(): Promise<PlatformIntegrationStatus> {
-  const [rows, bedrock] = await Promise.all([
+  const [rows, bedrock, aiProviders] = await Promise.all([
     db
       .select({
         encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
@@ -73,6 +74,7 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       .where(eq(platformSettingsTable.id, 1))
       .limit(1),
     getPlatformBedrockStatus(),
+    getAllPlatformAiProviderStatuses(),
   ]);
   const row = rows[0];
 
@@ -162,6 +164,13 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       login: fieldStatus(row?.encryptedDataforseoLogin, "DATAFORSEO_LOGIN"),
       password: fieldStatus(row?.encryptedDataforseoPassword, "DATAFORSEO_PASSWORD"),
     },
+    gemini: aiProviders.gemini,
+    openai: aiProviders.openai,
+    anthropic: aiProviders.anthropic,
+    openrouter: aiProviders.openrouter,
+    groq: aiProviders.groq,
+    nvidia: aiProviders.nvidia,
+    ollama: aiProviders.ollama,
     bedrock,
   };
 }

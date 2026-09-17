@@ -81,6 +81,13 @@ export function isIntegrationConfigured(
   if (definition.id === "google") {
     return status.google.clientId.configured && status.google.clientSecret.configured;
   }
+  if (definition.id === "gemini") return status.gemini.configured;
+  if (definition.id === "openai") return status.openai.configured;
+  if (definition.id === "anthropic") return status.anthropic.configured;
+  if (definition.id === "openrouter") return status.openrouter.configured;
+  if (definition.id === "groq") return status.groq.configured;
+  if (definition.id === "nvidia") return status.nvidia.configured;
+  if (definition.id === "ollama") return status.ollama.configured;
   if (definition.id === "bedrock") return status.bedrock.configured;
   return false;
 }
@@ -143,6 +150,12 @@ export function getIntegrationLastFour(
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
   if (definition.id === "bing") return status.bing.clientSecret.lastFour;
   if (definition.id === "google") return status.google.clientSecret.lastFour;
+  if (definition.id === "gemini") return status.gemini.apiKey.lastFour;
+  if (definition.id === "openai") return status.openai.apiKey.lastFour;
+  if (definition.id === "anthropic") return status.anthropic.apiKey.lastFour;
+  if (definition.id === "openrouter") return status.openrouter.apiKey.lastFour;
+  if (definition.id === "groq") return status.groq.apiKey.lastFour;
+  if (definition.id === "nvidia") return status.nvidia.apiKey.lastFour;
   if (definition.id === "bedrock") return status.bedrock.accessKeyId.lastFour;
   return null;
 }
@@ -161,6 +174,13 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "bluesky") return status.bluesky.managedByEnv;
   if (definition.id === "bing") return status.bing.managedByEnv;
   if (definition.id === "google") return status.google.managedByEnv;
+  if (definition.id === "gemini") return status.gemini.managedByEnv;
+  if (definition.id === "openai") return status.openai.managedByEnv;
+  if (definition.id === "anthropic") return status.anthropic.managedByEnv;
+  if (definition.id === "openrouter") return status.openrouter.managedByEnv;
+  if (definition.id === "groq") return status.groq.managedByEnv;
+  if (definition.id === "nvidia") return status.nvidia.managedByEnv;
+  if (definition.id === "ollama") return status.ollama.managedByEnv;
   if (definition.id === "bedrock") return status.bedrock.managedByEnv;
   if (definition.kind === "env" || definition.kind === "info") return definition.kind === "env";
   return false;

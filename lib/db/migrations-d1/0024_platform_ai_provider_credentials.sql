@@ -1,0 +1,11 @@
+ALTER TABLE `platform_settings` ADD COLUMN `encrypted_gemini_api_key` text;
+ALTER TABLE `platform_settings` ADD COLUMN `encrypted_openai_api_key` text;
+ALTER TABLE `platform_settings` ADD COLUMN `encrypted_anthropic_api_key` text;
+ALTER TABLE `platform_settings` ADD COLUMN `encrypted_openrouter_api_key` text;
+ALTER TABLE `platform_settings` ADD COLUMN `openrouter_model` text;
+ALTER TABLE `platform_settings` ADD COLUMN `encrypted_groq_api_key` text;
+ALTER TABLE `platform_settings` ADD COLUMN `groq_model` text;
+ALTER TABLE `platform_settings` ADD COLUMN `encrypted_nvidia_api_key` text;
+ALTER TABLE `platform_settings` ADD COLUMN `nvidia_model` text;
+ALTER TABLE `platform_settings` ADD COLUMN `ollama_base_url` text;
+ALTER TABLE `platform_settings` ADD COLUMN `ollama_model` text;

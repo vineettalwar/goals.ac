@@ -8,6 +8,7 @@
     "rootDir": "src"
   },
   "include": ["src"],
+  "exclude": ["src/**/*.selfcheck.mts"],
   "references": [
     { "path": "../db" },
     { "path": "../billing" },
