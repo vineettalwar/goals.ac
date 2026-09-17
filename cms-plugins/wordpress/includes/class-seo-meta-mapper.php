@@ -221,15 +221,15 @@ class Seo_Meta_Mapper {
 					$meta['_seopress_analysis_target_kw'] = $keyword;
 				}
 				if ( $og_title ) {
-					$meta['_seopress_social_fb_title'] = $og_title;
+					$meta['_seopress_social_fb_title']      = $og_title;
 					$meta['_seopress_social_twitter_title'] = $og_title;
 				}
 				if ( $og_desc ) {
-					$meta['_seopress_social_fb_desc'] = $og_desc;
+					$meta['_seopress_social_fb_desc']      = $og_desc;
 					$meta['_seopress_social_twitter_desc'] = $og_desc;
 				}
 				if ( $og_image ) {
-					$meta['_seopress_social_fb_img'] = $og_image;
+					$meta['_seopress_social_fb_img']      = $og_image;
 					$meta['_seopress_social_twitter_img'] = $og_image;
 				}
 				break;

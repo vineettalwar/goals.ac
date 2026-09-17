@@ -102,7 +102,7 @@ export function PageHero({
           </div>
         ) : null}
         {proof && proof.length > 0 ? (
-          <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t border-border pt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+          <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t border-border pt-4 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
             {proof.map((item) => (
               <div key={item.label} className="flex items-baseline gap-2">
                 <dt>{item.label}</dt>
