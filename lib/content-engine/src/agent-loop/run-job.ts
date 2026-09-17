@@ -17,6 +17,7 @@ async function generateDraftForLoop(args: {
   projectId: number;
   userId?: number | null;
   keyword?: string;
+  userPrompt?: string;
 }): Promise<AgentToolResult> {
   const keyword = args.keyword?.trim();
   if (!keyword) {
@@ -33,7 +34,7 @@ async function generateDraftForLoop(args: {
       "blog_post",
       brand,
       keyword,
-      undefined,
+      args.userPrompt,
       false,
       userApiKey,
       aiProviderOptions,
@@ -77,6 +78,7 @@ export async function executeStoredAgentRun(input: {
   stepBudget?: number;
   actionItemId?: number;
   resumeApproved?: boolean;
+  resumeFromAwaitingUser?: boolean;
   sink?: TrajectorySink;
   policy?: Partial<AgentPolicy>;
 }): Promise<RunAgentLoopResult> {
@@ -88,11 +90,13 @@ export async function executeStoredAgentRun(input: {
         projectId: input.projectId,
         userId: input.userId,
         keyword: typeof args.keyword === "string" ? args.keyword : input.goal.keyword,
+        userPrompt: typeof args.userPrompt === "string" ? args.userPrompt : input.goal.userPrompt,
       }),
   });
 
   const prior = input.runId ? await loadAgentRun(input.runId) : null;
   const resume = Boolean(input.resumeApproved && prior);
+  const resumeUser = Boolean(input.resumeFromAwaitingUser && prior);
   const policy = resume
     ? {
         allowLivePublish: true,
@@ -112,7 +116,7 @@ export async function executeStoredAgentRun(input: {
     planner: policy.plannerMode === "hybrid" ? hybridPlannerForUser(input.userId) : defaultEmployeePlanner,
     sink,
     userId: input.userId,
-    resumeFrom: resume && prior ? prior : undefined,
+    resumeFrom: (resume || resumeUser) && prior ? prior : undefined,
   });
 
   if (result.contentPieceId) {

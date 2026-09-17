@@ -6,6 +6,7 @@ import { contentPiecesTable } from "./content_pieces";
 export type AgentRunStatus =
   | "running"
   | "awaiting_approval"
+  | "awaiting_user"
   | "completed"
   | "failed"
   | "budget_exhausted"

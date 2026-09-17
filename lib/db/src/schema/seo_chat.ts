@@ -26,6 +26,7 @@ export const seoChatThreadsTable = pgTable(
     lastAgentRunId: integer("last_agent_run_id").references(() => agentRunsTable.id, {
       onDelete: "set null",
     }),
+    playbookState: jsonb("playbook_state").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

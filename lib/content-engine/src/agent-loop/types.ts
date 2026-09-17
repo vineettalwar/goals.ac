@@ -38,6 +38,11 @@ export type AgentGoal = {
   actionItemId?: number;
   actionType?: string;
   targetUrl?: string;
+  /** Chat research playbook: stop after research and wait for the user's angle. */
+  askBeforeDraft?: boolean;
+  /** Pasted brief / extra instructions for generate_draft. */
+  userPrompt?: string;
+  cmsStatus?: "draft" | "publish";
 };
 
 export type PlannerMode = "deterministic" | "hybrid" | "llm";
@@ -90,6 +95,7 @@ export type AgentRunRecord = {
   status:
     | "running"
     | "awaiting_approval"
+    | "awaiting_user"
     | "completed"
     | "failed"
     | "budget_exhausted"
@@ -125,7 +131,7 @@ export type PlannerDecision =
   | { type: "call_tool"; tool: string; args: Record<string, unknown>; reason: string }
   | {
       type: "stop";
-      reason: "done" | "budget" | "no_evidence" | "await_approval" | "failed";
+      reason: "done" | "budget" | "no_evidence" | "await_approval" | "await_user" | "failed";
       detail: string;
     };
 

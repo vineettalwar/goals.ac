@@ -21,7 +21,11 @@ export function parsePlannerJson(raw: string, toolNames: Iterable<string>): Plan
   }
   if (obj.type === "stop") {
     const reason =
-      obj.reason === "no_evidence" || obj.reason === "budget" || obj.reason === "failed" || obj.reason === "await_approval"
+      obj.reason === "no_evidence" ||
+      obj.reason === "budget" ||
+      obj.reason === "failed" ||
+      obj.reason === "await_approval" ||
+      obj.reason === "await_user"
         ? obj.reason
         : "done";
     return { type: "stop", reason, detail: String(obj.detail ?? obj.reason ?? "stop") };
@@ -54,7 +58,7 @@ ${traj || "(empty)"}
 Tools:
 ${toolLines}
 JSON shape: {"type":"call_tool","tool":"<name>","args":{},"reason":"..."} or {"type":"stop","reason":"done","detail":"..."}
-Do not invent tool names. Prefer research/read tools before writes. After one successful write, stop. Never pick publish_live unless the goal is publish_check.`;
+Do not invent tool names. Prefer research/read tools before writes. After one successful write, stop. Never pick publish_live unless the goal is publish_check. If goal.askBeforeDraft is true, after research tools reply {"type":"stop","reason":"await_user","detail":"Ask the user before drafting"} and do not pick generate_draft. Only pick publish_cms when the goal has cmsStatus.`;
 }
 
 /**

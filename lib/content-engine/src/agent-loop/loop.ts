@@ -73,6 +73,7 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
       if (decision.reason === "budget") run.status = "budget_exhausted";
       else if (decision.reason === "no_evidence") run.status = "no_evidence";
       else if (decision.reason === "await_approval") run.status = "awaiting_approval";
+      else if (decision.reason === "await_user") run.status = "awaiting_user";
       else if (decision.reason === "failed") run.status = "failed";
       else run.status = "completed";
       run.stopReason = decision.detail;

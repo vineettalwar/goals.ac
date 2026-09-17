@@ -17,6 +17,7 @@ export const seoChatThreadsTable = sqliteTable(
     lastAgentRunId: integer("last_agent_run_id").references(() => agentRunsTable.id, {
       onDelete: "set null",
     }),
+    playbookState: text("playbook_state", { mode: "json" }).$type<Record<string, unknown> | null>(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },

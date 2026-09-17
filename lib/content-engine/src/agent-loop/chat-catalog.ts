@@ -16,7 +16,9 @@ export function chatCapabilityPrompts(
     {
       label: "Create",
       prompts: [
+        "Onboard https://",
         `Brief for ${keyword}`,
+        "Push to WordPress",
         `Start Daily Five for ${keyword}`,
         "Rescan the brand site",
       ],

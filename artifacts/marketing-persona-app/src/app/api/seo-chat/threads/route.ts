@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { createSeoChatThread, listSeoChatThreads } from "@workspace/content-engine/agent-loop";
+import {
+  bootstrapOnboardThread,
+  createSeoChatThread,
+  getSeoChatThread,
+  listSeoChatThreads,
+} from "@workspace/content-engine/agent-loop";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
@@ -19,7 +24,21 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
-  const body = (await req.json().catch(() => null)) as { projectId?: number; title?: string } | null;
+  const body = (await req.json().catch(() => null)) as {
+    projectId?: number;
+    title?: string;
+    onboard?: boolean;
+    text?: string;
+  } | null;
+  if (body?.onboard || (!body?.projectId && body?.text)) {
+    try {
+      const started = await bootstrapOnboardThread({ userId: userId!, text: body.text ?? body.title ?? "" });
+      const packed = await getSeoChatThread(started.threadId);
+      return NextResponse.json({ thread: packed?.thread, projectId: started.projectId }, { status: 201 });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Onboard failed" }, { status: 400 });
+    }
+  }
   const projectId = Number(body?.projectId);
   if (!Number.isInteger(projectId) || projectId <= 0) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });

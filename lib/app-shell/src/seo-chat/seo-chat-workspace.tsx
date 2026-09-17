@@ -151,7 +151,9 @@ export function SeoChatWorkspace({
 
   async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || !projectId || busy) return;
+    const onboard = /onboard|https?:\/\//i.test(trimmed);
+    if (!trimmed || busy) return;
+    if (!projectId && !onboard) return;
     const gen = ++sendGen.current;
     setBusy(true);
     setError(null);
@@ -160,11 +162,29 @@ export function SeoChatWorkspace({
     setLiveRunId(null);
     try {
       let activeId = threadId;
+      let activeProject = projectId;
+      if (!activeProject) {
+        const boot = await request("/api/seo-chat/threads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onboard: true, text: trimmed }),
+        });
+        const data = (await boot.json()) as { thread: Thread; projectId?: number; error?: string };
+        if (!boot.ok) {
+          throw new Error(data?.error || "Could not start onboarding");
+        }
+        if (!data.projectId) throw new Error("Could not start onboarding");
+        activeId = data.thread.id;
+        activeProject = String(data.projectId);
+        setThreadId(activeId);
+        setThreads((prev) => [data.thread, ...prev.filter((row) => row.id !== data.thread.id)]);
+        onProjectChange(activeProject);
+      }
       if (!activeId) {
         const res = await request("/api/seo-chat/threads", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: Number(projectId), title: trimmed.slice(0, 72) }),
+          body: JSON.stringify({ projectId: Number(activeProject), title: trimmed.slice(0, 72) }),
         });
         if (!res.ok) throw new Error("Could not start a thread");
         const data = (await res.json()) as { thread: Thread };
@@ -259,8 +279,12 @@ export function SeoChatWorkspace({
               chips?: SeoChatChip[];
               cards?: SeoChatCard[];
               agentRunId?: number | null;
+              projectId?: number;
             };
             const doneRunId = typeof doneData.agentRunId === "number" ? doneData.agentRunId : agentRunId;
+            if (typeof doneData.projectId === "number" && String(doneData.projectId) !== projectId) {
+              onProjectChange(String(doneData.projectId));
+            }
             setMessages((prev) => {
               const next = prev.filter((row) => row.id !== "a-live" && !String(row.id).startsWith("a-live"));
               next.push({
@@ -336,7 +360,7 @@ export function SeoChatWorkspace({
             </div>
             <div className="w-full max-w-3xl">{composer}</div>
             {!projectId ? (
-              <p className="mt-4 text-sm text-muted-foreground">Pick a site in the composer to begin.</p>
+              <p className="mt-4 text-sm text-muted-foreground">Pick a site, or paste a URL to onboard.</p>
             ) : null}
             {error ? <p className="mt-3 text-center text-sm text-destructive">{error}</p> : null}
           </div>
@@ -499,7 +523,7 @@ function ChatComposer({
   onSelectThread: (id: number) => void;
   onSend: () => void;
 }) {
-  const canSend = Boolean(draft.trim() && projectId && !busy);
+  const canSend = Boolean(draft.trim() && !busy && (projectId || /onboard|https?:\/\//i.test(draft)));
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -562,7 +586,7 @@ function ChatComposer({
         ref={inputRef}
         rows={1}
         value={draft}
-        disabled={busy || !projectId}
+        disabled={busy}
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
@@ -570,7 +594,7 @@ function ChatComposer({
             onSend();
           }
         }}
-        placeholder={projectId ? "Ask about this site" : "Select a site first"}
+        placeholder={projectId ? "Ask about this site" : "Add a site URL or pick a site"}
         className="max-h-40 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-base leading-snug text-foreground caret-foreground outline-none placeholder:text-muted-foreground selection:bg-primary/30 disabled:opacity-50"
       />
       <div className="relative mb-0.5 shrink-0">
@@ -618,6 +642,38 @@ function ChatCard({
   onInspectRun: (runId: number) => void;
 }) {
   const inspectId = cardRunId(card);
+  if (card.kind === "choice") {
+    return (
+      <div className="rounded-2xl bg-secondary p-3 text-sm">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
+        <p className="mt-1 text-muted-foreground">{card.prompt}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {card.options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="border px-2 py-1 text-[11px]"
+              onClick={() => onAction(option.send)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (card.kind === "learn_summary") {
+    return (
+      <div className="rounded-2xl bg-secondary p-3 text-sm">
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
+        <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
+          {card.bullets.map((bullet) => (
+            <li key={bullet}>{bullet}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   if (card.kind === "opportunity") {
     return (
       <div className="rounded-2xl bg-secondary p-3 text-sm">
@@ -694,9 +750,9 @@ function ChatCard({
   return (
     <div className="rounded-2xl bg-secondary p-3 text-sm ring-1 ring-primary/40">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Live publish gate</p>
-      <p className="mt-1">Approve-first. The loop will not push live until you say so, and CMS publish still happens in Studio.</p>
+      <p className="mt-1">Approve-first. Approve here to enqueue a live WordPress publish.</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" className="border border-primary px-2 py-1 text-[11px]" onClick={() => onAction("decision: approved live publish")}>
+        <button type="button" className="border border-primary px-2 py-1 text-[11px]" onClick={() => onAction("approve live publish")}>
           Approve
         </button>
         {inspectId ? (

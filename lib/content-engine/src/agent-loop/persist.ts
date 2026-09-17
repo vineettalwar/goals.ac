@@ -61,7 +61,7 @@ export async function loadAgentRun(id: number): Promise<AgentRunRecord | null> {
     websiteProjectId: row.websiteProjectId,
     userId: row.userId,
     goal: row.goal as AgentRunRecord["goal"],
-    status: row.status,
+    status: row.status as AgentRunRecord["status"],
     stopReason: row.stopReason,
     policy,
     trajectory: (row.trajectory ?? []) as AgentRunRecord["trajectory"],

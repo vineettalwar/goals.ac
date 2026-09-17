@@ -14,6 +14,7 @@ export const TOOL_CHIP_LABELS: Record<string, string> = {
   upsert_action_queue: "Updated Action Queue",
   generate_draft: "Drafted piece",
   publish_live: "Live publish gated",
+  publish_cms: "Queued WordPress draft",
   suggest_ctr_title: "Suggested CTR titles",
   suggest_internal_links: "Suggested internal links",
   strategy_overview: "Loaded strategy",
@@ -45,15 +46,24 @@ export type SeoChatCard =
   | { kind: "draft_preview"; title: string; excerpt: string; contentPieceId: number }
   | { kind: "readiness"; ok: boolean; label: string; blockers: string[]; contentPieceId?: number }
   | { kind: "publish_gate"; runId: number; contentPieceId?: number | null }
-  | { kind: "nav_link"; title: string; href: string; reason: string };
+  | { kind: "nav_link"; title: string; href: string; reason: string }
+  | {
+      kind: "choice";
+      title: string;
+      prompt: string;
+      options: Array<{ id: string; label: string; send: string }>;
+    }
+  | { kind: "learn_summary"; title: string; bullets: string[] };
 
 export type SeoChatChip = { tool: string; label: string; ok?: boolean };
 
 export type ChatIntent =
   | { kind: "opportunity_scan" }
-  | { kind: "research_then_draft"; keyword: string }
+  | { kind: "research_then_draft"; keyword: string; userPrompt?: string }
   | { kind: "execute_action"; actionType: "inspect_url"; targetUrl: string; keyword?: string }
-  | { kind: "publish_check"; contentPieceId?: number }
+  | { kind: "publish_check"; contentPieceId?: number; cmsStatus?: "draft" | "publish" }
+  | { kind: "approve_live" }
+  | { kind: "onboard" }
   | { kind: "chat_turn"; actionType?: string; keyword?: string; targetUrl?: string; contentPieceId?: number }
   | { kind: "show_trajectory" }
   | { kind: "memory"; field: "brandVoiceNotes" | "bannedClaims" | "lastDecisions"; text: string };
@@ -74,6 +84,7 @@ export type SeoChatStreamEvent =
         cards: SeoChatCard[];
         missing: string[];
         citations: string[];
+        projectId?: number;
       };
     }
   | { event: "error"; data: { error: string } };
@@ -107,8 +118,24 @@ export function parseChatIntent(text: string, opts?: { contentPieceId?: number }
     return { kind: "execute_action", actionType: "inspect_url", targetUrl: url, keyword: keywordFrom(raw) };
   }
 
-  if (/\b(go\s+live|publish\s+live|live\s+publish)\b/.test(lower)) {
+  if (/^(approve(d)? live publish|decision:\s*approved live publish)\.?$/i.test(raw)) {
+    return { kind: "approve_live" };
+  }
+
+  if (/\b(go\s+live|publish\s+live|live\s+publish|push wordpress live|push to wordpress live)\b/.test(lower)) {
+    return { kind: "publish_check", contentPieceId: opts?.contentPieceId, cmsStatus: "publish" };
+  }
+
+  if (/\b(push (to )?(wordpress|wp) as draft|wordpress draft|push as draft)\b/.test(lower)) {
+    return { kind: "publish_check", contentPieceId: opts?.contentPieceId, cmsStatus: "draft" };
+  }
+
+  if (/\bpush to (wordpress|wp)\b/.test(lower)) {
     return { kind: "publish_check", contentPieceId: opts?.contentPieceId };
+  }
+
+  if (/\b(onboard|new (site|project)|add (a |this )?site|set up (a |this )?site)\b/.test(lower)) {
+    return { kind: "onboard" };
   }
 
   if (/\bctr\b/.test(lower) && /\b(title|meta|rewrite|suggest)\b/.test(lower) && !/\bgaps?\b/.test(lower)) {
@@ -200,6 +227,11 @@ export function parseChatIntent(text: string, opts?: { contentPieceId?: number }
     return { kind: "research_then_draft", keyword };
   }
 
+  if (raw.length >= 280 && !url) {
+    const topic = keywordFrom(raw) ?? stripTopic(raw.slice(0, 80));
+    return { kind: "research_then_draft", keyword: topic || "untitled", userPrompt: raw };
+  }
+
   return {
     kind: "chat_turn",
     keyword: keywordFrom(raw),
@@ -244,12 +276,21 @@ export function keywordFrom(text: string): string | undefined {
 }
 
 export function goalFromIntent(intent: ChatIntent, projectId: number, text: string): AgentGoal | null {
-  if (intent.kind === "show_trajectory" || intent.kind === "memory") return null;
+  if (intent.kind === "show_trajectory" || intent.kind === "memory" || intent.kind === "onboard" || intent.kind === "approve_live") {
+    return null;
+  }
   if (intent.kind === "opportunity_scan") {
     return { kind: "opportunity_scan", text, projectId };
   }
   if (intent.kind === "research_then_draft") {
-    return { kind: "research_then_draft", text, projectId, keyword: intent.keyword };
+    return {
+      kind: "research_then_draft",
+      text,
+      projectId,
+      keyword: intent.keyword,
+      userPrompt: intent.userPrompt,
+      askBeforeDraft: true,
+    };
   }
   if (intent.kind === "execute_action") {
     return {
@@ -262,7 +303,13 @@ export function goalFromIntent(intent: ChatIntent, projectId: number, text: stri
     };
   }
   if (intent.kind === "publish_check") {
-    return { kind: "publish_check", text, projectId, contentPieceId: intent.contentPieceId };
+    return {
+      kind: "publish_check",
+      text,
+      projectId,
+      contentPieceId: intent.contentPieceId,
+      cmsStatus: intent.cmsStatus,
+    };
   }
   return {
     kind: "chat_turn",
@@ -318,9 +365,9 @@ export function composeGroundedReply(input: {
         "No connected research evidence (GSC, keywords, or competitors). I will not mark anything verified.",
     );
   } else if (input.run.status === "awaiting_approval") {
-    lines.push(
-      "Live CMS publish is gated. Approve in this thread, then push from Studio — the loop does not auto-publish.",
-    );
+    lines.push("Live WordPress publish is gated. Approve in this thread to enqueue the live CMS job.");
+  } else if (input.run.status === "awaiting_user") {
+    lines.push(input.run.stopReason ?? "Research finished. Tell me the angle, or say Draft this.");
   } else if (input.intent.kind === "opportunity_scan") {
     lines.push(
       verified

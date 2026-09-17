@@ -340,6 +340,36 @@ export function createFirstPartyTools(options?: {
     },
   };
 
+  const publishCms: AgentTool = {
+    name: "publish_cms",
+    description: "Queue CMS publish as a WordPress draft (not live).",
+    risk: "write",
+    creditCost: 3,
+    async execute(args, ctx) {
+      const contentPieceId = Number(args.contentPieceId ?? ctx.goal.contentPieceId);
+      const userId = ctx.userId;
+      if (!Number.isInteger(contentPieceId) || contentPieceId <= 0) {
+        return fail("contentPieceId required");
+      }
+      if (!userId) return fail("userId required to queue publish");
+      try {
+        const jobId = await enqueue(QUEUES.contentPublish, {
+          contentPieceId,
+          userId,
+          cmsStatus: "draft",
+        });
+        return ok("Queued WordPress draft publish", [{ source: "content-publish", verified: false }], {
+          contentPieceId,
+          queued: true,
+          jobId,
+          cmsStatus: "draft",
+        });
+      } catch (err) {
+        return fail(err instanceof Error ? err.message : "publish enqueue failed");
+      }
+    },
+  };
+
   return [
     siteContext,
     gscQuery,
@@ -353,5 +383,6 @@ export function createFirstPartyTools(options?: {
     ...createFinishActionTools(),
     ...createPlatformTools(),
     publishLive,
+    publishCms,
   ];
 }

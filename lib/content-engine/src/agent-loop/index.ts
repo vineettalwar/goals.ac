@@ -37,6 +37,7 @@ export {
   composeGroundedReply,
   runInspectorHref,
   runSeoChatTurn,
+  bootstrapOnboardThread,
   listSeoChatThreads,
   getSeoChatThread,
   createSeoChatThread,

@@ -41,6 +41,7 @@ const WRITE_ONCE = new Set([
   "suggest_ctr_title",
   "suggest_internal_links",
   "publish_live",
+  "publish_cms",
   "generate_roadmap",
   "generate_topical_map",
   "run_geo_audit",
@@ -127,7 +128,15 @@ export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecisio
         reason: "Check publish gates",
       };
     }
-    if (hasTool(tools, "publish_live") && !called(ctx, "publish_live")) {
+    if (goal.cmsStatus === "draft" && hasTool(tools, "publish_cms") && !called(ctx, "publish_cms")) {
+      return {
+        type: "call_tool",
+        tool: "publish_cms",
+        args: { projectId: goal.projectId, contentPieceId: goal.contentPieceId, cmsStatus: "draft" },
+        reason: "Push WordPress draft",
+      };
+    }
+    if (hasTool(tools, "publish_live") && !called(ctx, "publish_live") && goal.cmsStatus !== "draft") {
       return {
         type: "call_tool",
         tool: "publish_live",
@@ -263,13 +272,20 @@ export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecisio
       reason: "Load competitor analyses",
     };
   }
+  if (goal.askBeforeDraft && !called(ctx, "generate_draft")) {
+    return {
+      type: "stop",
+      reason: "await_user",
+      detail: "Research finished. Ask for the user's angle before drafting.",
+    };
+  }
   // Studio / Autopilot / Daily Five: same generator after research *attempts*.
   // Missing GSC/keywords does not skip draft; it also does not mark claims verified.
   if (hasTool(tools, "generate_draft") && !called(ctx, "generate_draft") && goal.keyword) {
     return {
       type: "call_tool",
       tool: "generate_draft",
-      args: { projectId: goal.projectId, keyword: goal.keyword },
+      args: { projectId: goal.projectId, keyword: goal.keyword, userPrompt: goal.userPrompt },
       reason: "Draft after research tools (verified evidence optional)",
     };
   }

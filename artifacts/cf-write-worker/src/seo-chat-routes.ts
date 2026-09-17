@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { withCors } from "@workspace/cf-edge/cors";
 import {
+  bootstrapOnboardThread,
   createSeoChatThread,
   getOrCreateProjectChatMemory,
   getSeoChatThread,
@@ -11,8 +12,10 @@ import {
 import { getAccessibleProject } from "./project-access";
 
 const CreateThreadBody = z.object({
-  projectId: z.number().int().positive(),
+  projectId: z.number().int().positive().optional(),
   title: z.string().trim().max(120).optional(),
+  onboard: z.boolean().optional(),
+  text: z.string().trim().max(8000).optional(),
 });
 
 const MessageBody = z.object({
@@ -61,6 +64,24 @@ export async function handleSeoChatWrite(
   if (path === "/api/seo-chat/threads" && method === "POST") {
     const parsed = CreateThreadBody.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
+      return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
+    }
+    if (parsed.data.onboard || parsed.data.text) {
+      try {
+        const started = await bootstrapOnboardThread({
+          userId,
+          text: parsed.data.text ?? parsed.data.title ?? "",
+        });
+        const packed = await getSeoChatThread(started.threadId);
+        return withCors(request, Response.json({ thread: packed?.thread, projectId: started.projectId }, { status: 201 }));
+      } catch (err) {
+        return withCors(
+          request,
+          Response.json({ error: err instanceof Error ? err.message : "Onboard failed" }, { status: 400 }),
+        );
+      }
+    }
+    if (!parsed.data.projectId) {
       return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
     }
     const project = await getAccessibleProject(parsed.data.projectId, userId);
