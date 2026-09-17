@@ -26,8 +26,8 @@
   --accent-warm-hover: #b45309;
   --accent-warm-foreground: #0a0a0b;
   --surface-dark: #0a0a0b;
-  --sidebar-bg: #f3efe6;
-  --sidebar-border: #c9c2b4;
+  --sidebar-bg: #0a0a0b;
+  --sidebar-border: #2e2c28;
   --chart-1: #d97706;
   --chart-2: #0a0a0b;
   --chart-3: #78716c;
@@ -93,18 +93,11 @@
   color-scheme: light;
 }
 
+/* Product rail is always ink. Light mode only flips the main column to newsprint. */
 .app-sidebar {
-  color: var(--foreground);
-  background-color: var(--sidebar-bg);
-}
-
-.app-sidebar .app-nav-active {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
-}
-
-.dark .app-sidebar {
   color-scheme: dark;
   color: var(--studio-chrome-fg);
+  background-color: var(--studio-chrome);
   --foreground: var(--studio-chrome-fg);
   --muted-foreground: #c9c4ba;
   --border: var(--sidebar-border);
@@ -121,23 +114,23 @@
   scrollbar-color: #3a3834 transparent;
   background-image:
     linear-gradient(180deg, rgba(217, 119, 6, 0.07) 0%, transparent 32%),
-    linear-gradient(180deg, #121110 0%, var(--sidebar-bg) 42%, #070708 100%);
+    linear-gradient(180deg, #121110 0%, var(--studio-chrome) 42%, #070708 100%);
 }
 
-.dark .app-sidebar .app-nav-active {
+.app-sidebar .app-nav-active {
   background: linear-gradient(90deg, rgba(217, 119, 6, 0.26), rgba(255, 255, 255, 0.06));
 }
 
-.dark .app-sidebar *::-webkit-scrollbar {
+.app-sidebar *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.dark .app-sidebar *::-webkit-scrollbar-track {
+.app-sidebar *::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.dark .app-sidebar *::-webkit-scrollbar-thumb {
+.app-sidebar *::-webkit-scrollbar-thumb {
   background: #3a3834;
   border-radius: 1px;
 }
