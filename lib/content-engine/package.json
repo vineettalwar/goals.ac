@@ -199,6 +199,7 @@
     "./support/social/meta-platform-credentials": "./src/support/social/meta-platform-credentials.ts",
     "./support/social/bluesky-platform-credentials": "./src/support/social/bluesky-platform-credentials.ts",
     "./support/social/social-oauth-availability": "./src/support/social/social-oauth-availability.ts",
+    "./support/social/resolve-social-oauth-configured": "./src/support/social/resolve-social-oauth-configured.ts",
     "./support/social/social-tokens": "./src/support/social/social-tokens.ts",
     "./support/integrations/google-platform-credentials": "./src/support/integrations/google-platform-credentials.ts",
     "./topical-map-generator": "./src/strategy/topical-map-generator.ts",

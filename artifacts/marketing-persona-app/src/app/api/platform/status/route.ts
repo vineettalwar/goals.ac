@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveSocialOauthConfigured } from "@workspace/content-engine/support/social/social-oauth-availability";
+import { resolveSocialOauthConfigured } from "@workspace/content-engine/support/social/resolve-social-oauth-configured";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 
 export const dynamic = "force-dynamic";

@@ -79,7 +79,7 @@ async function platformStatus(env: Env) {
   }
 
   const { resolveSocialOauthConfigured } = await import(
-    "@workspace/content-engine/support/social/social-oauth-availability"
+    "@workspace/content-engine/support/social/resolve-social-oauth-configured"
   );
   const socialOauthConfigured = await resolveSocialOauthConfigured({
     socialPublishingEnabled,
