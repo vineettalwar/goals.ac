@@ -1,9 +1,8 @@
-import type { PlatformVoices } from "@workspace/db";
-import { SOCIAL_PLATFORM_IDS } from "@workspace/db/schema";
+import { SOCIAL_PLATFORM_IDS, type PlatformVoices } from "@workspace/db/schema";
 import { hasPlatformVoice } from "../platform-voice/platform-voice-prompt";
+import { BRAND_SCRAPE_SKIPPED } from "./project-voice-status";
 
-/** User opted out of waiting for the brand scrape. */
-export const BRAND_SCRAPE_SKIPPED = "skipped";
+export { BRAND_SCRAPE_SKIPPED, scrapeStatusIsSettled } from "./project-voice-status";
 
 export type ProjectVoiceReadyInput = {
   scrapeStatus?: string | null;
@@ -33,10 +32,6 @@ export function hasBrandVoiceFields(
 export function hasAnyPlatformVoice(voices: PlatformVoices | null | undefined): boolean {
   if (!voices) return false;
   return SOCIAL_PLATFORM_IDS.some((platform) => hasPlatformVoice(voices, platform));
-}
-
-export function scrapeStatusIsSettled(status: string | null | undefined): boolean {
-  return status === "done" || status === "failed" || status === BRAND_SCRAPE_SKIPPED;
 }
 
 /**

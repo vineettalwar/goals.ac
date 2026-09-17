@@ -10,7 +10,7 @@ import {
 } from "@/lib/projects/publishing-destinations";
 import { useReleasedCmsPlatforms, useSocialOauthConfigured } from "@/lib/queries";
 import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
-import { isSocialOauthReady } from "@workspace/content-engine/support/social/social-oauth-availability";
+import { isSocialOauthReady } from "@workspace/content-engine/support/social-oauth-availability";
 import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import {
   PublishingSettingsBlueskyCard,

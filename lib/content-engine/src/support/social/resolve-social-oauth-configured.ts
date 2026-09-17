@@ -5,7 +5,7 @@ import { hasPlatformTwitterCredentials } from "./twitter-platform-credentials";
 import {
   SOCIAL_OAUTH_DISABLED,
   type SocialOauthConfigured,
-} from "./social-oauth-availability";
+} from "../social-oauth-availability";
 
 /**
  * Per-network connect readiness for project Social integrations.

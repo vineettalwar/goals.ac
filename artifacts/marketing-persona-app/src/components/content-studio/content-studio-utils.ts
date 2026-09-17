@@ -1,6 +1,6 @@
 import type { ContentFormatType } from "./content-studio-format-data";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
-import type { BriefContentDraft } from "./create-content/modal";
+import type { BriefContentDraft } from "./create-content/modal-types";
 
 export function draftFromCreateParams(searchParams: URLSearchParams): BriefContentDraft | null {
   if (searchParams.get("create") !== "1") return null;

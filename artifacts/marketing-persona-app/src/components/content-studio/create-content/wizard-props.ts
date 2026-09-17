@@ -2,7 +2,7 @@ import type { ContentFormatType } from "../content-studio-format-data";
 import type { LinkedInArchetypeId, LinkedInHookId } from "@workspace/app-shell/studio";
 import type { CmsConnectionSnapshot, PublishDestinationId } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "../content-studio-utils";
-import type { BriefContentDraft } from "./use-modal";
+import type { BriefContentDraft } from "./modal-types";
 
 export type CreateContentWizardProps = {
   selectPath: (flow: "create" | "repurpose" | "optimize") => void;

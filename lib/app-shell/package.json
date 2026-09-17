@@ -29,6 +29,8 @@
     "./nav-roles": "./src/nav-roles.ts",
     "./publish-destinations": "./src/content-piece/publish-destinations.ts",
     "./integrations": "./src/integrations/index.ts",
+    "./integrations/integration-health-alert-banner": "./src/integrations/integration-health-alert-banner.tsx",
+    "./integrations/integration-icons": "./src/integrations/integration-icons.tsx",
     "./auth": "./src/auth/index.ts",
     "./section": "./src/section/index.ts",
     "./audit": "./src/audit/index.ts",

@@ -1,4 +1,4 @@
-import { PublishBrandIcon, type PublishBrandIconId } from "@workspace/app-shell/integrations";
+import { PublishBrandIcon, type PublishBrandIconId } from "@workspace/app-shell/integrations/integration-icons";
 import type { PlatformIntegrationId } from "@/lib/platform/platform-features";
 
 export function PlatformIntegrationBrandIcon({

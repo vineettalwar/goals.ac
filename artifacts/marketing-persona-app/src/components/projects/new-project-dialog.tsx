@@ -16,7 +16,7 @@ import { QuotaUpgradePrompt } from "@/components/billing/quota-upgrade-prompt";
 import {
   BRAND_SCRAPE_SKIPPED,
   scrapeStatusIsSettled,
-} from "@workspace/content-engine/brand/project-voice-ready";
+} from "@workspace/content-engine/brand/project-voice-status";
 
 const schema = z.object({
   name: z.string().min(1, "Project name is required"),

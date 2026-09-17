@@ -6,7 +6,7 @@ import {
   briefToDraft,
   draftFromCreateParams,
 } from "@/components/content-studio/content-studio-utils";
-import type { BriefContentDraft } from "@/components/content-studio/create-content/modal";
+import type { BriefContentDraft } from "@/components/content-studio/create-content/modal-types";
 import { loadBriefForProject } from "@/lib/content/content-pieces-helpers";
 import { loadContentStudioInitialData } from "@/lib/server/load-content-studio-data";
 

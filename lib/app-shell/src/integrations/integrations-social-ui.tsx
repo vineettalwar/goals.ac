@@ -12,7 +12,7 @@ import {
   isSocialOauthReady,
   SOCIAL_OAUTH_DISABLED,
   type SocialOauthConfigured,
-} from "@workspace/content-engine/support/social/social-oauth-availability";
+} from "@workspace/content-engine/support/social-oauth-availability";
 
 export { countSocialConnections };
 export type { SocialOauthConfigured };

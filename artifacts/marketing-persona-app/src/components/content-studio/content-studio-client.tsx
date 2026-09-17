@@ -27,12 +27,12 @@ import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import { useKeywordIntelligence } from "@/lib/queries";
 import { ArticlePerformanceBadge } from "./article-performance-badge";
-import type { BriefContentDraft } from "./create-content/modal";
+import type { BriefContentDraft } from "./create-content/modal-types";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
 import { isRefreshPiece } from "./content-studio-utils";
 import { VoiceRequiredBanner, type VoiceGateStatus } from "./voice-required-banner";
-import { BRAND_SCRAPE_SKIPPED } from "@workspace/content-engine/brand/project-voice-ready";
+import { BRAND_SCRAPE_SKIPPED } from "@workspace/content-engine/brand/project-voice-status";
 
 const CreateContentModal = dynamic(
   () => import("./create-content/modal").then((m) => m.CreateContentModal),

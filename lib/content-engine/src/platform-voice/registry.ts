@@ -1,4 +1,4 @@
-import type { ContentFormatType } from "@workspace/db";
+import type { ContentFormatType } from "@workspace/db/schema";
 import {
   FORMAT_TO_SOCIAL_PLATFORM,
   SOCIAL_PLATFORM_IDS,

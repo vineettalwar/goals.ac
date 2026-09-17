@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PlatformVoices } from "@workspace/db";
+import type { PlatformVoices } from "@workspace/db/schema";
 import {
   BRAND_SCRAPE_SKIPPED,
   evaluateProjectVoiceReady,

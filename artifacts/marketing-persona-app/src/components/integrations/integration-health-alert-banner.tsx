@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { IntegrationHealthAlertBanner as IntegrationHealthAlertBannerView } from "@workspace/app-shell/integrations";
+import { IntegrationHealthAlertBanner as IntegrationHealthAlertBannerView } from "@workspace/app-shell/integrations/integration-health-alert-banner";
 import { queryKeys } from "@/lib/queries/keys";
 import { fetchIntegrationHealthAlerts } from "@/lib/queries/fetchers";
 import { useActiveProject } from "@/context/use-active-project";

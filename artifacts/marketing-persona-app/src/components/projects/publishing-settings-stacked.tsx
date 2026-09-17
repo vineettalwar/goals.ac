@@ -8,7 +8,7 @@ import type { CmsIntegrationStatus } from "./publishing-settings-cards";
 import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import type { PublishDestinationDefinition } from "@/lib/projects/publishing-destinations";
 import { useSocialOauthConfigured } from "@/lib/queries";
-import { isSocialOauthReady } from "@workspace/content-engine/support/social/social-oauth-availability";
+import { isSocialOauthReady } from "@workspace/content-engine/support/social-oauth-availability";
 import { PublishingSettingsExtraSocialCards } from "./publishing-settings-extra-social-cards";
 
 export function PublishingSettingsStackedLayout({

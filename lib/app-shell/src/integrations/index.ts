@@ -20,7 +20,7 @@ export {
   countSocialConnections,
   type SocialOauthConfigured,
 } from "./integrations-social-ui";
-export { SOCIAL_OAUTH_DISABLED } from "@workspace/content-engine/support/social/social-oauth-availability";
+export { SOCIAL_OAUTH_DISABLED } from "@workspace/content-engine/support/social-oauth-availability";
 export {
   CMS_PLATFORM_IDS,
   ESP_PLATFORM_IDS,

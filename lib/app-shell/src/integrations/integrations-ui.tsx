@@ -14,7 +14,7 @@ import {
   countSocialConnections,
   type SocialOauthConfigured,
 } from "./integrations-social-ui";
-import { SOCIAL_OAUTH_DISABLED } from "@workspace/content-engine/support/social/social-oauth-availability";
+import { SOCIAL_OAUTH_DISABLED } from "@workspace/content-engine/support/social-oauth-availability";
 import { IntegrationsEspPanel, countEspConnections } from "./integrations-esp-ui";
 import { IntegrationsCmsPanel } from "./integrations-cms-panel";
 import type { EspPlatformId } from "./publishing-destinations";
