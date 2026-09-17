@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IntegrationsDirectoryPageClient } from "@/components/marketing/pages/product/integrations-directory-page-client";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
 
 export const metadata: Metadata = {
   title: "Integrations | CMS, ESP & Social Publishing",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/integrations" },
 };
 
-export default function Page() {
-  return <IntegrationsDirectoryPageClient />;
+export default async function Page() {
+  const settings = await getPlatformSettings();
+  return <IntegrationsDirectoryPageClient releasedCmsPlatforms={settings.releasedCmsPlatforms} />;
 }

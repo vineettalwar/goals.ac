@@ -42,15 +42,17 @@ async function loadPlanQuotaLimits(): Promise<Record<PlanId, PlanQuotaLimits>> {
 }
 
 async function platformStatus(env: Env) {
-  const cacheKey = "platform:status:v2";
-  const cached = await kvGetJson<{ status: string; message?: string }>(
-    env.AI_CACHE,
-    cacheKey,
-  );
+  const cacheKey = "platform:status:v3";
+  const cached = await kvGetJson<{
+    status: string;
+    message?: string;
+    releasedCmsPlatforms?: string[];
+  }>(env.AI_CACHE, cacheKey);
   if (cached) return cached;
 
   let enabled = true;
   let maintenanceMessage: string | null = null;
+  let releasedCmsPlatforms = ["wordpress"];
   try {
     const [row] = await db()
       .select()
@@ -58,17 +60,23 @@ async function platformStatus(env: Env) {
       .where(eq(platformSettingsTable.id, 1));
     enabled = row?.platformEnabled ?? true;
     maintenanceMessage = row?.maintenanceMessage ?? null;
+    if (Array.isArray(row?.releasedCmsPlatforms) && row.releasedCmsPlatforms.length > 0) {
+      releasedCmsPlatforms = row.releasedCmsPlatforms.includes("wordpress")
+        ? row.releasedCmsPlatforms
+        : ["wordpress", ...row.releasedCmsPlatforms];
+    }
   } catch {
     // Empty or unmigrated platform_settings — treat as operational on edge.
   }
 
   const payload = enabled
-    ? { status: "operational" as const }
+    ? { status: "operational" as const, releasedCmsPlatforms }
     : {
         status: "maintenance" as const,
         message:
           maintenanceMessage ??
           "We're performing scheduled maintenance. Please check back shortly.",
+        releasedCmsPlatforms,
       };
   await kvPutJson(env.AI_CACHE, cacheKey, payload, 30);
   return payload;
@@ -80,7 +88,10 @@ export async function handleCatalogRoutes(
   env: Env,
 ): Promise<Response | null> {
   if (path === "/api/platform/status" && request.method === "GET") {
-    const body = await platformStatus(env).catch(() => ({ status: "operational" as const }));
+    const body = await platformStatus(env).catch(() => ({
+      status: "operational" as const,
+      releasedCmsPlatforms: ["wordpress"],
+    }));
     return withCors(request, Response.json(body, { headers: { "Cache-Control": "no-store" } }));
   }
 

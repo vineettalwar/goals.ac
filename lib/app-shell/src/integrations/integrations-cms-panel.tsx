@@ -1,22 +1,23 @@
 import { cn } from "../cn";
+import { isCmsConnectReady, DEFAULT_RELEASED_CMS_PLATFORMS } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 import {
   CMS_PLATFORMS,
   type CmsIntegrationRow,
 } from "./types";
 import { CmsPlatformIcon } from "./integration-icons";
 import { IntegrationTile } from "./integration-tiles";
-import { ConnectSetupSteps, WEBHOOK_SETUP_STEPS } from "./connect-setup-steps";
 
 function CmsPlatformTiles({
   integrations,
   onConnectPlatform,
+  releasedCmsPlatforms = DEFAULT_RELEASED_CMS_PLATFORMS,
 }: {
   integrations: Record<string, CmsIntegrationRow>;
   onConnectPlatform: (platform: string) => void;
+  releasedCmsPlatforms?: readonly string[];
 }) {
   const tiles = [];
   for (const platform of CMS_PLATFORMS) {
-    if (platform.key === "webhook") continue;
     const { key, label, description, tierBadge } = platform;
     const row = integrations[key];
     const connected = Boolean(row?.connected);
@@ -37,8 +38,9 @@ function CmsPlatformTiles({
         connected={connected}
         summary={summary}
         tierBadge={tierBadge}
+        comingSoon={!isCmsConnectReady(key, releasedCmsPlatforms)}
         onClick={() => {
-          if (!connected) onConnectPlatform(key);
+          if (connected || isCmsConnectReady(key, releasedCmsPlatforms)) onConnectPlatform(key);
         }}
       />,
     );
@@ -128,17 +130,18 @@ export function IntegrationsCmsPanel({
   loadError,
   saveMessage,
   saving,
-  webhookUrl,
-  webhookSecret,
-  onWebhookUrlChange,
-  onWebhookSecretChange,
-  onSaveWebhook,
+  webhookUrl: _webhookUrl,
+  webhookSecret: _webhookSecret,
+  onWebhookUrlChange: _onWebhookUrlChange,
+  onWebhookSecretChange: _onWebhookSecretChange,
+  onSaveWebhook: _onSaveWebhook,
   onDisconnect,
   onConnectPlatform,
   onTestPlatform,
   onRunHealthCheck,
   healthCheckRunning,
   healthStatuses,
+  releasedCmsPlatforms,
 }: {
   integrations: Record<string, CmsIntegrationRow>;
   integrationsLoading: boolean;
@@ -161,6 +164,7 @@ export function IntegrationsCmsPanel({
     ok: boolean | null;
     error?: string;
   }> | null;
+  releasedCmsPlatforms?: readonly string[];
 }) {
   return (
     <div className="space-y-6">
@@ -182,6 +186,7 @@ export function IntegrationsCmsPanel({
         <CmsPlatformTiles
           integrations={integrations}
           onConnectPlatform={onConnectPlatform}
+          releasedCmsPlatforms={releasedCmsPlatforms}
         />
       )}
 
@@ -212,42 +217,6 @@ export function IntegrationsCmsPanel({
         </div>
       ) : null}
 
-      <section className="paper-card max-w-lg space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Connect webhook</h2>
-        <p className="text-xs text-muted-foreground">
-          Receive publish events at your endpoint when content is pushed from goals.ac.
-        </p>
-        <ConnectSetupSteps steps={WEBHOOK_SETUP_STEPS} />
-        <div className="space-y-3">
-          <label className="block text-sm">
-            <span className="mb-1 block text-muted-foreground">Webhook URL</span>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={(event) => onWebhookUrlChange(event.target.value)}
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="https://example.com/hooks/goals-ac"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-muted-foreground">Signing secret</span>
-            <input
-              type="password"
-              value={webhookSecret}
-              onChange={(event) => onWebhookSecretChange(event.target.value)}
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-          <button
-            type="button"
-            disabled={saving || !webhookUrl.trim() || !webhookSecret.trim()}
-            onClick={onSaveWebhook}
-            className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save webhook"}
-          </button>
-        </div>
-      </section>
     </div>
   );
 }

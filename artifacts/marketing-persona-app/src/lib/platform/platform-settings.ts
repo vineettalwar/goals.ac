@@ -7,6 +7,7 @@ import {
   DEFAULT_PLATFORM_STATUS,
   type PlatformStatus,
 } from "./platform-status";
+import { normalizeReleasedCmsPlatforms } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 
 export type { PlatformStatus } from "./platform-status";
 
@@ -26,6 +27,7 @@ function rowToStatus(row: {
   bingWebmasterEnabled?: boolean | null;
   socialPublishingEnabled?: boolean | null;
   emailEnabled?: boolean | null;
+  releasedCmsPlatforms?: string[] | null;
 }): PlatformStatus {
   return {
     platformEnabled: row.platformEnabled,
@@ -39,6 +41,7 @@ function rowToStatus(row: {
     socialPublishingEnabled:
       row.socialPublishingEnabled ?? DEFAULT_STATUS.socialPublishingEnabled,
     emailEnabled: row.emailEnabled ?? DEFAULT_STATUS.emailEnabled,
+    releasedCmsPlatforms: normalizeReleasedCmsPlatforms(row.releasedCmsPlatforms),
   };
 }
 
@@ -86,6 +89,9 @@ export async function updatePlatformSettings(
     socialPublishingEnabled:
       input.socialPublishingEnabled ?? existing.socialPublishingEnabled,
     emailEnabled: input.emailEnabled ?? existing.emailEnabled,
+    releasedCmsPlatforms: normalizeReleasedCmsPlatforms(
+      input.releasedCmsPlatforms ?? existing.releasedCmsPlatforms,
+    ),
   };
 
   await db

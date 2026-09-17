@@ -32,6 +32,7 @@ export function IntegrationTile({
   className,
   pending,
   compact = false,
+  comingSoon = false,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -43,29 +44,35 @@ export function IntegrationTile({
   /** Account linked but setup incomplete (e.g. pick a property). */
   pending?: boolean;
   compact?: boolean;
+  comingSoon?: boolean;
 }) {
   const status = connected ? (pending ? "pending" : "connected") : "idle";
+  const locked = comingSoon && !connected;
   const statusLabel =
     status === "connected"
       ? "connected"
       : status === "pending"
         ? "needs setup"
-        : title.toLowerCase().includes("export")
-          ? "export only, no connection required"
-          : "not connected";
+        : locked
+          ? "coming soon"
+          : title.toLowerCase().includes("export")
+            ? "export only, no connection required"
+            : "not connected";
 
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={locked}
       aria-label={`${title}, ${statusLabel}`}
       className={cn(
         "group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card text-left transition-all",
         compact ? "px-3 py-2.5" : "px-4 py-3.5",
-        "hover:border-border hover:bg-muted/20 hover:shadow-sm",
+        !locked && "hover:border-border hover:bg-muted/20 hover:shadow-sm",
         "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         status === "connected" && "border-emerald-500/25 bg-emerald-500/3",
         status === "pending" && "border-amber-500/25 bg-amber-500/3",
+        locked && "cursor-not-allowed opacity-70",
         className,
       )}
     >
@@ -78,6 +85,11 @@ export function IntegrationTile({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{title}</span>
+          {locked ? (
+            <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          ) : null}
           <span
             className={cn(
               "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -93,7 +105,9 @@ export function IntegrationTile({
         </p>
       </div>
 
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" aria-hidden />
+      {locked ? null : (
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" aria-hidden />
+      )}
     </button>
   );
 }

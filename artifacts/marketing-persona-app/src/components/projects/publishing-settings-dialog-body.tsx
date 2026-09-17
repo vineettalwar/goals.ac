@@ -8,6 +8,8 @@ import {
   getExportDestinations,
   getSocialDestinations,
 } from "@/lib/projects/publishing-destinations";
+import { useReleasedCmsPlatforms } from "@/lib/queries";
+import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import {
   PublishingSettingsBlueskyCard,
@@ -67,7 +69,11 @@ export function PublishingSettingsDialogBody({
   onDisconnectSocial: (platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon") => void;
   onSelectMetaPage: (pageId: string) => void;
 }) {
-  const cmsDestinations = getCmsDestinations();
+  const releasedCms = useReleasedCmsPlatforms();
+  const cmsDestinations = getCmsDestinations().map((destination) => ({
+    ...destination,
+    comingSoon: !isCmsConnectReady(destination.id, releasedCms),
+  }));
   const espDestinations = getEspDestinations();
   const exportDestinations = getExportDestinations();
   const socialDestinations = getSocialDestinations();

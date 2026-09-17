@@ -8,6 +8,7 @@ export interface PlatformStatus {
   bingWebmasterEnabled: boolean;
   socialPublishingEnabled: boolean;
   emailEnabled: boolean;
+  releasedCmsPlatforms: string[];
 }
 
 export const DEFAULT_PLATFORM_STATUS: PlatformStatus = {
@@ -20,4 +21,5 @@ export const DEFAULT_PLATFORM_STATUS: PlatformStatus = {
   bingWebmasterEnabled: true,
   socialPublishingEnabled: true,
   emailEnabled: true,
+  releasedCmsPlatforms: ["wordpress"],
 };

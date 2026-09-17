@@ -134,7 +134,16 @@ export async function fetchPlatformSettings() {
     aiGenerationEnabled: boolean;
     maintenanceMessage: string | null;
     signupsEnabled: boolean;
+    releasedCmsPlatforms: string[];
   }>("/api/admin/platform-settings");
+}
+
+export async function fetchPlatformPublicStatus() {
+  return fetchJson<{
+    status: string;
+    message?: string;
+    releasedCmsPlatforms?: string[];
+  }>("/api/platform/status");
 }
 
 export async function fetchBrandProfile(projectId: string) {

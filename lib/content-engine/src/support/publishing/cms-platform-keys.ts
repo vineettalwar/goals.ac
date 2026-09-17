@@ -123,6 +123,34 @@ const BLOG_DESTINATION_PRIORITY: BlogDestinationId[] = [
   "webhook",
 ];
 
+const BLOG_DESTINATION_SET = new Set<string>(BLOG_DESTINATION_PRIORITY);
+
+export const DEFAULT_RELEASED_CMS_PLATFORMS = ["wordpress"] as const;
+
+export function normalizeReleasedCmsPlatforms(raw: unknown): string[] {
+  const keys = Array.isArray(raw)
+    ? raw.filter((key): key is string => typeof key === "string" && BLOG_DESTINATION_SET.has(key))
+    : [];
+  const released = new Set<string>(keys);
+  released.add("wordpress");
+  return [...released];
+}
+
+export function isCmsConnectReady(
+  platform: string,
+  released: readonly string[] = DEFAULT_RELEASED_CMS_PLATFORMS,
+): boolean {
+  if (!BLOG_DESTINATION_SET.has(platform)) return true;
+  return released.includes(platform);
+}
+
+export function unreadyCmsConnectKeys(
+  presentKeys: readonly string[],
+  released: readonly string[] = DEFAULT_RELEASED_CMS_PLATFORMS,
+): string[] {
+  return presentKeys.filter((key) => BLOG_DESTINATION_SET.has(key) && !isCmsConnectReady(key, released));
+}
+
 function hasBlogDestination(
   creds: CmsIntegrationCredentials,
   platform: BlogDestinationId,

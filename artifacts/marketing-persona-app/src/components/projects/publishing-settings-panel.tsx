@@ -83,6 +83,8 @@ export type IntegrationCategoryFilter = "all" | "cms" | "social" | "esp";
 import { getIntegrationDialogTitle } from "./publishing-settings-shared";
 import { PublishingSettingsGridLayout } from "./publishing-settings-grid";
 import { PublishingSettingsStackedLayout } from "./publishing-settings-stacked";
+import { useReleasedCmsPlatforms } from "@/lib/queries";
+import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 
 type IntegrationDialogId = PublishDestinationId | "meta";
 
@@ -149,7 +151,15 @@ export function PublishingSettingsPanel({
   layout?: IntegrationLayout;
   categoryFilter?: IntegrationCategoryFilter;
 }) {
-  const cmsDestinations = getCmsDestinations();
+  const releasedCms = useReleasedCmsPlatforms();
+  const cmsDestinations = useMemo(
+    () =>
+      getCmsDestinations().map((destination) => ({
+        ...destination,
+        comingSoon: !isCmsConnectReady(destination.id, releasedCms),
+      })),
+    [releasedCms],
+  );
   const espDestinations = getEspDestinations();
   const exportDestinations = getExportDestinations();
   const socialDestinations = getSocialDestinations();

@@ -63,6 +63,7 @@ export {
   WebflowConnectDialog,
   WordPressConnectDialog,
 } from "./cms-connect-dialogs";
+export { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 export {
   CMS_NATIVE_CONNECT_PLATFORMS,
   type DrupalConnectPayload,

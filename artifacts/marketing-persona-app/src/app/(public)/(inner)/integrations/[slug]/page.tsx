@@ -7,6 +7,8 @@ import {
   listIntegrationLanders,
 } from "@/lib/marketing/content/integration-landers";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
+import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 
 export function generateStaticParams() {
   return listIntegrationLanders().map((l) => ({ slug: l.slug }));
@@ -38,6 +40,9 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const lander = getIntegrationLander(slug);
   if (!lander) notFound();
+
+  const settings = await getPlatformSettings();
+  const comingSoon = !isCmsConnectReady(lander.slug, settings.releasedCmsPlatforms);
 
   const site = getSiteUrl();
   const pageUrl = `${site}${integrationLanderPath(lander.slug)}`;
@@ -95,7 +100,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <IntegrationLanderPageClient lander={lander} />
+      <IntegrationLanderPageClient lander={lander} comingSoon={comingSoon} />
     </>
   );
 }

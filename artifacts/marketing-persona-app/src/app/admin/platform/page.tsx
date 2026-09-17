@@ -5,7 +5,7 @@ export default function AdminPlatformPage() {
   return (
     <AdminSectionLayout
       title="Platform"
-      description="System-wide access, AI gates, signups, and maintenance messaging."
+      description="System-wide access, AI gates, CMS releases, signups, and maintenance messaging."
     >
       <div className="max-w-2xl rounded-xl border border-border px-6 py-2">
         <PlatformOperationsPanel />

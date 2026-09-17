@@ -2,11 +2,9 @@
 
 import { PublishBrandIcon } from "@workspace/app-shell/integrations";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  IntegrationCategorySection,
-  IntegrationIconBox,
-  IntegrationTile,
-} from "@/components/integrations/integration-tile";
+import { IntegrationCategorySection, IntegrationIconBox, IntegrationTile } from "@/components/integrations/integration-tile";
+import { useReleasedCmsPlatforms } from "@/lib/queries";
+import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 import {
   type PublishDestinationId,
   countCmsConnections,
@@ -48,6 +46,7 @@ export function PublishingSettingsGridLayout({
   onActiveDialogChange: (id: IntegrationDialogId | null) => void;
   renderDialogBody: () => React.ReactNode;
 }) {
+  const releasedCms = useReleasedCmsPlatforms();
   const cmsDestinations = getCmsDestinations();
   const espDestinations = getEspDestinations();
   const exportDestinations = getExportDestinations();
@@ -64,7 +63,9 @@ export function PublishingSettingsGridLayout({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4">
         <p className="text-sm text-muted-foreground">
-          Click an integration to connect or manage settings.
+          {categoryFilter === "cms"
+            ? "Connect a released CMS. Unreleased platforms show as coming soon."
+            : "Click an integration to connect or manage settings."}
         </p>
         {testConnectionsButton}
       </div>
@@ -80,7 +81,9 @@ export function PublishingSettingsGridLayout({
           compact={singleCategory}
         >
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {cmsDestinations.map((destination) => (
+            {cmsDestinations.map((destination) => {
+              const comingSoon = !isCmsConnectReady(destination.id, releasedCms);
+              return (
               <IntegrationTile
                 key={destination.id}
                 icon={
@@ -92,9 +95,14 @@ export function PublishingSettingsGridLayout({
                 description={destination.description}
                 connected={destination.isConnected(cmsIntegrations)}
                 summary={getConnectionSummary(destination.id, cmsIntegrations)}
-                onClick={() => onActiveDialogChange(destination.id)}
+                comingSoon={comingSoon}
+                onClick={() => {
+                  if (comingSoon && !destination.isConnected(cmsIntegrations)) return;
+                  onActiveDialogChange(destination.id);
+                }}
               />
-            ))}
+              );
+            })}
           </div>
         </IntegrationCategorySection>
       ) : null}

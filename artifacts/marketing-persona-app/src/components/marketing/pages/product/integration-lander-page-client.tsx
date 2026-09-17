@@ -22,7 +22,13 @@ import {
   type IntegrationLander,
 } from "@/lib/marketing/content/integration-landers";
 
-export function IntegrationLanderPageClient({ lander }: { lander: IntegrationLander }) {
+export function IntegrationLanderPageClient({
+  lander,
+  comingSoon = false,
+}: {
+  lander: IntegrationLander;
+  comingSoon?: boolean;
+}) {
   const related = lander.relatedSlugs
     .map((slug) => getIntegrationLander(slug))
     .filter((x): x is IntegrationLander => !!x);
@@ -45,14 +51,23 @@ export function IntegrationLanderPageClient({ lander }: { lander: IntegrationLan
                 <span className="mx-2 text-white/35" aria-hidden>
                   ·
                 </span>
-                <span className="text-white/60">{lander.depthLabel}</span>
+                <span className="text-white/60">
+                  {comingSoon ? "Coming soon" : lander.depthLabel}
+                </span>
               </p>
             </div>
           }
-          ctas={[
-            { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
-            { label: "All integrations", href: "/integrations", variant: "ghost" },
-          ]}
+          ctas={
+            comingSoon
+              ? [
+                  { label: "All integrations", href: "/integrations", variant: "primary" as const },
+                  { label: CONTACT_CTA_LABEL, href: CONTACT_HREF, variant: "ghost" as const },
+                ]
+              : [
+                  { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" as const },
+                  { label: "All integrations", href: "/integrations", variant: "ghost" as const },
+                ]
+          }
         />
       }
     >

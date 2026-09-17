@@ -247,6 +247,7 @@ export function CmsConnectionCard({
   };
 
   const handleSave = async () => {
+    if (destination.comingSoon) return;
     if (!schema || !schema.canSubmit(formValues, connectionMethod)) return;
     setIsSaving(true);
     const selectedOutputMode =
@@ -337,6 +338,42 @@ export function CmsConnectionCard({
   };
 
   if (!schema) return null;
+
+  if (destination.comingSoon && !integration) {
+    const comingSoonCopy = (
+      <p className="text-sm text-muted-foreground">
+        {destination.label} publishing is coming soon. Platform admins can release it from Admin → Platform.
+      </p>
+    );
+    if (embedded) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-base font-semibold">
+            <DestinationBadge destination={destination} />
+            {destination.label}
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </div>
+          {comingSoonCopy}
+        </div>
+      );
+    }
+    return (
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-base font-semibold">
+            <DestinationBadge destination={destination} />
+            {destination.label}
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>{comingSoonCopy}</CardContent>
+      </Card>
+    );
+  }
 
   const header = (
     <div className="flex items-start justify-between gap-4">

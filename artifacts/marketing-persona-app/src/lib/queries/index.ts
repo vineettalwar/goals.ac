@@ -22,6 +22,7 @@ import {
   fetchMetaPages,
   fetchOrgSecuritySettings,
   fetchPlatformSettings,
+  fetchPlatformPublicStatus,
   fetchProjectContent,
   fetchProjectRoadmaps,
   fetchRoadmapsCatalog,
@@ -184,6 +185,17 @@ export function usePlatformSettings() {
     queryKey: queryKeys.platformSettings,
     queryFn: fetchPlatformSettings,
   });
+}
+
+export function useReleasedCmsPlatforms() {
+  const { data } = useQuery({
+    queryKey: queryKeys.platformStatus,
+    queryFn: fetchPlatformPublicStatus,
+    staleTime: 15_000,
+  });
+  return data?.releasedCmsPlatforms?.includes("wordpress")
+    ? data.releasedCmsPlatforms
+    : ["wordpress"];
 }
 
 export function useBrandProfile(projectId: string) {

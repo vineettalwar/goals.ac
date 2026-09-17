@@ -12,6 +12,7 @@ export interface PlatformStatus {
   bingWebmasterEnabled: boolean;
   socialPublishingEnabled: boolean;
   emailEnabled: boolean;
+  releasedCmsPlatforms: string[];
 }
 
 const DEFAULT_STATUS: PlatformStatus = {
@@ -24,6 +25,7 @@ const DEFAULT_STATUS: PlatformStatus = {
   bingWebmasterEnabled: true,
   socialPublishingEnabled: true,
   emailEnabled: true,
+  releasedCmsPlatforms: ["wordpress"],
 };
 
 function rowToStatus(row: {
@@ -36,7 +38,12 @@ function rowToStatus(row: {
   bingWebmasterEnabled?: boolean | null;
   socialPublishingEnabled?: boolean | null;
   emailEnabled?: boolean | null;
+  releasedCmsPlatforms?: string[] | null;
 }): PlatformStatus {
+  const released = Array.isArray(row.releasedCmsPlatforms)
+    ? row.releasedCmsPlatforms.filter((key): key is string => typeof key === "string")
+    : [];
+  if (!released.includes("wordpress")) released.unshift("wordpress");
   return {
     platformEnabled: row.platformEnabled,
     aiGenerationEnabled: row.aiGenerationEnabled,
@@ -49,6 +56,7 @@ function rowToStatus(row: {
     socialPublishingEnabled:
       row.socialPublishingEnabled ?? DEFAULT_STATUS.socialPublishingEnabled,
     emailEnabled: row.emailEnabled ?? DEFAULT_STATUS.emailEnabled,
+    releasedCmsPlatforms: released,
   };
 }
 

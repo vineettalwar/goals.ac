@@ -24,6 +24,7 @@ import {
   getEspDestinations,
   PUBLISHING_DESTINATIONS,
 } from "@/lib/projects/publishing-destinations";
+import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 
 const CATEGORY_LABELS = {
   cms: "CMS & headless",
@@ -61,7 +62,11 @@ function groupDestinations() {
   ];
 }
 
-export function IntegrationsDirectoryPageClient() {
+export function IntegrationsDirectoryPageClient({
+  releasedCmsPlatforms,
+}: {
+  releasedCmsPlatforms: string[];
+}) {
   const groups = groupDestinations();
   const [filter, setFilter] = useState<FilterKey>("all");
   const visible = filter === "all" ? groups : groups.filter((g) => g.key === filter);
@@ -130,6 +135,8 @@ export function IntegrationsDirectoryPageClient() {
                   const landerHref = hasIntegrationLander(dest.id)
                     ? integrationLanderPath(dest.id)
                     : null;
+                  const comingSoon =
+                    dest.category === "cms" && !isCmsConnectReady(dest.id, releasedCmsPlatforms);
                   const body = (
                     <>
                       <PublishBrandIcon
@@ -139,6 +146,11 @@ export function IntegrationsDirectoryPageClient() {
                       <div>
                         <p className="font-medium text-sm text-white">
                           {dest.label}
+                          {comingSoon ? (
+                            <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-white/45">
+                              Coming soon
+                            </span>
+                          ) : null}
                           {landerHref ? (
                             <span className="ml-2 text-xs font-normal text-white/40">→</span>
                           ) : null}

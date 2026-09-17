@@ -8,7 +8,9 @@ import {
   decryptCmsCredentials,
   encryptCmsCredentials,
   maskCmsCredentials,
+  unreadyCmsConnectKeys,
 } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { getPlatformSettings } from "@workspace/platform-admin";
 import { getAccessibleProject } from "./project-access";
 
 function requireEncryptionSecret(request: Request): Response | null {
@@ -171,6 +173,22 @@ export async function handleCmsIntegrationsWrite(
         request,
         Response.json(
           { error: parsed.error.errors[0]?.message ?? "Invalid request" },
+          { status: 400 },
+        ),
+      );
+    }
+
+    const blocked = unreadyCmsConnectKeys(
+      Object.entries(parsed.data)
+        .filter(([, value]) => Boolean(value))
+        .map(([key]) => key),
+      (await getPlatformSettings()).releasedCmsPlatforms,
+    );
+    if (blocked[0]) {
+      return withCors(
+        request,
+        Response.json(
+          { error: `${blocked[0]} publishing is coming soon. Connect WordPress for now.` },
           { status: 400 },
         ),
       );

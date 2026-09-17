@@ -10,7 +10,9 @@ import {
   decryptCmsCredentials,
   encryptCmsCredentials,
   maskCmsCredentials,
+  unreadyCmsConnectKeys,
 } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import { z } from "zod";
 
 const fieldMappingSchema = z.object({
@@ -180,6 +182,19 @@ export async function PATCH(
   const parsed = CmsIntegrationsBody.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
+  }
+
+  const blocked = unreadyCmsConnectKeys(
+    Object.entries(parsed.data)
+      .filter(([, value]) => Boolean(value))
+      .map(([key]) => key),
+    (await getPlatformSettings()).releasedCmsPlatforms,
+  );
+  if (blocked[0]) {
+    return NextResponse.json(
+      { error: `${blocked[0]} publishing is coming soon. Connect WordPress for now.` },
+      { status: 400 },
+    );
   }
 
   try {

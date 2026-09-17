@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
 import { CMS_PLATFORMS } from "../integrations/types";
 import { CmsPlatformIcon, IntegrationIconBox } from "../integrations/integration-icons";
 import { projectIntegrationsPath } from "./types";
@@ -269,6 +270,7 @@ function PublishingTabPanel({
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {CMS_PLATFORMS.filter((p) => p.key !== "webhook").map((platform) => {
           const isConnected = connected.has(platform.key);
+          const comingSoon = !isCmsConnectReady(platform.key);
           return (
             <DetailLink
               key={platform.key}
@@ -281,7 +283,9 @@ function PublishingTabPanel({
               </IntegrationIconBox>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{platform.label}</p>
-                <p className="text-xs text-muted-foreground">{isConnected ? "Connected" : "Not connected"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isConnected ? "Connected" : comingSoon ? "Coming soon" : "Not connected"}
+                </p>
               </div>
             </DetailLink>
           );

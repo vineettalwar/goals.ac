@@ -15,6 +15,7 @@ export const platformSettingsTable = sqliteTable("platform_settings", {
   bingWebmasterEnabled: integer("bing_webmaster_enabled", { mode: "boolean" }).notNull().default(true),
   socialPublishingEnabled: integer("social_publishing_enabled", { mode: "boolean" }).notNull().default(true),
   emailEnabled: integer("email_enabled", { mode: "boolean" }).notNull().default(true),
+  releasedCmsPlatforms: text("released_cms_platforms", { mode: "json" }).$type<string[]>().notNull().default(["wordpress"]),
   encryptedStripeSecretKey: text("encrypted_stripe_secret_key"),
   encryptedStripeWebhookSecret: text("encrypted_stripe_webhook_secret"),
   stripePriceGrowthMonthly: text("stripe_price_growth_monthly"),

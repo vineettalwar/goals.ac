@@ -1,4 +1,4 @@
-import { pgTable, serial, boolean, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, boolean, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -15,6 +15,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   bingWebmasterEnabled: boolean("bing_webmaster_enabled").notNull().default(true),
   socialPublishingEnabled: boolean("social_publishing_enabled").notNull().default(true),
   emailEnabled: boolean("email_enabled").notNull().default(true),
+  /** CMS keys customers may connect. WordPress is always included at read time. */
+  releasedCmsPlatforms: jsonb("released_cms_platforms").$type<string[]>().notNull().default(["wordpress"]),
   encryptedStripeSecretKey: text("encrypted_stripe_secret_key"),
   encryptedStripeWebhookSecret: text("encrypted_stripe_webhook_secret"),
   stripePriceGrowthMonthly: text("stripe_price_growth_monthly"),

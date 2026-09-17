@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { queryKeys, usePlatformSettings } from "@/lib/queries";
+import { CMS_PLATFORMS } from "@workspace/app-shell/integrations";
 
 interface PlatformSettings {
   platformEnabled: boolean;
   aiGenerationEnabled: boolean;
   maintenanceMessage: string | null;
   signupsEnabled: boolean;
+  releasedCmsPlatforms?: string[];
 }
 
 type ToggleKey = keyof Pick<
@@ -97,6 +99,7 @@ export function PlatformOperationsPanel() {
       if (!res.ok) throw new Error("Save failed");
       const data = (await res.json()) as PlatformSettings;
       queryClient.setQueryData(queryKeys.platformSettings, data);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.platformStatus });
     } catch {
       setError("Failed to save settings");
     } finally {
@@ -148,6 +151,39 @@ export function PlatformOperationsPanel() {
         disabled={saving}
         onCheckedChange={(checked) => toggle("signupsEnabled", checked)}
       />
+
+      <div className="space-y-3 py-4">
+        <div>
+          <p className="text-sm font-medium">CMS publishing</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Release a CMS so customers can connect it in product and it shows as live on the
+            marketing integrations pages. WordPress stays on.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {CMS_PLATFORMS.map((platform) => {
+            const released = new Set(settings.releasedCmsPlatforms ?? ["wordpress"]);
+            const lockedOn = platform.key === "wordpress";
+            return (
+              <ToggleRow
+                key={platform.key}
+                id={`cms-release-${platform.key}`}
+                label={platform.label}
+                description={lockedOn ? "Always available" : released.has(platform.key) ? "Live" : "Coming soon"}
+                checked={released.has(platform.key)}
+                disabled={saving || lockedOn}
+                onCheckedChange={(checked) => {
+                  const next = new Set(released);
+                  if (checked) next.add(platform.key);
+                  else next.delete(platform.key);
+                  next.add("wordpress");
+                  void save({ releasedCmsPlatforms: [...next] });
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
 
       <div className="space-y-3 py-4 pb-0">
         <div>

@@ -56,6 +56,7 @@ export interface PublishDestinationDefinition {
   oauthPath?: string;
   hideSettingsCard?: boolean;
   exportOnly?: boolean;
+  comingSoon?: boolean;
 }
 
 export type CmsSummary = Record<

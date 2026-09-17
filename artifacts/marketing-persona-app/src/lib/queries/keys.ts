@@ -22,6 +22,7 @@ export const queryKeys = {
   orgSecurity: ["org-security"] as const,
   adminOrganizations: ["admin-organizations"] as const,
   platformSettings: ["platform-settings"] as const,
+  platformStatus: ["platform-status"] as const,
   brandProfile: (projectId: string | number) => ["brand-profile", String(projectId)] as const,
   articlePerformance: (projectId: string | number, startDate: string, endDate: string) =>
     ["article-performance", String(projectId), startDate, endDate] as const,

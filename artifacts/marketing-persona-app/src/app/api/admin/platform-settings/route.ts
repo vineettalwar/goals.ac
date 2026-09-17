@@ -15,6 +15,7 @@ const updateSchema = z.object({
   bingWebmasterEnabled: z.boolean().optional(),
   socialPublishingEnabled: z.boolean().optional(),
   emailEnabled: z.boolean().optional(),
+  releasedCmsPlatforms: z.array(z.string()).optional(),
 });
 
 export async function GET() {

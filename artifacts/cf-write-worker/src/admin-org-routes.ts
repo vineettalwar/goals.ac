@@ -87,6 +87,7 @@ async function updatePlatformSettings(
     bingWebmasterEnabled: boolean;
     socialPublishingEnabled: boolean;
     emailEnabled: boolean;
+    releasedCmsPlatforms: string[];
   }> & { updatedBy: number },
 ) {
   const existing = await getPlatformSettings();
@@ -104,6 +105,7 @@ async function updatePlatformSettings(
     bingWebmasterEnabled: input.bingWebmasterEnabled ?? existing.bingWebmasterEnabled,
     socialPublishingEnabled: input.socialPublishingEnabled ?? existing.socialPublishingEnabled,
     emailEnabled: input.emailEnabled ?? existing.emailEnabled,
+    releasedCmsPlatforms: input.releasedCmsPlatforms ?? existing.releasedCmsPlatforms,
   };
   await upsertPlatformSettingsPatch({ ...next, updatedBy: input.updatedBy });
   return next;
@@ -196,6 +198,7 @@ const platformSettingsUpdateSchema = z.object({
   bingWebmasterEnabled: z.boolean().optional(),
   socialPublishingEnabled: z.boolean().optional(),
   emailEnabled: z.boolean().optional(),
+  releasedCmsPlatforms: z.array(z.string()).optional(),
 });
 
 const createOrgBodySchema = z

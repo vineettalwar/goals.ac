@@ -2,6 +2,13 @@ import { db } from "./db";
 import { platformSettingsTable } from "@workspace/db/schema-sqlite";
 import { getPlatformSettings, type PlatformStatus } from "./platform-settings";
 
+function releasedCms(next: unknown, fallback: string[]): string[] {
+  const keys = Array.isArray(next)
+    ? next.filter((key): key is string => typeof key === "string")
+    : fallback;
+  return keys.includes("wordpress") ? keys : ["wordpress", ...keys];
+}
+
 export async function updatePlatformSettings(
   input: Partial<PlatformStatus> & { updatedBy: number },
 ): Promise<PlatformStatus> {
@@ -20,6 +27,7 @@ export async function updatePlatformSettings(
     bingWebmasterEnabled: input.bingWebmasterEnabled ?? existing.bingWebmasterEnabled,
     socialPublishingEnabled: input.socialPublishingEnabled ?? existing.socialPublishingEnabled,
     emailEnabled: input.emailEnabled ?? existing.emailEnabled,
+    releasedCmsPlatforms: releasedCms(input.releasedCmsPlatforms, existing.releasedCmsPlatforms),
   };
 
   await db

@@ -9,11 +9,13 @@ export async function GET() {
   // Short private cache: middleware + clients may hit this often; admin toggle
   // updates are rare and already TTL-bounded in getPlatformSettings.
   const cacheHeaders = { "Cache-Control": "private, max-age=15" };
+  const releasedCmsPlatforms = settings.releasedCmsPlatforms;
 
   if (settings.platformEnabled) {
-    return NextResponse.json({ status: "operational" as const }, {
-      headers: cacheHeaders,
-    });
+    return NextResponse.json(
+      { status: "operational" as const, releasedCmsPlatforms },
+      { headers: cacheHeaders },
+    );
   }
 
   return NextResponse.json(
@@ -22,6 +24,7 @@ export async function GET() {
       message:
         settings.maintenanceMessage ??
         "We're performing scheduled maintenance. Please check back shortly.",
+      releasedCmsPlatforms,
     },
     { headers: cacheHeaders },
   );
