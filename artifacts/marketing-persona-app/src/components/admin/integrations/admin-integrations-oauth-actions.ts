@@ -19,6 +19,7 @@ export function useAdminIntegrationsOauthActions(deps: {
   const [savingMeta, setSavingMeta] = useState(false);
   const [savingBluesky, setSavingBluesky] = useState(false);
   const [savingBing, setSavingBing] = useState(false);
+  const [savingGoogle, setSavingGoogle] = useState(false);
   const [savingDataforseo, setSavingDataforseo] = useState(false);
   const [savingBedrock, setSavingBedrock] = useState(false);
   const [testingBedrock, setTestingBedrock] = useState(false);
@@ -236,6 +237,49 @@ export function useAdminIntegrationsOauthActions(deps: {
     }
   }
 
+  async function saveGoogle() {
+    const payload: Record<string, string> = {};
+    if (form.googleClientId.trim()) payload.clientId = form.googleClientId.trim();
+    if (form.googleClientSecret.trim()) payload.clientSecret = form.googleClientSecret.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a Client ID or Client Secret to save");
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.google.clientId.configured && status.google.clientSecret.configured;
+    if (!alreadyConfigured && (!payload.clientId || !payload.clientSecret)) {
+      toast.error("Enter both Client ID and Client Secret for the first save");
+      return;
+    }
+
+    setSavingGoogle(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "google",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      form.setGoogleClientId(data.status.google.clientId.value ?? "");
+      form.setGoogleClientSecret("");
+      toast.success("Google credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Google credentials");
+    } finally {
+      setSavingGoogle(false);
+    }
+  }
+
   async function saveDataforseo() {
     const payload: Record<string, string> = {};
     if (form.dataforseoLogin.trim()) payload.login = form.dataforseoLogin.trim();
@@ -366,6 +410,7 @@ export function useAdminIntegrationsOauthActions(deps: {
     saveMeta,
     saveBluesky,
     saveBing,
+    saveGoogle,
     saveDataforseo,
     saveBedrock,
     testBedrock,
@@ -375,6 +420,7 @@ export function useAdminIntegrationsOauthActions(deps: {
     savingMeta,
     savingBluesky,
     savingBing,
+    savingGoogle,
     savingDataforseo,
     savingBedrock,
     testingBedrock,

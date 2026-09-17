@@ -203,6 +203,7 @@ export function useAdminIntegrationsCredentialActions(deps: {
       | "meta"
       | "bluesky"
       | "bing"
+      | "google"
       | "bedrock",
   ) {
     try {
@@ -235,11 +236,11 @@ export function useAdminIntegrationsCredentialActions(deps: {
       } else if (integration === "bing") {
         form.setBingClientId("");
         form.setBingClientSecret("");
+      } else if (integration === "google") {
+        form.setGoogleClientId("");
+        form.setGoogleClientSecret("");
       } else if (integration === "bedrock") {
-        form.setBedrockAccessKeyId("");
-        form.setBedrockSecretAccessKey("");
-        form.setBedrockSessionToken("");
-        form.setBedrockRegion("");
+        form.setBedrockApiKey("");
         form.setBedrockModel("");
       }
       setNotice({ type: "success", message: "Stored credentials removed" });

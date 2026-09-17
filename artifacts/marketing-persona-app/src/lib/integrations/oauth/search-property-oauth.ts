@@ -19,6 +19,7 @@ import {
 } from "../search/search-property-client";
 import { assertBingWebmasterEnabled, assertGoogleIntegrationsEnabled } from "../../platform/platform-settings";
 import { resolveBingWebmasterOAuthCredentials } from "../../platform/bing-webmaster-credentials";
+import { resolveGoogleOAuthCredentials } from "../../platform/google-oauth-credentials";
 import { resolveSameOriginReturnUrl } from "@workspace/cf-edge/oauth-return-url";
 
 type OAuthState = SignedOAuthPayload & {
@@ -133,9 +134,8 @@ export async function startGoogleSearchConsoleOAuth(
   returnUrl?: string,
 ): Promise<NextResponse> {
   await assertGoogleIntegrationsEnabled();
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
+  const google = await resolveGoogleOAuthCredentials();
+  if (!google) {
     throw new Error("Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)");
   }
 
@@ -146,7 +146,7 @@ export async function startGoogleSearchConsoleOAuth(
     returnUrl: resolveSearchOAuthReturnUrl(projectId, returnUrl),
   });
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: google.clientId,
     redirect_uri: redirectUri("google_search_console"),
     response_type: "code",
     scope: "https://www.googleapis.com/auth/webmasters.readonly",
@@ -179,7 +179,8 @@ export async function startBingWebmasterOAuth(
     client_id: bing.clientId,
     redirect_uri: redirectUri("bing_webmaster"),
     response_type: "code",
-    scope: "webmaster.read",
+    // Microsoft's authorize example uses webmaster.manage.
+    scope: "webmaster.manage",
     state,
   });
 
@@ -232,7 +233,15 @@ export async function handleSearchPropertyCallback(
     }
 
     const tokens = await exchangeBingCode(code);
-    const properties = await listPropertiesForProvider(provider, tokens.accessToken);
+    // Persist tokens even when GetUserSites fails — otherwise Connect looks
+    // "broken" (back to Not connected with no row saved).
+    let properties: string[] = [];
+    let listFailed = false;
+    try {
+      properties = await listPropertiesForProvider(provider, tokens.accessToken);
+    } catch {
+      listFailed = true;
+    }
     const matched = pickSearchProperty(project.url, properties);
     await upsertConnection({
       projectId: project.id,
@@ -242,13 +251,12 @@ export async function handleSearchPropertyCallback(
       tokens,
       propertyVerified: Boolean(matched),
     });
-    return redirectToProject(
-      project.id,
-      {
-        [param]: callbackStatus(properties, matched),
-      },
-      decoded.returnUrl,
-    );
+    const status = matched
+      ? "connected"
+      : listFailed || properties.length > 0
+        ? "pick_property"
+        : "no_properties";
+    return redirectToProject(project.id, { [param]: status }, decoded.returnUrl);
   } catch {
     return redirectToProject(project.id, { [param]: "error" }, decoded.returnUrl);
   }

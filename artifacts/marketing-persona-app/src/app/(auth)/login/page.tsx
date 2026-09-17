@@ -1,4 +1,4 @@
-import { hasGoogleCredentials } from "@/lib/platform/platform-features";
+import { hasPlatformGoogleCredentials } from "@/lib/platform/google-oauth-credentials";
 import { resolvePostLoginRedirect } from "@/lib/projects/roadmap-intent";
 import { LoginPageClient } from "./login-client";
 
@@ -12,7 +12,7 @@ export default async function LoginPage({
   return (
     <LoginPageClient
       postLoginRedirect={postLoginRedirect}
-      googleSignInEnabled={hasGoogleCredentials()}
+      googleSignInEnabled={await hasPlatformGoogleCredentials()}
     />
   );
 }

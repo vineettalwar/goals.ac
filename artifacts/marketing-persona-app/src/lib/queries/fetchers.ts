@@ -143,6 +143,7 @@ export async function fetchPlatformPublicStatus() {
     status: string;
     message?: string;
     releasedCmsPlatforms?: string[];
+    socialOauthConfigured?: import("@workspace/content-engine/support/social/social-oauth-availability").SocialOauthConfigured;
   }>("/api/platform/status");
 }
 

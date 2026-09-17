@@ -14,6 +14,7 @@ import {
   requireProjectAccess,
 } from "@/lib/org/org-access";
 import { assertGoogleIntegrationsEnabled } from "@/lib/platform/platform-settings";
+import { resolveGoogleOAuthCredentials } from "@/lib/platform/google-oauth-credentials";
 
 type OAuthState = {
   projectId: number;
@@ -43,15 +44,14 @@ export async function startGoogleSheetsOAuth(
   userId: number,
 ): Promise<NextResponse> {
   await assertGoogleIntegrationsEnabled();
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
+  const google = await resolveGoogleOAuthCredentials();
+  if (!google) {
     throw new Error("Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)");
   }
 
   const state = encodeState({ projectId, sourceId, userId });
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: google.clientId,
     redirect_uri: googleSheetsRedirectUri(),
     response_type: "code",
     scope: "https://www.googleapis.com/auth/spreadsheets.readonly",

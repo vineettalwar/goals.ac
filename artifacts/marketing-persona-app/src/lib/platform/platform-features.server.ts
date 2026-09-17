@@ -7,9 +7,9 @@ import { hasPlatformBlueskyCredentials } from "@workspace/content-engine/support
 import type { PlatformStatus } from "./platform-status";
 import type { IntegrationEnvStatus } from "./platform-features";
 import { hasPlatformBingWebmasterCredentials } from "@/lib/platform/bing-webmaster-credentials";
+import { hasPlatformGoogleCredentials } from "@/lib/platform/google-oauth-credentials";
 import { hasPlatformDataForSeoCredentials } from "@/lib/platform/dataforseo-credentials";
 import {
-  hasGoogleCredentials,
   hasPexelsCredentials,
   hasResendCredentials,
   hasStripeCredentials,
@@ -44,16 +44,17 @@ export async function hasSocialCredentials(): Promise<boolean> {
 }
 
 export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
-  const [linkedin, twitter, meta, bluesky, bing, dataforseo] = await Promise.all([
+  const [linkedin, twitter, meta, bluesky, bing, dataforseo, google] = await Promise.all([
     hasLinkedInCredentials(),
     hasTwitterCredentials(),
     hasMetaCredentials(),
     hasBlueskyCredentials(),
     hasPlatformBingWebmasterCredentials(),
     hasPlatformDataForSeoCredentials(),
+    hasPlatformGoogleCredentials(),
   ]);
   return {
-    google: hasGoogleCredentials(),
+    google,
     bing,
     dataforseo,
     social: linkedin || twitter || meta || bluesky,
@@ -66,6 +67,10 @@ export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
     unsplash: hasUnsplashCredentials(),
     pexels: hasPexelsCredentials(),
   };
+}
+
+export async function googleIntegrationsAvailable(settings: PlatformStatus): Promise<boolean> {
+  return settings.googleIntegrationsEnabled && (await hasPlatformGoogleCredentials());
 }
 
 export async function bingWebmasterAvailable(settings: PlatformStatus): Promise<boolean> {

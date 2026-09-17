@@ -75,6 +75,17 @@ export {
 } from "./bing-webmaster-credentials";
 
 export {
+  type GoogleOAuthCredentials,
+  type GoogleTokenEnv,
+  type SaveGoogleOAuthCredentialsInput,
+  resolveGoogleOAuthCredentials,
+  hasGoogleOAuthCredentials,
+  googleEnvBindings,
+  saveGoogleOAuthCredentials,
+  clearStoredGoogleOAuthCredentials,
+} from "./google-oauth-credentials";
+
+export {
   type DataForSeoCredentials,
   type SaveDataForSeoCredentialsInput,
   resolveDataForSeoCredentials,

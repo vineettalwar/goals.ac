@@ -8,8 +8,14 @@ import {
 } from "./publishing-destinations";
 import { IntegrationIconBox, SocialDestinationIcon } from "./integration-icons";
 import { ConnectSetupSteps, getSocialSetupSteps } from "./connect-setup-steps";
+import {
+  isSocialOauthReady,
+  SOCIAL_OAUTH_DISABLED,
+  type SocialOauthConfigured,
+} from "@workspace/content-engine/support/social/social-oauth-availability";
 
 export { countSocialConnections };
+export type { SocialOauthConfigured };
 
 type MetaPageOption = {
   pageId: string;
@@ -182,6 +188,7 @@ export function IntegrationsSocialPanel({
   metaPageToken,
   onMetaPageConnected,
   oauthNotice,
+  oauthConfigured = SOCIAL_OAUTH_DISABLED,
 }: {
   projectId: string;
   integrations: Record<string, CmsIntegrationRow>;
@@ -195,6 +202,8 @@ export function IntegrationsSocialPanel({
   metaPageToken?: string | null;
   onMetaPageConnected?: () => void;
   oauthNotice?: string | null;
+  /** Platform OAuth app readiness from `/api/platform/status`. */
+  oauthConfigured?: SocialOauthConfigured;
 }) {
   const [blueskyHandle, setBlueskyHandle] = useState("");
   const [mastodonInstance, setMastodonInstance] = useState("");
@@ -241,6 +250,7 @@ export function IntegrationsSocialPanel({
         {destinations.map((destination) => {
           const row = integrations[destination.integrationKey];
           const connected = destination.isConnected(integrations);
+          const comingSoon = !connected && !isSocialOauthReady(destination.id, oauthConfigured);
           const accountSummary = destination.connectionSummary(integrations);
           const healthOk = row?.lastHealthOk;
           const summary = connected
@@ -253,13 +263,16 @@ export function IntegrationsSocialPanel({
                   ? `${accountSummary} · Failing`
                   : "Connected · Failing"
                 : (accountSummary ?? "Connected")
-            : null;
-          const connectHref = connected
-            ? null
-            : buildConnectHref(resolvedApiBase, projectId, destination, {
-                handle: blueskyHandle,
-                instance: mastodonInstance,
-              });
+            : comingSoon
+              ? "Coming soon"
+              : null;
+          const connectHref =
+            connected || comingSoon
+              ? null
+              : buildConnectHref(resolvedApiBase, projectId, destination, {
+                  handle: blueskyHandle,
+                  instance: mastodonInstance,
+                });
 
           return (
             <div
@@ -267,6 +280,7 @@ export function IntegrationsSocialPanel({
               className={cn(
                 "paper-card flex flex-col gap-3 p-4 transition-colors",
                 connected && "border-emerald-500/25 bg-emerald-500/3",
+                comingSoon && "opacity-70",
               )}
             >
               <div className="flex items-start gap-3">
@@ -276,17 +290,23 @@ export function IntegrationsSocialPanel({
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-semibold">{destination.label}</p>
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 shrink-0 rounded-full",
-                        connected
-                          ? healthOk === false
-                            ? "bg-red-500"
-                            : "bg-emerald-500"
-                          : "bg-muted-foreground/25",
-                      )}
-                      aria-hidden
-                    />
+                    {comingSoon ? (
+                      <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Coming soon
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 shrink-0 rounded-full",
+                          connected
+                            ? healthOk === false
+                              ? "bg-red-500"
+                              : "bg-emerald-500"
+                            : "bg-muted-foreground/25",
+                        )}
+                        aria-hidden
+                      />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {summary ?? destination.description}
@@ -311,14 +331,22 @@ export function IntegrationsSocialPanel({
                       : healthOk === false
                         ? "Failing"
                         : "Connected"
-                    : "Not connected"}
+                    : comingSoon
+                      ? "Coming soon"
+                      : "Not connected"}
                 </span>
 
-                {!connected ? (
+                {comingSoon ? (
+                  <p className="text-xs text-muted-foreground">
+                    Platform OAuth is not configured yet.
+                  </p>
+                ) : null}
+
+                {!connected && !comingSoon ? (
                   <ConnectSetupSteps steps={getSocialSetupSteps(destination.id)} />
                 ) : null}
 
-                {!connected && destination.oauthHandleParam ? (
+                {!connected && !comingSoon && destination.oauthHandleParam ? (
                   <label className="block text-xs">
                     <span className="mb-1 block text-muted-foreground">Bluesky handle</span>
                     <input
@@ -331,7 +359,7 @@ export function IntegrationsSocialPanel({
                   </label>
                 ) : null}
 
-                {!connected && destination.oauthInstanceParam ? (
+                {!connected && !comingSoon && destination.oauthInstanceParam ? (
                   <label className="block text-xs">
                     <span className="mb-1 block text-muted-foreground">Mastodon instance</span>
                     <input
@@ -355,6 +383,7 @@ export function IntegrationsSocialPanel({
                   ) : null}
 
                   {!connected &&
+                  !comingSoon &&
                   !connectHref &&
                   (destination.oauthHandleParam || destination.oauthInstanceParam) ? (
                     <span className="text-xs text-muted-foreground">

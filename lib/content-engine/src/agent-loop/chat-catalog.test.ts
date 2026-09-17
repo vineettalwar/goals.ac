@@ -16,5 +16,6 @@ describe("chatCapabilityPrompts", () => {
     expect(list.some((prompt) => /GEO/i.test(prompt))).toBe(true);
     expect(list.some((prompt) => /LinkedIn/i.test(prompt))).toBe(true);
     expect(chatCapabilityPromptList("blog_wordpress").some((prompt) => /LinkedIn/i.test(prompt))).toBe(false);
+    expect(list.some((prompt) => /\[keyword\]|\[url\]/.test(prompt))).toBe(false);
   });
 });

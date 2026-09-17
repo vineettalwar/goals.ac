@@ -18,7 +18,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getAccessibleProject } from "./project-access";
-import { bingEnvBindings } from "@workspace/platform-admin";
+import { bingEnvBindings, googleEnvBindings } from "@workspace/platform-admin";
 
 const selectPropertyBody = z.object({
   provider: z.enum(["google_search_console", "bing_webmaster"]),
@@ -111,7 +111,11 @@ export async function handleSearchPropertiesWrite(
 
     try {
       let tokens = parseStoredTokens(connection.encryptedTokens);
-      const resolved = await resolveAccessToken(provider, tokens, await bingEnvBindings(env));
+      const resolved = await resolveAccessToken(
+        provider,
+        tokens,
+        await googleEnvBindings(await bingEnvBindings(env)),
+      );
       tokens = resolved.tokens;
 
       if (resolved.refreshed) {

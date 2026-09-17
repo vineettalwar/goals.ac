@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  BING_GET_USER_SITES_URL,
+  BING_OAUTH_AUTHORIZE_URL,
+  BING_OAUTH_TOKEN_URL,
   formatPropertyLabel,
   pickSearchProperty,
   propertyMatchesProject,
 } from "./search-property-client";
+
+describe("Bing OAuth endpoints", () => {
+  it("uses www.bing.com for OAuth Bearer GetUserSites (not the API-key ssl host)", () => {
+    expect(BING_OAUTH_AUTHORIZE_URL).toContain("www.bing.com/webmasters/oauth/authorize");
+    expect(BING_OAUTH_TOKEN_URL).toContain("www.bing.com/webmasters/oauth/token");
+    expect(BING_GET_USER_SITES_URL).toBe(
+      "https://www.bing.com/webmaster/api.svc/json/GetUserSites",
+    );
+    expect(BING_GET_USER_SITES_URL).not.toContain("ssl.bing.com");
+  });
+});
 
 describe("propertyMatchesProject", () => {
   it("matches a domain property to www and apex project URLs", () => {

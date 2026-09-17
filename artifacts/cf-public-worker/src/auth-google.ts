@@ -1,3 +1,4 @@
+import { resolveGoogleOAuthCredentials } from "@workspace/platform-admin";
 import { eq } from "drizzle-orm";
 import type { GoalsD1Database } from "@workspace/db/d1";
 import { usersTable } from "@workspace/db/schema-sqlite";
@@ -9,7 +10,7 @@ import {
 
 /**
  * Google OAuth sign-in for goals-app-ui (session JWT cookie).
- * Worker secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_SECRET.
+ * Google client: Worker secrets overlay, else platform-admin encrypted credentials. AUTH_SECRET still required.
  */
 
 const PROD_API_ORIGIN = "https://api.goals.ac";
@@ -206,8 +207,9 @@ export async function handleGoogleAuthStart(
   env: GoogleAuthEnv,
 ): Promise<Response> {
   const url = new URL(request.url);
-  const clientId = env.GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
+  const google = await resolveGoogleOAuthCredentials(env);
+  const clientId = google?.clientId;
+  const clientSecret = google?.clientSecret;
   const configured = Boolean(clientId && clientSecret && requireSecret(env));
 
   // Login UI probes this before enabling the Google button.
@@ -257,8 +259,9 @@ export async function handleGoogleAuthCallback(
   const stateParam = url.searchParams.get("state");
 
   const secret = requireSecret(env);
-  const clientId = env.GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
+  const google = await resolveGoogleOAuthCredentials(env);
+  const clientId = google?.clientId;
+  const clientSecret = google?.clientSecret;
 
   const fallbackReturn = defaultSuccessUrl(env, request);
 

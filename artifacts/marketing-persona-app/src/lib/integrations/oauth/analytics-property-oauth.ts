@@ -21,6 +21,7 @@ import {
   type StoredTokens,
 } from "../analytics/analytics-property-client";
 import { assertGoogleIntegrationsEnabled } from "../../platform/platform-settings";
+import { resolveGoogleOAuthCredentials } from "../../platform/google-oauth-credentials";
 
 type OAuthState = SignedOAuthPayload & {
   provider: AnalyticsPropertyProvider;
@@ -110,15 +111,14 @@ export async function startGoogleAnalyticsOAuth(
   userId: number,
 ): Promise<NextResponse> {
   await assertGoogleIntegrationsEnabled();
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
+  const google = await resolveGoogleOAuthCredentials();
+  if (!google) {
     throw new Error("Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)");
   }
 
   const state = encodeState({ projectId, userId, provider: "google_analytics_4" });
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: google.clientId,
     redirect_uri: googleAnalyticsRedirectUri(),
     response_type: "code",
     scope: "https://www.googleapis.com/auth/analytics.readonly",

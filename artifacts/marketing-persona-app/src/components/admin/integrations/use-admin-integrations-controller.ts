@@ -77,6 +77,7 @@ export function useAdminIntegrationsController() {
       form.setMetaAppId(statusData.meta.appId.value ?? "");
       form.setBlueskyClientName(statusData.bluesky.clientName.value ?? "");
       form.setBingClientId(statusData.bing.clientId.value ?? "");
+      form.setGoogleClientId(statusData.google.clientId.value ?? "");
       form.setBedrockGrantedOrgIds(
         new Set(statusData.bedrock.grantedOrganizations.map((org) => org.id)),
       );
@@ -180,6 +181,7 @@ export function useAdminIntegrationsController() {
     saveMeta: oauth.saveMeta,
     saveBluesky: oauth.saveBluesky,
     saveBing: oauth.saveBing,
+    saveGoogle: oauth.saveGoogle,
     saveDataforseo: oauth.saveDataforseo,
     saveBedrock: oauth.saveBedrock,
     testBedrock: oauth.testBedrock,
@@ -196,6 +198,7 @@ export function useAdminIntegrationsController() {
     savingMeta: oauth.savingMeta,
     savingBluesky: oauth.savingBluesky,
     savingBing: oauth.savingBing,
+    savingGoogle: oauth.savingGoogle,
     savingDataforseo: oauth.savingDataforseo,
     savingBedrock: oauth.savingBedrock,
     testingBedrock: oauth.testingBedrock,
@@ -238,6 +241,10 @@ export function useAdminIntegrationsController() {
     setBingClientId: form.setBingClientId,
     bingClientSecret: form.bingClientSecret,
     setBingClientSecret: form.setBingClientSecret,
+    googleClientId: form.googleClientId,
+    setGoogleClientId: form.setGoogleClientId,
+    googleClientSecret: form.googleClientSecret,
+    setGoogleClientSecret: form.setGoogleClientSecret,
     dataforseoLogin: form.dataforseoLogin,
     setDataforseoLogin: form.setDataforseoLogin,
     dataforseoPassword: form.dataforseoPassword,

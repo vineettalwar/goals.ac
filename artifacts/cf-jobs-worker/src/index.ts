@@ -76,6 +76,8 @@ export interface Env {
   AI_PROVIDER?: string;
   DATAFORSEO_LOGIN?: string;
   DATAFORSEO_PASSWORD?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   DB_DIALECT?: string;
 }
 

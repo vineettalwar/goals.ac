@@ -22,6 +22,7 @@ export const BING_WEBMASTER_ENV_VARS = [
   "BING_WEBMASTER_CLIENT_ID",
   "BING_WEBMASTER_CLIENT_SECRET",
 ] as const;
+export const GOOGLE_ENV_VARS = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] as const;
 export const DATAFORSEO_ENV_VARS = ["DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD"] as const;
 
 export function isUnsplashManagedByEnv(): boolean {

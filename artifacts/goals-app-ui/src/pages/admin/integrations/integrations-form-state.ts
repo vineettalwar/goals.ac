@@ -23,10 +23,9 @@ export function useAdminIntegrationsFormState() {
   const [blueskyPrivateKeyJwk, setBlueskyPrivateKeyJwk] = useState("");
   const [bingClientId, setBingClientId] = useState("");
   const [bingClientSecret, setBingClientSecret] = useState("");
-  const [bedrockAccessKeyId, setBedrockAccessKeyId] = useState("");
-  const [bedrockSecretAccessKey, setBedrockSecretAccessKey] = useState("");
-  const [bedrockSessionToken, setBedrockSessionToken] = useState("");
-  const [bedrockRegion, setBedrockRegion] = useState("");
+  const [googleClientId, setGoogleClientId] = useState("");
+  const [googleClientSecret, setGoogleClientSecret] = useState("");
+  const [bedrockApiKey, setBedrockApiKey] = useState("");
   const [bedrockModel, setBedrockModel] = useState("");
   const [bedrockOrgSearch, setBedrockOrgSearch] = useState("");
   const [bedrockOrgOptions, setBedrockOrgOptions] = useState<Array<{ id: number; name: string }>>(
@@ -54,10 +53,10 @@ export function useAdminIntegrationsFormState() {
       setBlueskyPrivateKeyJwk("");
     } else if (dialog === "bing") {
       setBingClientSecret("");
+    } else if (dialog === "google") {
+      setGoogleClientSecret("");
     } else if (dialog === "bedrock") {
-      setBedrockAccessKeyId("");
-      setBedrockSecretAccessKey("");
-      setBedrockSessionToken("");
+      setBedrockApiKey("");
     }
   }, []);
 
@@ -100,14 +99,12 @@ export function useAdminIntegrationsFormState() {
     setBingClientId,
     bingClientSecret,
     setBingClientSecret,
-    bedrockAccessKeyId,
-    setBedrockAccessKeyId,
-    bedrockSecretAccessKey,
-    setBedrockSecretAccessKey,
-    bedrockSessionToken,
-    setBedrockSessionToken,
-    bedrockRegion,
-    setBedrockRegion,
+    googleClientId,
+    setGoogleClientId,
+    googleClientSecret,
+    setGoogleClientSecret,
+    bedrockApiKey,
+    setBedrockApiKey,
     bedrockModel,
     setBedrockModel,
     bedrockOrgSearch,

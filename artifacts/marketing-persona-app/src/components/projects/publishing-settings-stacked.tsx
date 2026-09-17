@@ -7,6 +7,8 @@ import {
 import type { CmsIntegrationStatus } from "./publishing-settings-cards";
 import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import type { PublishDestinationDefinition } from "@/lib/projects/publishing-destinations";
+import { useSocialOauthConfigured } from "@/lib/queries";
+import { isSocialOauthReady } from "@workspace/content-engine/support/social/social-oauth-availability";
 import { PublishingSettingsExtraSocialCards } from "./publishing-settings-extra-social-cards";
 
 export function PublishingSettingsStackedLayout({
@@ -62,6 +64,8 @@ export function PublishingSettingsStackedLayout({
   onDisconnectSocial: (platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon") => void;
   onSelectMetaPage: (pageId: string) => void;
 }) {
+  const socialOauth = useSocialOauthConfigured();
+
   return (
     <>
       {statusAlerts}
@@ -84,29 +88,35 @@ export function PublishingSettingsStackedLayout({
         />
       ))}
 
-      {socialDestinations.map((destination) => (
-        <SocialConnectionCard
-          key={destination.id}
-          destination={destination}
-          integration={
-            cmsIntegrations[destination.integrationKey] as Record<string, unknown> | undefined
-          }
-          health={healthStatus?.[destination.integrationKey]}
-          apiBase={apiBase}
-          projectId={projectId}
-          isDisconnecting={
-            destination.id === "linkedin"
-              ? pendingAction === "disconnecting_linkedin"
-              : pendingAction === "disconnecting_twitter"
-          }
-          onConnect={() => {
-            if (destination.oauthPath) onConnectOAuth(destination.oauthPath);
-          }}
-          onDisconnect={() => {
-            onDisconnectSocial(destination.id as "linkedin" | "twitter");
-          }}
-        />
-      ))}
+      {socialDestinations.map((destination) => {
+        const integration = cmsIntegrations[destination.integrationKey] as
+          | Record<string, unknown>
+          | undefined;
+        const comingSoon = !integration && !isSocialOauthReady(destination.id, socialOauth);
+        return (
+          <SocialConnectionCard
+            key={destination.id}
+            destination={destination}
+            integration={integration}
+            health={healthStatus?.[destination.integrationKey]}
+            apiBase={apiBase}
+            projectId={projectId}
+            comingSoon={comingSoon}
+            isDisconnecting={
+              destination.id === "linkedin"
+                ? pendingAction === "disconnecting_linkedin"
+                : pendingAction === "disconnecting_twitter"
+            }
+            onConnect={() => {
+              if (comingSoon) return;
+              if (destination.oauthPath) onConnectOAuth(destination.oauthPath);
+            }}
+            onDisconnect={() => {
+              onDisconnectSocial(destination.id as "linkedin" | "twitter");
+            }}
+          />
+        );
+      })}
 
       <PublishingSettingsExtraSocialCards
         metaIntegration={metaIntegration}
@@ -118,6 +128,11 @@ export function PublishingSettingsStackedLayout({
         metaPages={metaPages}
         blueskyHandle={blueskyHandle}
         mastodonInstance={mastodonInstance}
+        comingSoonByPlatform={{
+          meta: !metaIntegration && !isSocialOauthReady("meta", socialOauth),
+          bluesky: !blueskyIntegration && !isSocialOauthReady("bluesky", socialOauth),
+          mastodon: !mastodonIntegration && !isSocialOauthReady("mastodon", socialOauth),
+        }}
         onBlueskyHandleChange={onBlueskyHandleChange}
         onMastodonInstanceChange={onMastodonInstanceChange}
         onConnectOAuth={onConnectOAuth}

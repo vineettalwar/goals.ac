@@ -78,6 +78,9 @@ export function isIntegrationConfigured(
   if (definition.id === "bing") {
     return status.bing.clientId.configured && status.bing.clientSecret.configured;
   }
+  if (definition.id === "google") {
+    return status.google.clientId.configured && status.google.clientSecret.configured;
+  }
   if (definition.id === "bedrock") return status.bedrock.configured;
   return false;
 }
@@ -139,6 +142,7 @@ export function getIntegrationLastFour(
   if (definition.id === "meta") return status.meta.appSecret.lastFour;
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
   if (definition.id === "bing") return status.bing.clientSecret.lastFour;
+  if (definition.id === "google") return status.google.clientSecret.lastFour;
   if (definition.id === "bedrock") return status.bedrock.accessKeyId.lastFour;
   return null;
 }
@@ -156,6 +160,7 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "meta") return status.meta.managedByEnv;
   if (definition.id === "bluesky") return status.bluesky.managedByEnv;
   if (definition.id === "bing") return status.bing.managedByEnv;
+  if (definition.id === "google") return status.google.managedByEnv;
   if (definition.id === "bedrock") return status.bedrock.managedByEnv;
   if (definition.kind === "env" || definition.kind === "info") return definition.kind === "env";
   return false;

@@ -18,6 +18,7 @@ import {
   isPexelsManagedByEnv,
   isBingManagedByEnv,
   isDataForSeoManagedByEnv,
+  isGoogleManagedByEnv,
   stripeConnectOAuthAvailable,
   STRIPE_ENV_VARS,
   RESEND_ENV_VARS,
@@ -28,8 +29,8 @@ import {
   META_ENV_VARS,
   BLUESKY_ENV_VARS,
   BING_WEBMASTER_ENV_VARS,
+  GOOGLE_ENV_VARS,
   DATAFORSEO_ENV_VARS,
-  hasGoogleCredentials,
   hasUnsplashCredentials,
   hasPexelsCredentials,
   hasResendCredentials,
@@ -115,6 +116,12 @@ export type PlatformIntegrationStatus = {
     clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
     clientSecret: IntegrationFieldStatus;
   };
+  google: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
   dataforseo: {
     managedByEnv: boolean;
     envVars: string[];
@@ -183,6 +190,8 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         bingWebmasterClientId: platformSettingsTable.bingWebmasterClientId,
         encryptedBingWebmasterClientSecret:
           platformSettingsTable.encryptedBingWebmasterClientSecret,
+        googleClientId: platformSettingsTable.googleClientId,
+        encryptedGoogleClientSecret: platformSettingsTable.encryptedGoogleClientSecret,
         encryptedDataforseoLogin: platformSettingsTable.encryptedDataforseoLogin,
         encryptedDataforseoPassword: platformSettingsTable.encryptedDataforseoPassword,
       })
@@ -270,6 +279,12 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         "BING_WEBMASTER_CLIENT_SECRET",
       ),
     },
+    google: {
+      managedByEnv: isGoogleManagedByEnv(),
+      envVars: activeEnvVars(GOOGLE_ENV_VARS),
+      clientId: plainFieldStatus(row?.googleClientId, "GOOGLE_CLIENT_ID"),
+      clientSecret: fieldStatus(row?.encryptedGoogleClientSecret, "GOOGLE_CLIENT_SECRET"),
+    },
     dataforseo: {
       managedByEnv: isDataForSeoManagedByEnv(),
       envVars: activeEnvVars(DATAFORSEO_ENV_VARS),
@@ -320,7 +335,8 @@ export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
   const meta = status.meta.appId.configured && status.meta.appSecret.configured;
   const bluesky = status.bluesky.privateKeyJwk.configured;
   return {
-    google: hasGoogleCredentials(),
+    google:
+      status.google.clientId.configured && status.google.clientSecret.configured,
     bing:
       status.bing.clientId.configured && status.bing.clientSecret.configured,
     social: linkedin || twitter || meta || bluesky,

@@ -14,6 +14,12 @@ export type PlatformIntegrationId =
   | "mastodon"
   | "bedrock"
   | "gemini"
+  | "openai"
+  | "anthropic"
+  | "openrouter"
+  | "groq"
+  | "nvidia"
+  | "ollama"
   | "bing"
   | "google";
 
@@ -71,7 +77,8 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
   {
     id: "ai",
     label: "AI providers",
-    description: "Platform Gemini key and Bedrock credentials for organizations without BYOK.",
+    description:
+      "Platform AI keys (Gemini, OpenAI, Anthropic, OpenRouter, Groq, NVIDIA, Ollama) and Bedrock credentials for organizations without BYOK.",
   },
   {
     id: "search",
@@ -156,6 +163,12 @@ export type PlatformIntegrationStatus = {
     privateKeyJwk: IntegrationFieldStatus;
   };
   bing: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
+  google: {
     managedByEnv: boolean;
     envVars: string[];
     clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };

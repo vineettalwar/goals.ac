@@ -26,7 +26,7 @@ const TAB_SKELETONS: Record<PlatformIntegrationCategoryId, number> = {
   email: 1,
   media: 2,
   social: 1,
-  ai: 1,
+  ai: 8,
   search: 1,
 };
 
@@ -57,8 +57,8 @@ export function AdminIntegrationsPageClient() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Platform integrations</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Stripe, Resend, stock photos, social OAuth, Google, Bing Webmaster, and Bedrock.
-          Credentials are encrypted at rest.
+          Stripe, Resend, stock photos, social OAuth, AI providers, Google, Bing Webmaster, and
+          DataForSEO. Credentials are encrypted at rest.
         </p>
       </div>
 

@@ -21,8 +21,7 @@ import {
   resolveAccessToken,
 } from "@/lib/integrations/search/search-property-client";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
-import { googleIntegrationsAvailable } from "@/lib/platform/platform-features";
-import { bingWebmasterAvailable } from "@/lib/platform/platform-features.server";
+import { bingWebmasterAvailable, googleIntegrationsAvailable } from "@/lib/platform/platform-features.server";
 
 function serializeConnection(row: {
   provider: string;
@@ -100,7 +99,7 @@ export async function GET(
   const payload: SearchPropertyConnectionsResponse = {
     connections,
     oauthConfigured: {
-      googleSearchConsole: googleIntegrationsAvailable(settings),
+      googleSearchConsole: await googleIntegrationsAvailable(settings),
       bingWebmaster: await bingWebmasterAvailable(settings),
     },
   };

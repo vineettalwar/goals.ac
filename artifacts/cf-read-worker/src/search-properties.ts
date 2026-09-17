@@ -19,7 +19,7 @@ import {
   type SearchPropertyTokenEnv,
 } from "@workspace/cf-edge/search-property-client";
 import { getAccessibleProject, requireProjectAccess } from "./project-access";
-import { hasBingWebmasterOAuthCredentials, bingEnvBindings } from "@workspace/platform-admin";
+import { hasBingWebmasterOAuthCredentials, bingEnvBindings, googleEnvBindings, hasGoogleOAuthCredentials } from "@workspace/platform-admin";
 
 const AI_REPORT_LABELS: Record<SearchPropertyProvider, string> = {
   google_search_console: "Generative AI performance (Search Console)",
@@ -97,13 +97,6 @@ function emptyStatus(provider: SearchPropertyProvider) {
   };
 }
 
-function hasGoogleCredentials(env: {
-  GOOGLE_CLIENT_ID?: string;
-  GOOGLE_CLIENT_SECRET?: string;
-}): boolean {
-  return Boolean(env.GOOGLE_CLIENT_ID?.trim() && env.GOOGLE_CLIENT_SECRET?.trim());
-}
-
 async function oauthConfigured(env: {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -127,7 +120,7 @@ async function oauthConfigured(env: {
   }
 
   return {
-    googleSearchConsole: googleIntegrationsEnabled && hasGoogleCredentials(env),
+    googleSearchConsole: googleIntegrationsEnabled && (await hasGoogleOAuthCredentials(env)),
     bingWebmaster: bingWebmasterEnabled && (await hasBingWebmasterOAuthCredentials(env)),
   };
 }
@@ -273,7 +266,11 @@ export async function handleSearchPropertiesAvailablePost(
 
   try {
     let tokens = parseStoredTokens(connection.encryptedTokens);
-    const resolved = await resolveAccessToken(provider, tokens, await bingEnvBindings(env));
+    const resolved = await resolveAccessToken(
+      provider,
+      tokens,
+      await googleEnvBindings(await bingEnvBindings(env)),
+    );
     tokens = resolved.tokens;
 
     if (resolved.refreshed) {

@@ -6,6 +6,15 @@ import { cn } from "../cn";
 import { chatCapabilityPromptList, type ChatProductSurface } from "@workspace/content-engine/agent-loop/chat-catalog";
 import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop/seo-chat-format";
 import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
+import { StudioAiReadinessBanner } from "../studio/brand-ai-profile-card";
+import {
+  parseChatAiStatus,
+  providerPatchBody,
+  readApiError,
+  type ChatAiProviderId,
+  type ChatAiStatus,
+} from "./chat-ai-gate";
+import { ChatAiPicker } from "./chat-ai-picker";
 
 type Thread = { id: number; title: string; updatedAt?: string | Date };
 type ProjectOption = { id: number | string; name: string };
@@ -27,6 +36,7 @@ type SeoChatWorkspaceProps = {
   studioHref: (pieceId?: number) => string;
   actionsHref: string;
   surface?: ChatProductSurface;
+  aiSettingsHref?: string;
 };
 
 function runInspectorHref(actionsHref: string, runId: number): string {
@@ -54,6 +64,7 @@ export function SeoChatWorkspace({
   studioHref,
   actionsHref,
   surface = "full",
+  aiSettingsHref = "/integrations/ai",
 }: SeoChatWorkspaceProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [threadId, setThreadId] = useState<number | null>(null);
@@ -61,6 +72,8 @@ export function SeoChatWorkspace({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<ChatAiStatus | null>(null);
+  const [aiSaving, setAiSaving] = useState(false);
   const [liveChips, setLiveChips] = useState<SeoChatChip[]>([]);
   const [liveRunId, setLiveRunId] = useState<number | null>(null);
   const [openRun, setOpenRun] = useState<AgentRunView | null>(null);
@@ -71,10 +84,20 @@ export function SeoChatWorkspace({
   const loadThreads = useCallback(async () => {
     if (!projectId) return;
     const res = await request(`/api/seo-chat/threads?projectId=${projectId}`);
-    if (!res.ok) throw new Error("Could not load threads");
+    if (!res.ok) throw new Error(await readApiError(res, "Could not load threads"));
     const data = (await res.json()) as { threads?: Thread[] };
     setThreads(data.threads ?? []);
   }, [projectId, request]);
+
+  const loadAiStatus = useCallback(async () => {
+    const res = await request("/api/ai-providers/status");
+    if (!res.ok) {
+      setAiStatus(null);
+      return;
+    }
+    const data = (await res.json().catch(() => null)) as Parameters<typeof parseChatAiStatus>[0];
+    setAiStatus(parseChatAiStatus(data));
+  }, [request]);
 
   const loadThread = useCallback(
     async (id: number) => {
@@ -112,10 +135,51 @@ export function SeoChatWorkspace({
   }, [loadThreads]);
 
   useEffect(() => {
+    void loadAiStatus().catch(() => setAiStatus(null));
+  }, [loadAiStatus]);
+
+  useEffect(() => {
     const el = scroller.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: busy ? "auto" : "smooth" });
   }, [messages, liveChips, busy, openRun]);
+
+  function requireAiReady(): boolean {
+    if (aiStatus?.ready === false) {
+      setError(aiStatus.detail ?? "Configure an AI model in Integrations → AI first.");
+      return false;
+    }
+    return true;
+  }
+
+  async function saveAiProvider(provider: ChatAiProviderId, model?: string | null) {
+    if (!aiStatus) return;
+    const option = aiStatus.options.find((row) => row.id === provider);
+    setAiSaving(true);
+    setError(null);
+    try {
+      const res = await request("/api/ai-providers/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          providerPatchBody({
+            provider,
+            model: model ?? option?.model,
+            ollamaBaseUrl: aiStatus.ollamaBaseUrl,
+          }),
+        ),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not update AI provider"));
+      }
+      await loadAiStatus();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update AI provider");
+      await loadAiStatus().catch(() => undefined);
+    } finally {
+      setAiSaving(false);
+    }
+  }
 
   async function inspectRun(runId: number) {
     const gen = ++inspectGen.current;
@@ -132,6 +196,7 @@ export function SeoChatWorkspace({
 
   async function newThread() {
     if (!projectId) return;
+    if (!requireAiReady()) return;
     setError(null);
     const res = await request("/api/seo-chat/threads", {
       method: "POST",
@@ -139,7 +204,7 @@ export function SeoChatWorkspace({
       body: JSON.stringify({ projectId: Number(projectId) }),
     });
     if (!res.ok) {
-      setError("Could not start a thread");
+      setError(await readApiError(res, "Could not start a thread"));
       return;
     }
     const data = (await res.json()) as { thread: Thread };
@@ -154,6 +219,7 @@ export function SeoChatWorkspace({
     const onboard = /onboard|https?:\/\//i.test(trimmed);
     if (!trimmed || busy) return;
     if (!projectId && !onboard) return;
+    if (!requireAiReady()) return;
     const gen = ++sendGen.current;
     setBusy(true);
     setError(null);
@@ -186,7 +252,7 @@ export function SeoChatWorkspace({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ projectId: Number(activeProject), title: trimmed.slice(0, 72) }),
         });
-        if (!res.ok) throw new Error("Could not start a thread");
+        if (!res.ok) throw new Error(await readApiError(res, "Could not start a thread"));
         const data = (await res.json()) as { thread: Thread };
         activeId = data.thread.id;
         setThreadId(activeId);
@@ -199,7 +265,8 @@ export function SeoChatWorkspace({
         headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
         body: JSON.stringify({ text: trimmed }),
       });
-      if (!res.ok || !res.body) throw new Error("Chat request failed");
+      if (!res.ok) throw new Error(await readApiError(res, "Chat request failed"));
+      if (!res.body) throw new Error("Chat request failed");
 
       let assistant = "";
       let agentRunId: number | null = null;
@@ -315,10 +382,34 @@ export function SeoChatWorkspace({
 
   const empty = messages.length === 0 && !busy;
 
+  const aiGate = (
+    <div className="mb-3 w-full max-w-3xl space-y-2">
+      <StudioAiReadinessBanner
+        ready={aiStatus ? aiStatus.ready : null}
+        activeProvider={aiStatus?.activeProvider ?? "gemini"}
+        settingsHref={aiSettingsHref}
+        renderLink={({ href, className, children }) => (
+          <a href={href} className={className}>
+            {children}
+          </a>
+        )}
+      />
+      {aiStatus ? (
+        <ChatAiPicker
+          status={aiStatus}
+          saving={aiSaving}
+          aiSettingsHref={aiSettingsHref}
+          onSelectProvider={(provider) => void saveAiProvider(provider)}
+          onSaveModel={(provider, model) => void saveAiProvider(provider, model)}
+        />
+      ) : null}
+    </div>
+  );
+
   const composer = (
     <ChatComposer
       draft={draft}
-      busy={busy}
+      busy={busy || aiStatus?.ready === false}
       projectId={projectId}
       projects={projects}
       threads={threads}
@@ -339,18 +430,20 @@ export function SeoChatWorkspace({
             <h1 className="mb-7 text-center text-4xl font-normal tracking-tight text-foreground">
               Where should we start?
             </h1>
-            <div className="mb-9 flex max-w-3xl flex-wrap justify-center gap-2">
+            <div className="mb-9 flex max-w-3xl flex-wrap justify-center gap-x-5 gap-y-3">
               {chatCapabilityPromptList(surface).map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
-                  className="rounded-sm border border-border bg-secondary px-3.5 py-1.5 text-xs text-foreground hover:bg-muted"
+                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-40"
+                  disabled={aiStatus?.ready === false}
                   onClick={() => void send(prompt)}
                 >
                   {prompt}
                 </button>
               ))}
             </div>
+            {aiGate}
             <div className="w-full max-w-3xl">{composer}</div>
             {!projectId ? (
               <p className="mt-4 text-sm text-muted-foreground">Pick a site, or paste a URL to onboard.</p>
@@ -478,7 +571,10 @@ export function SeoChatWorkspace({
             </div>
             {error ? <p className="px-4 pb-2 text-center text-sm text-destructive">{error}</p> : null}
             <div className="seo-chat-composer-dock shrink-0 px-4 pb-6 pt-4">
-              <div className="mx-auto w-full max-w-3xl">{composer}</div>
+              <div className="mx-auto w-full max-w-3xl">
+                {aiGate}
+                {composer}
+              </div>
             </div>
           </>
         )}

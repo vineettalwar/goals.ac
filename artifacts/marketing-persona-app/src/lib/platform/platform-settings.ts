@@ -128,11 +128,8 @@ export async function assertPlatformEnabled(): Promise<void> {
 }
 
 export async function assertGoogleIntegrationsEnabled(): Promise<void> {
-  const [{ googleIntegrationsAvailable }, settings] = await Promise.all([
-    import("./platform-features"),
-    getPlatformSettings(),
-  ]);
-  if (!googleIntegrationsAvailable(settings)) {
+  const settings = await getPlatformSettings();
+  if (!settings.googleIntegrationsEnabled) {
     throw new Error("Google integrations are disabled on this platform.");
   }
 }

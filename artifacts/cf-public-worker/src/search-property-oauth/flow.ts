@@ -6,7 +6,7 @@ import {
 } from "@workspace/db/schema-sqlite";
 import { requireProjectAccess, getAccessibleProject } from "@workspace/cf-edge/project-access";
 import { encryptSecret } from "@workspace/security/encryption";
-import { resolveBingWebmasterOAuthCredentials } from "@workspace/platform-admin";
+import { resolveBingWebmasterOAuthCredentials, resolveGoogleOAuthCredentials } from "@workspace/platform-admin";
 import {
   BING_OAUTH_AUTHORIZE_URL,
   listPropertiesForProvider,
@@ -149,7 +149,15 @@ export async function handleSearchPropertyCallback(
     }
 
     const tokens = await exchangeBingCode(env, code, redirectUri);
-    const properties = await listPropertiesForProvider(provider, tokens.accessToken);
+    // Persist tokens even when GetUserSites fails — otherwise Connect looks
+    // "broken" (back to Not connected with no row saved).
+    let properties: string[] = [];
+    let listFailed = false;
+    try {
+      properties = await listPropertiesForProvider(provider, tokens.accessToken);
+    } catch {
+      listFailed = true;
+    }
     const matched = pickSearchProperty(project.url, properties);
     await upsertConnection(database, {
       projectId: project.id,
@@ -159,7 +167,12 @@ export async function handleSearchPropertyCallback(
       tokens,
       propertyVerified: Boolean(matched),
     });
-    return redirectToIntegrations(returnUrl, provider, callbackStatus(properties, matched));
+    const status = matched
+      ? "connected"
+      : listFailed || properties.length > 0
+        ? "pick_property"
+        : "no_properties";
+    return redirectToIntegrations(returnUrl, provider, status);
   } catch {
     return redirectToIntegrations(returnUrl, provider, "error");
   }
@@ -201,9 +214,8 @@ export async function startSearchPropertyOAuth(
 
   if (provider === "google_search_console") {
     await assertGoogleIntegrationsEnabled(database);
-    const clientId = env.GOOGLE_CLIENT_ID?.trim();
-    const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
-    if (!clientId || !clientSecret) {
+    const google = await resolveGoogleOAuthCredentials(env);
+    if (!google) {
       return Response.json(
         { error: "Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)" },
         { status: 503 },
@@ -211,7 +223,7 @@ export async function startSearchPropertyOAuth(
     }
 
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: google.clientId,
       redirect_uri: redirectUri,
       response_type: "code",
       scope: "https://www.googleapis.com/auth/webmasters.readonly",
@@ -236,7 +248,8 @@ export async function startSearchPropertyOAuth(
     client_id: bing.clientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: "webmaster.read",
+    // Match Microsoft's authorize example (webmaster.manage).
+    scope: "webmaster.manage",
     state,
   });
 

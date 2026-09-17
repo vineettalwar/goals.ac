@@ -12,7 +12,9 @@ import {
 import {
   IntegrationsSocialPanel,
   countSocialConnections,
+  type SocialOauthConfigured,
 } from "./integrations-social-ui";
+import { SOCIAL_OAUTH_DISABLED } from "@workspace/content-engine/support/social/social-oauth-availability";
 import { IntegrationsEspPanel, countEspConnections } from "./integrations-esp-ui";
 import { IntegrationsCmsPanel } from "./integrations-cms-panel";
 import type { EspPlatformId } from "./publishing-destinations";
@@ -64,6 +66,7 @@ export function IntegrationsView({
   metaPageToken,
   onMetaPageConnected,
   socialOauthNotice,
+  socialOauthConfigured = SOCIAL_OAUTH_DISABLED,
   renderLink,
 }: {
   projectId: string | null;
@@ -110,6 +113,7 @@ export function IntegrationsView({
   metaPageToken?: string | null;
   onMetaPageConnected?: () => void;
   socialOauthNotice?: string | null;
+  socialOauthConfigured?: SocialOauthConfigured;
   renderLink: (props: ProjectLinkProps) => ReactNode;
 }) {
   const cmsCount = cmsConnectedCount(integrations);
@@ -246,6 +250,7 @@ export function IntegrationsView({
               metaPageToken={metaPageToken}
               onMetaPageConnected={onMetaPageConnected}
               oauthNotice={socialOauthNotice}
+              oauthConfigured={socialOauthConfigured}
             />
           ) : null}
         </>

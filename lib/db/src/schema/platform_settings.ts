@@ -34,6 +34,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   encryptedLinkedinClientSecret: text("encrypted_linkedin_client_secret"),
   bingWebmasterClientId: text("bing_webmaster_client_id"),
   encryptedBingWebmasterClientSecret: text("encrypted_bing_webmaster_client_secret"),
+  googleClientId: text("google_client_id"),
+  encryptedGoogleClientSecret: text("encrypted_google_client_secret"),
   encryptedDataforseoLogin: text("dataforseo_login"),
   encryptedDataforseoPassword: text("encrypted_dataforseo_password"),
   twitterClientId: text("twitter_client_id"),

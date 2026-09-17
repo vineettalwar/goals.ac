@@ -9,17 +9,23 @@ const FULL_ONLY_LABELS = new Set(["GEO", "Social", "Research"]);
 
 export function chatCapabilityPrompts(
   surface: ChatProductSurface = "full",
-  keyword = "[keyword]",
-  url = "[url]",
+  keyword?: string,
+  url?: string,
 ): ChatCapabilityGroup[] {
+  const brief = keyword ? `Brief for ${keyword}` : "Write a brief";
+  const dailyFive = keyword ? `Start Daily Five for ${keyword}` : "Start Daily Five";
+  const ctrTitles = keyword ? `Suggest CTR titles for ${keyword}` : "Suggest CTR titles";
+  const relaunch = url ? `Relaunch risk for ${url}` : "Check relaunch risk";
+  const geoAudit = url ? `Run GEO audit for ${url}` : "Run GEO audit";
+
   const groups: ChatCapabilityGroup[] = [
     {
       label: "Create",
       prompts: [
-        "Onboard https://",
-        `Brief for ${keyword}`,
+        "Onboard a site",
+        brief,
         "Push to WordPress",
-        `Start Daily Five for ${keyword}`,
+        dailyFive,
         "Rescan the brand site",
       ],
     },
@@ -32,16 +38,16 @@ export function chatCapabilityPrompts(
       prompts: [
         "What's slipping?",
         "CTR gaps",
-        `Suggest CTR titles for ${keyword}`,
+        ctrTitles,
         "Check backlinks",
         "Show performance",
         "Show AI visibility",
-        `Relaunch risk for ${url}`,
+        relaunch,
       ],
     },
     {
       label: "GEO",
-      prompts: ["Show last GEO audit", `Run GEO audit for ${url}`],
+      prompts: ["Show last GEO audit", geoAudit],
     },
     {
       label: "Social",
@@ -64,8 +70,8 @@ export function chatCapabilityPrompts(
 
 export function chatCapabilityPromptList(
   surface: ChatProductSurface = "full",
-  keyword = "[keyword]",
-  url = "[url]",
+  keyword?: string,
+  url?: string,
 ): string[] {
   return chatCapabilityPrompts(surface, keyword, url).flatMap((group) => group.prompts);
 }

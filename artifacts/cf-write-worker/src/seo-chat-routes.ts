@@ -88,12 +88,19 @@ export async function handleSeoChatWrite(
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
-    const thread = await createSeoChatThread({
-      projectId: parsed.data.projectId,
-      userId,
-      title: parsed.data.title,
-    });
-    return withCors(request, Response.json({ thread }, { status: 201 }));
+    try {
+      const thread = await createSeoChatThread({
+        projectId: parsed.data.projectId,
+        userId,
+        title: parsed.data.title,
+      });
+      return withCors(request, Response.json({ thread }, { status: 201 }));
+    } catch (err) {
+      return withCors(
+        request,
+        Response.json({ error: err instanceof Error ? err.message : "Could not start a thread" }, { status: 500 }),
+      );
+    }
   }
 
   const messageMatch = path.match(/^\/api\/seo-chat\/threads\/(\d+)\/messages$/);

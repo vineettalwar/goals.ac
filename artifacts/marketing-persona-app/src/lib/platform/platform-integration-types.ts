@@ -79,6 +79,12 @@ export type PlatformIntegrationStatus = {
     clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
     clientSecret: IntegrationFieldStatus;
   };
+  google: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
   dataforseo: {
     managedByEnv: boolean;
     envVars: string[];

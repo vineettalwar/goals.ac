@@ -15,6 +15,7 @@ export const platformSettingsTable = sqliteTable("platform_settings", {
   bingWebmasterEnabled: integer("bing_webmaster_enabled", { mode: "boolean" }).notNull().default(true),
   socialPublishingEnabled: integer("social_publishing_enabled", { mode: "boolean" }).notNull().default(true),
   emailEnabled: integer("email_enabled", { mode: "boolean" }).notNull().default(true),
+  /** CMS keys customers may connect. WordPress is always included at read time. */
   releasedCmsPlatforms: text("released_cms_platforms", { mode: "json" }).$type<string[]>().notNull().default(["wordpress"]),
   encryptedStripeSecretKey: text("encrypted_stripe_secret_key"),
   encryptedStripeWebhookSecret: text("encrypted_stripe_webhook_secret"),
@@ -33,6 +34,8 @@ export const platformSettingsTable = sqliteTable("platform_settings", {
   encryptedLinkedinClientSecret: text("encrypted_linkedin_client_secret"),
   bingWebmasterClientId: text("bing_webmaster_client_id"),
   encryptedBingWebmasterClientSecret: text("encrypted_bing_webmaster_client_secret"),
+  googleClientId: text("google_client_id"),
+  encryptedGoogleClientSecret: text("encrypted_google_client_secret"),
   encryptedDataforseoLogin: text("dataforseo_login"),
   encryptedDataforseoPassword: text("encrypted_dataforseo_password"),
   twitterClientId: text("twitter_client_id"),

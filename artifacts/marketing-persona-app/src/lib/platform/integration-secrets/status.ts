@@ -9,6 +9,7 @@ import { isTwitterManagedByEnv } from "@workspace/content-engine/support/social/
 import { isMetaManagedByEnv } from "@workspace/content-engine/support/social/meta-platform-credentials";
 import { isBlueskyManagedByEnv } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 import { isBingManagedByEnv } from "@/lib/platform/bing-webmaster-credentials";
+import { isGoogleManagedByEnv } from "@/lib/platform/google-oauth-credentials";
 import { isDataForSeoManagedByEnv } from "@/lib/platform/dataforseo-credentials";
 import { eq } from "drizzle-orm";
 import { getPlatformBedrockStatus } from "@/lib/platform/platform-bedrock-admin";
@@ -17,6 +18,7 @@ import {
   activeEnvVars,
   BLUESKY_ENV_VARS,
   BING_WEBMASTER_ENV_VARS,
+  GOOGLE_ENV_VARS,
   DATAFORSEO_ENV_VARS,
   fieldStatus,
   isPexelsManagedByEnv,
@@ -62,6 +64,8 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         bingWebmasterClientId: platformSettingsTable.bingWebmasterClientId,
         encryptedBingWebmasterClientSecret:
           platformSettingsTable.encryptedBingWebmasterClientSecret,
+        googleClientId: platformSettingsTable.googleClientId,
+        encryptedGoogleClientSecret: platformSettingsTable.encryptedGoogleClientSecret,
         encryptedDataforseoLogin: platformSettingsTable.encryptedDataforseoLogin,
         encryptedDataforseoPassword: platformSettingsTable.encryptedDataforseoPassword,
       })
@@ -145,6 +149,12 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         row?.encryptedBingWebmasterClientSecret,
         "BING_WEBMASTER_CLIENT_SECRET",
       ),
+    },
+    google: {
+      managedByEnv: isGoogleManagedByEnv(),
+      envVars: activeEnvVars(GOOGLE_ENV_VARS),
+      clientId: plainFieldStatus(row?.googleClientId, "GOOGLE_CLIENT_ID"),
+      clientSecret: fieldStatus(row?.encryptedGoogleClientSecret, "GOOGLE_CLIENT_SECRET"),
     },
     dataforseo: {
       managedByEnv: isDataForSeoManagedByEnv(),

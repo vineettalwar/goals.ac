@@ -1,3 +1,4 @@
+import { resolveGoogleOAuthCredentials } from "@workspace/platform-admin";
 import { and, eq } from "drizzle-orm";
 import type { GoalsD1Database } from "@workspace/db/d1";
 import { analyticsPropertyConnectionsTable } from "@workspace/db/schema-sqlite";
@@ -127,9 +128,8 @@ export async function handleGoogleAnalyticsAuthStart(
 
   try {
     await assertGoogleIntegrationsEnabled(database);
-    const clientId = env.GOOGLE_CLIENT_ID?.trim();
-    const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
-    if (!clientId || !clientSecret) {
+    const google = await resolveGoogleOAuthCredentials(env);
+    if (!google) {
       return Response.json(
         { error: "Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)" },
         { status: 503 },
@@ -144,7 +144,7 @@ export async function handleGoogleAnalyticsAuthStart(
     const redirectUri = resolveGoogleAnalyticsRedirectUri(request);
 
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: google.clientId,
       redirect_uri: redirectUri,
       response_type: "code",
       scope: "https://www.googleapis.com/auth/analytics.readonly",

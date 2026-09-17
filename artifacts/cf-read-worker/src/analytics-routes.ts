@@ -34,6 +34,7 @@ import {
 import type { ContentStyle } from "@workspace/db/schema-sqlite";
 import { defaultSyncDateRange } from "@workspace/seo-tools";
 import { requireProjectAccess } from "./project-access";
+import { googleEnvBindings, hasGoogleOAuthCredentials } from "@workspace/platform-admin";
 
 const UNSELECTED_PROPERTY_ID = "";
 
@@ -91,10 +92,7 @@ async function ga4OAuthConfigured(env: AnalyticsPropertyTokenEnv): Promise<boole
   } catch {
     // Unmigrated platform_settings — default to enabled.
   }
-  return (
-    googleIntegrationsEnabled &&
-    Boolean(env.GOOGLE_CLIENT_ID?.trim() && env.GOOGLE_CLIENT_SECRET?.trim())
-  );
+  return googleIntegrationsEnabled && (await hasGoogleOAuthCredentials(env));
 }
 
 export async function handleAnalyticsRead(
@@ -196,7 +194,7 @@ export async function handleAnalyticsRead(
 
     try {
       let tokens = parseStoredTokens(connection.encryptedTokens);
-      const resolved = await resolveAccessToken(tokens, env);
+      const resolved = await resolveAccessToken(tokens, await googleEnvBindings(env));
       tokens = resolved.tokens;
 
       if (resolved.refreshed) {

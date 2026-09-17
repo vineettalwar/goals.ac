@@ -16,6 +16,8 @@ describe("copyCfWorkerProcessEnv", () => {
     expect(CF_EDGE_PROCESS_ENV_KEYS).toEqual(
       expect.arrayContaining([
         "GEMINI_KEY_ENCRYPTION_SECRET",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
         "LINKEDIN_CLIENT_ID",
         "LINKEDIN_CLIENT_SECRET",
         "TWITTER_CLIENT_ID",

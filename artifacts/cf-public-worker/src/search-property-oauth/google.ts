@@ -1,3 +1,4 @@
+import { resolveGoogleOAuthCredentials } from "@workspace/platform-admin";
 import { eq } from "drizzle-orm";
 import type { GoalsD1Database } from "@workspace/db/d1";
 import { platformSettingsTable } from "@workspace/db/schema-sqlite";
@@ -25,9 +26,8 @@ export async function exchangeGoogleCode(
   code: string,
   redirectUri: string,
 ): Promise<StoredTokens & { email?: string }> {
-  const clientId = env.GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) {
+  const google = await resolveGoogleOAuthCredentials(env);
+  if (!google) {
     throw new Error("Google OAuth is not configured");
   }
 
@@ -36,8 +36,8 @@ export async function exchangeGoogleCode(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: google.clientId,
+      client_secret: google.clientSecret,
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),

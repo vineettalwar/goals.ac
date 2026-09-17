@@ -18,7 +18,7 @@ import {
   resolveAccessToken,
 } from "@/lib/integrations/analytics/analytics-property-client";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
-import { googleIntegrationsAvailable } from "@/lib/platform/platform-features";
+import { googleIntegrationsAvailable } from "@/lib/platform/platform-features.server";
 
 const UNSELECTED_PROPERTY_ID = "";
 
@@ -102,7 +102,7 @@ export async function GET(
   const payload: AnalyticsPropertyConnectionsResponse = {
     connections,
     oauthConfigured: {
-      googleAnalytics4: googleIntegrationsAvailable(settings),
+      googleAnalytics4: await googleIntegrationsAvailable(settings),
     },
   };
 

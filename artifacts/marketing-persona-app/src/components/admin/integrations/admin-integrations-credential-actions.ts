@@ -218,6 +218,7 @@ export function useAdminIntegrationsCredentialActions(deps: {
       | "meta"
       | "bluesky"
       | "bing"
+      | "google"
       | "dataforseo"
       | "bedrock",
   ) {
@@ -253,6 +254,9 @@ export function useAdminIntegrationsCredentialActions(deps: {
       } else if (integration === "bing") {
         form.setBingClientId("");
         form.setBingClientSecret("");
+      } else if (integration === "google") {
+        form.setGoogleClientId("");
+        form.setGoogleClientSecret("");
       } else if (integration === "dataforseo") {
         form.setDataforseoLogin("");
         form.setDataforseoPassword("");

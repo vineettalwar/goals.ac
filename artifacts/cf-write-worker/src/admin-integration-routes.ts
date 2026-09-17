@@ -7,6 +7,16 @@ import {
   setPlatformBedrockOrgGrants,
   saveBingWebmasterCredentials,
   clearStoredBingWebmasterCredentials,
+  saveGoogleOAuthCredentials,
+  clearStoredGoogleOAuthCredentials,
+  saveLinkedInCredentials,
+  clearStoredLinkedInCredentials,
+  saveTwitterCredentials,
+  clearStoredTwitterCredentials,
+  saveMetaCredentials,
+  clearStoredMetaCredentials,
+  saveBlueskyCredentials,
+  clearStoredBlueskyCredentials,
   saveDataForSeoCredentials,
   clearStoredDataForSeoCredentials,
   getPlatformIntegrationStatus,
@@ -45,6 +55,31 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
     clientSecret: z.string().min(8).optional(),
   }),
   z.object({
+    integration: z.literal("google"),
+    clientId: z.string().trim().min(4).optional().nullable(),
+    clientSecret: z.string().min(8).optional(),
+  }),
+  z.object({
+    integration: z.literal("linkedin"),
+    clientId: z.string().trim().min(4).optional().nullable(),
+    clientSecret: z.string().min(8).optional(),
+  }),
+  z.object({
+    integration: z.literal("twitter"),
+    clientId: z.string().trim().min(4).optional().nullable(),
+    clientSecret: z.string().min(8).optional(),
+  }),
+  z.object({
+    integration: z.literal("meta"),
+    appId: z.string().trim().min(4).optional().nullable(),
+    appSecret: z.string().min(8).optional(),
+  }),
+  z.object({
+    integration: z.literal("bluesky"),
+    clientName: z.string().trim().min(1).optional().nullable(),
+    privateKeyJwk: z.string().min(8).optional(),
+  }),
+  z.object({
     integration: z.literal("dataforseo"),
     login: z.string().trim().min(3).optional().nullable(),
     password: z.string().min(8).optional(),
@@ -62,7 +97,21 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
 ]);
 
 const deleteIntegrationSchema = z.object({
-  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels", "bing", "dataforseo", "bedrock"]),
+  integration: z.enum([
+    "stripe",
+    "stripe_connect",
+    "resend",
+    "unsplash",
+    "pexels",
+    "linkedin",
+    "twitter",
+    "meta",
+    "bluesky",
+    "bing",
+    "google",
+    "dataforseo",
+    "bedrock",
+  ]),
 });
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -148,6 +197,51 @@ export async function handleAdminIntegrationRoutes(
         await saveBingWebmasterCredentials({
           clientId: data.clientId,
           clientSecret: data.clientSecret,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "google") {
+        if (data.clientId === undefined && data.clientSecret === undefined) {
+          return badRequest(request, "No Google fields to update");
+        }
+        await saveGoogleOAuthCredentials({
+          clientId: data.clientId,
+          clientSecret: data.clientSecret,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "linkedin") {
+        if (data.clientId === undefined && data.clientSecret === undefined) {
+          return badRequest(request, "No LinkedIn fields to update");
+        }
+        await saveLinkedInCredentials({
+          clientId: data.clientId,
+          clientSecret: data.clientSecret,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "twitter") {
+        if (data.clientId === undefined && data.clientSecret === undefined) {
+          return badRequest(request, "No X fields to update");
+        }
+        await saveTwitterCredentials({
+          clientId: data.clientId,
+          clientSecret: data.clientSecret,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "meta") {
+        if (data.appId === undefined && data.appSecret === undefined) {
+          return badRequest(request, "No Meta fields to update");
+        }
+        await saveMetaCredentials({
+          appId: data.appId,
+          appSecret: data.appSecret,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "bluesky") {
+        if (data.clientName === undefined && data.privateKeyJwk === undefined) {
+          return badRequest(request, "No Bluesky fields to update");
+        }
+        await saveBlueskyCredentials({
+          clientName: data.clientName,
+          privateKeyJwk: data.privateKeyJwk,
           updatedBy: userId,
         });
       } else if (data.integration === "dataforseo") {
@@ -251,6 +345,21 @@ export async function handleAdminIntegrationRoutes(
           break;
         case "bing":
           await clearStoredBingWebmasterCredentials(userId);
+          break;
+        case "google":
+          await clearStoredGoogleOAuthCredentials(userId);
+          break;
+        case "linkedin":
+          await clearStoredLinkedInCredentials(userId);
+          break;
+        case "twitter":
+          await clearStoredTwitterCredentials(userId);
+          break;
+        case "meta":
+          await clearStoredMetaCredentials(userId);
+          break;
+        case "bluesky":
+          await clearStoredBlueskyCredentials(userId);
           break;
         case "dataforseo":
           await clearStoredDataForSeoCredentials(userId);

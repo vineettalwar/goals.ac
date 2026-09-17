@@ -59,16 +59,16 @@ export async function resolveBingWebmasterOAuthCredentials(
   return null;
 }
 
-export async function bingEnvBindings(
-  env?: BingWebmasterTokenEnv,
-): Promise<BingWebmasterTokenEnv> {
+export async function bingEnvBindings<T extends BingWebmasterTokenEnv = BingWebmasterTokenEnv>(
+  env?: T,
+): Promise<T> {
   const resolved = await resolveBingWebmasterOAuthCredentials(env);
-  if (!resolved) return env ?? {};
+  if (!resolved) return (env ?? {}) as T;
   return {
     ...env,
     BING_WEBMASTER_CLIENT_ID: resolved.clientId,
     BING_WEBMASTER_CLIENT_SECRET: resolved.clientSecret,
-  };
+  } as T;
 }
 
 export async function hasBingWebmasterOAuthCredentials(env?: BingWebmasterTokenEnv): Promise<boolean> {

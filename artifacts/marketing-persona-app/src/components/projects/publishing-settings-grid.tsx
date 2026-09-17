@@ -1,10 +1,9 @@
-"use client";
-
 import { PublishBrandIcon } from "@workspace/app-shell/integrations";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IntegrationCategorySection, IntegrationIconBox, IntegrationTile } from "@/components/integrations/integration-tile";
-import { useReleasedCmsPlatforms } from "@/lib/queries";
+import { useReleasedCmsPlatforms, useSocialOauthConfigured } from "@/lib/queries";
 import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
+import { isSocialOauthReady } from "@workspace/content-engine/support/social/social-oauth-availability";
 import {
   type PublishDestinationId,
   countCmsConnections,
@@ -47,6 +46,7 @@ export function PublishingSettingsGridLayout({
   renderDialogBody: () => React.ReactNode;
 }) {
   const releasedCms = useReleasedCmsPlatforms();
+  const socialOauth = useSocialOauthConfigured();
   const cmsDestinations = getCmsDestinations();
   const espDestinations = getEspDestinations();
   const exportDestinations = getExportDestinations();
@@ -65,7 +65,9 @@ export function PublishingSettingsGridLayout({
         <p className="text-sm text-muted-foreground">
           {categoryFilter === "cms"
             ? "Connect a released CMS. Unreleased platforms show as coming soon."
-            : "Click an integration to connect or manage settings."}
+            : categoryFilter === "social"
+              ? "Connect accounts when platform OAuth is configured. Others show as coming soon."
+              : "Click an integration to connect or manage settings."}
         </p>
         {testConnectionsButton}
       </div>
@@ -161,7 +163,10 @@ export function PublishingSettingsGridLayout({
           compact={singleCategory}
         >
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {socialDestinations.map((destination) => (
+            {socialDestinations.map((destination) => {
+              const connected = destination.isConnected(cmsIntegrations);
+              const comingSoon = !connected && !isSocialOauthReady(destination.id, socialOauth);
+              return (
               <IntegrationTile
                 key={destination.id}
                 icon={
@@ -171,59 +176,61 @@ export function PublishingSettingsGridLayout({
                 }
                 title={destination.label}
                 description={destination.description}
-                connected={destination.isConnected(cmsIntegrations)}
+                connected={connected}
                 summary={getConnectionSummary(destination.id, cmsIntegrations)}
-                onClick={() => onActiveDialogChange(destination.id)}
+                comingSoon={comingSoon}
+                onClick={() => {
+                  if (comingSoon) return;
+                  onActiveDialogChange(destination.id);
+                }}
               />
-            ))}
-            <IntegrationTile
-              icon={
-                <IntegrationIconBox className="p-0 border-0 bg-transparent">
-                  <PublishBrandIcon id="meta" />
-                </IntegrationIconBox>
-              }
-              title="Facebook & Instagram"
-              description="Publish via a Facebook Page and linked Instagram account."
-              connected={!!metaIntegration}
-              summary={
-                metaIntegration
+              );
+            })}
+            {(["meta", "bluesky", "mastodon"] as const).map((id) => {
+              const integration =
+                id === "meta"
+                  ? metaIntegration
+                  : id === "bluesky"
+                    ? blueskyIntegration
+                    : mastodonIntegration;
+              const connected = Boolean(integration);
+              const comingSoon = !connected && !isSocialOauthReady(id, socialOauth);
+              const title =
+                id === "meta" ? "Facebook & Instagram" : id === "bluesky" ? "Bluesky" : "Mastodon";
+              const description =
+                id === "meta"
+                  ? "Publish via a Facebook Page and linked Instagram account."
+                  : id === "bluesky"
+                    ? "Publish skeets via AT Protocol OAuth."
+                    : "Publish toots to your Mastodon instance.";
+              const summary =
+                id === "meta" && metaIntegration
                   ? String(metaIntegration.pageName ?? metaIntegration.pageId)
-                  : null
-              }
-              onClick={() => onActiveDialogChange("meta")}
-            />
-            <IntegrationTile
-              icon={
-                <IntegrationIconBox className="p-0 border-0 bg-transparent">
-                  <PublishBrandIcon id="bluesky" />
-                </IntegrationIconBox>
-              }
-              title="Bluesky"
-              description="Publish skeets via AT Protocol OAuth."
-              connected={!!blueskyIntegration}
-              summary={
-                blueskyIntegration
-                  ? `@${String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}`
-                  : null
-              }
-              onClick={() => onActiveDialogChange("bluesky")}
-            />
-            <IntegrationTile
-              icon={
-                <IntegrationIconBox className="p-0 border-0 bg-transparent">
-                  <PublishBrandIcon id="mastodon" />
-                </IntegrationIconBox>
-              }
-              title="Mastodon"
-              description="Publish toots to your Mastodon instance."
-              connected={!!mastodonIntegration}
-              summary={
-                mastodonIntegration
-                  ? `@${String(mastodonIntegration.username ?? "connected")}`
-                  : null
-              }
-              onClick={() => onActiveDialogChange("mastodon")}
-            />
+                  : id === "bluesky" && blueskyIntegration
+                    ? `@${String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}`
+                    : id === "mastodon" && mastodonIntegration
+                      ? `@${String(mastodonIntegration.username ?? "connected")}`
+                      : null;
+              return (
+                <IntegrationTile
+                  key={id}
+                  icon={
+                    <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                      <PublishBrandIcon id={id} />
+                    </IntegrationIconBox>
+                  }
+                  title={title}
+                  description={description}
+                  connected={connected}
+                  summary={summary}
+                  comingSoon={comingSoon}
+                  onClick={() => {
+                    if (comingSoon) return;
+                    onActiveDialogChange(id);
+                  }}
+                />
+              );
+            })}
           </div>
         </IntegrationCategorySection>
       ) : null}

@@ -1,3 +1,4 @@
+import { resolveGoogleOAuthCredentials } from "@workspace/platform-admin";
 import { and, eq } from "drizzle-orm";
 import type { GoalsD1Database } from "@workspace/db/d1";
 import { articleIdeaSourcesTable, usersTable } from "@workspace/db/schema-sqlite";
@@ -133,9 +134,8 @@ export async function handleGoogleSheetsAuthStart(
       return Response.json({ error: "Source not found" }, { status: 404 });
     }
 
-    const clientId = env.GOOGLE_CLIENT_ID?.trim();
-    const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
-    if (!clientId || !clientSecret) {
+    const google = await resolveGoogleOAuthCredentials(env);
+    if (!google) {
       return Response.json({ error: "Google OAuth is not configured" }, { status: 503 });
     }
 
@@ -146,7 +146,7 @@ export async function handleGoogleSheetsAuthStart(
     const state = encodeSheetsState({ projectId, sourceId, userId, returnUrl });
     const redirectUri = resolveGoogleSheetsRedirectUri(request);
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: google.clientId,
       redirect_uri: redirectUri,
       response_type: "code",
       scope: "https://www.googleapis.com/auth/spreadsheets.readonly",

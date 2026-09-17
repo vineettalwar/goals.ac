@@ -28,6 +28,7 @@ export type {
   SaveTwitterCredentialsInput,
   SaveUnsplashCredentialsInput,
   SaveBingWebmasterCredentialsInput,
+  SaveGoogleOAuthCredentialsInput,
 } from "./types";
 
 export type { SaveDataForSeoCredentialsInput } from "@/lib/platform/dataforseo-credentials";
@@ -68,4 +69,6 @@ export {
   saveTwitterCredentials,
   saveBingWebmasterCredentials,
   clearStoredBingWebmasterCredentials,
+  saveGoogleOAuthCredentials,
+  clearStoredGoogleOAuthCredentials,
 } from "./social-oauth";

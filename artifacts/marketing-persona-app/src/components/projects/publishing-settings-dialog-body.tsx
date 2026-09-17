@@ -8,8 +8,9 @@ import {
   getExportDestinations,
   getSocialDestinations,
 } from "@/lib/projects/publishing-destinations";
-import { useReleasedCmsPlatforms } from "@/lib/queries";
+import { useReleasedCmsPlatforms, useSocialOauthConfigured } from "@/lib/queries";
 import { isCmsConnectReady } from "@workspace/content-engine/support/publishing/cms-platform-keys";
+import { isSocialOauthReady } from "@workspace/content-engine/support/social/social-oauth-availability";
 import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import {
   PublishingSettingsBlueskyCard,
@@ -70,6 +71,7 @@ export function PublishingSettingsDialogBody({
   onSelectMetaPage: (pageId: string) => void;
 }) {
   const releasedCms = useReleasedCmsPlatforms();
+  const socialOauth = useSocialOauthConfigured();
   const cmsDestinations = getCmsDestinations().map((destination) => ({
     ...destination,
     comingSoon: !isCmsConnectReady(destination.id, releasedCms),
@@ -93,6 +95,7 @@ export function PublishingSettingsDialogBody({
     return (
       <PublishingSettingsMetaCard
         {...sharedSocial}
+        comingSoon={!metaIntegration && !isSocialOauthReady("meta", socialOauth)}
         metaIntegration={metaIntegration}
         metaPageToken={metaPageToken}
         metaPages={metaPages}
@@ -105,6 +108,7 @@ export function PublishingSettingsDialogBody({
     return (
       <PublishingSettingsBlueskyCard
         {...sharedSocial}
+        comingSoon={!blueskyIntegration && !isSocialOauthReady("bluesky", socialOauth)}
         blueskyIntegration={blueskyIntegration}
         blueskyHandle={blueskyHandle}
         onBlueskyHandleChange={onBlueskyHandleChange}
@@ -116,6 +120,7 @@ export function PublishingSettingsDialogBody({
     return (
       <PublishingSettingsMastodonCard
         {...sharedSocial}
+        comingSoon={!mastodonIntegration && !isSocialOauthReady("mastodon", socialOauth)}
         mastodonIntegration={mastodonIntegration}
         mastodonInstance={mastodonInstance}
         onMastodonInstanceChange={onMastodonInstanceChange}
@@ -170,6 +175,9 @@ export function PublishingSettingsDialogBody({
 
   const socialDestination = socialDestinations.find((d) => d.id === activeDialog);
   if (socialDestination) {
+    const comingSoon =
+      !cmsIntegrations[socialDestination.integrationKey] &&
+      !isSocialOauthReady(socialDestination.id, socialOauth);
     return (
       <SocialConnectionCard
         destination={socialDestination}
@@ -180,12 +188,14 @@ export function PublishingSettingsDialogBody({
         apiBase={apiBase}
         projectId={projectId}
         embedded
+        comingSoon={comingSoon}
         isDisconnecting={
           socialDestination.id === "linkedin"
             ? pendingAction === "disconnecting_linkedin"
             : pendingAction === "disconnecting_twitter"
         }
         onConnect={() => {
+          if (comingSoon) return;
           if (socialDestination.oauthPath) onConnectOAuth(socialDestination.oauthPath);
         }}
         onDisconnect={() => {

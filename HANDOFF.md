@@ -1,6 +1,27 @@
 # Session Handoff
 
-## Latest (2026-09-17) — Light mode keeps the ink rail
+## Latest (2026-09-17) — Admin Google OAuth credentials
+
+Platform admins can save Google OAuth Client ID + encrypted secret from Admin → Integrations → Google (same pattern as Bing). Env vars still win when set. Login, GSC, GA4, and Sheets resolve env-then-DB. CF write worker also accepts LinkedIn / X / Meta / Bluesky PATCH+DELETE (those were 400 on production).
+
+**Apply:** `0088_platform_google_oauth_credentials` (Postgres) · D1 `0023_platform_google_oauth_credentials`.
+
+**Verify:** `npx tsx lib/platform-admin/src/google-oauth-credentials.test.ts` · Admin → Integrations → Google: save Client ID + secret (no `GOOGLE_CLIENT_*` env) → login / GSC start works; with env set, dialog is env-managed and save is blocked.
+
+## Prior (2026-09-17) — SEO chat provider/model picker
+
+Chat shows a compact provider select (connected providers only) and an editable model field for Ollama / OpenRouter / NVIDIA. Saves via `PATCH /api/ai-providers/settings` (site admin); "connect more" still goes to Integrations → AI. Switching Ollama re-probes reachability on the server.
+
+**Verify:** `npx tsx lib/app-shell/src/seo-chat/chat-ai-gate.test.ts` · `/chat` with 2+ connected providers → switch in the picker; change Ollama/OpenRouter model and blur/Enter; non-admin gets a clear forbidden error.
+
+## Prior (2026-09-17) — SEO chat AI readiness gate
+
+`/chat` never checked whether an AI model was configured or reachable — it jumped straight to thread create and failed with a opaque "Could not start a thread". Now loads `/api/ai-providers/status` (same probe Studio uses, including Ollama reachability), shows the active provider/model with a link to Integrations → AI, blocks send when `ready === false`, and surfaces the real API error body on thread create failures.
+
+**Verify:** `npx tsx lib/app-shell/src/seo-chat/chat-ai-gate.test.ts` · hard-refresh `/chat` with no AI key / unreachable Ollama → amber banner + blocked send; with a ready provider → "Using {provider}" under the composer.
+
+## Prior (2026-09-17) — Light mode keeps the ink rail
+
 
 Product Light mode (sidebar footer) only flips the main column to newsprint. `.app-sidebar` stays studio chrome (`--studio-chrome` / newsprint-on-ink) in both themes. Marketing `(public)` still uses `.marketing-register` cream. First visit stays dark unless `localStorage.theme === "light"`.
 

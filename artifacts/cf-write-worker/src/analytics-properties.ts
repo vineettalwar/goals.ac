@@ -9,6 +9,7 @@ import {
 } from "@workspace/cf-edge/analytics-property-client";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
+import { googleEnvBindings } from "@workspace/platform-admin";
 import { db } from "./db";
 import {
   ANALYTICS_PROPERTY_PROVIDERS,
@@ -105,7 +106,7 @@ export async function handleAnalyticsPropertiesWrite(
 
     try {
       let tokens = parseStoredTokens(connection.encryptedTokens);
-      const resolved = await resolveAccessToken(tokens, env);
+      const resolved = await resolveAccessToken(tokens, await googleEnvBindings(env));
       tokens = resolved.tokens;
 
       if (resolved.refreshed) {

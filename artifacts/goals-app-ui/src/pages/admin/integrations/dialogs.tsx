@@ -7,7 +7,7 @@ import { StripeDialog, ResendDialog } from "./dialogs-payments";
 import { UnsplashDialog, PexelsDialog } from "./dialogs-stock";
 import { LinkedInDialog, TwitterDialog, MetaDialog, BlueskyDialog, BingDialog } from "./dialogs-social";
 import { BedrockDialog } from "./dialogs-bedrock";
-import { GoogleDialog, GeminiDialog, MastodonDialog } from "./dialogs-env";
+import { GoogleDialog, EnvAiProviderDialog, MastodonDialog } from "./dialogs-env";
 
 const DIALOG_TITLES: Record<string, string> = {
   stripe: "Stripe",
@@ -22,8 +22,24 @@ const DIALOG_TITLES: Record<string, string> = {
   bing: "Bing Webmaster",
   google: "Google",
   gemini: "Google Gemini",
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  openrouter: "OpenRouter",
+  groq: "Groq",
+  nvidia: "NVIDIA NIM",
+  ollama: "Ollama",
   bedrock: "AWS Bedrock",
 };
+
+const ENV_AI_DIALOGS = new Set([
+  "gemini",
+  "openai",
+  "anthropic",
+  "openrouter",
+  "groq",
+  "nvidia",
+  "ollama",
+]);
 
 export function AdminIntegrationsDialogs({
   controller,
@@ -48,7 +64,9 @@ export function AdminIntegrationsDialogs({
       {activeDialog === "bluesky" && <BlueskyDialog controller={controller} />}
       {activeDialog === "bing" && <BingDialog controller={controller} />}
       {activeDialog === "google" && <GoogleDialog controller={controller} />}
-      {activeDialog === "gemini" && <GeminiDialog controller={controller} />}
+      {activeDialog && ENV_AI_DIALOGS.has(activeDialog) ? (
+        <EnvAiProviderDialog controller={controller} />
+      ) : null}
       {activeDialog === "mastodon" && <MastodonDialog controller={controller} />}
       {activeDialog === "bedrock" && <BedrockDialog controller={controller} />}
     </AdminDialog>

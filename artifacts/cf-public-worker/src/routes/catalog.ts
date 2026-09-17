@@ -42,17 +42,25 @@ async function loadPlanQuotaLimits(): Promise<Record<PlanId, PlanQuotaLimits>> {
 }
 
 async function platformStatus(env: Env) {
-  const cacheKey = "platform:status:v3";
+  const cacheKey = "platform:status:v4";
   const cached = await kvGetJson<{
     status: string;
     message?: string;
     releasedCmsPlatforms?: string[];
+    socialOauthConfigured?: {
+      linkedin: boolean;
+      twitter: boolean;
+      meta: boolean;
+      bluesky: boolean;
+      mastodon: boolean;
+    };
   }>(env.AI_CACHE, cacheKey);
   if (cached) return cached;
 
   let enabled = true;
   let maintenanceMessage: string | null = null;
   let releasedCmsPlatforms = ["wordpress"];
+  let socialPublishingEnabled = true;
   try {
     const [row] = await db()
       .select()
@@ -60,6 +68,7 @@ async function platformStatus(env: Env) {
       .where(eq(platformSettingsTable.id, 1));
     enabled = row?.platformEnabled ?? true;
     maintenanceMessage = row?.maintenanceMessage ?? null;
+    socialPublishingEnabled = row?.socialPublishingEnabled ?? true;
     if (Array.isArray(row?.releasedCmsPlatforms) && row.releasedCmsPlatforms.length > 0) {
       releasedCmsPlatforms = row.releasedCmsPlatforms.includes("wordpress")
         ? row.releasedCmsPlatforms
@@ -69,14 +78,22 @@ async function platformStatus(env: Env) {
     // Empty or unmigrated platform_settings — treat as operational on edge.
   }
 
+  const { resolveSocialOauthConfigured } = await import(
+    "@workspace/content-engine/support/social/social-oauth-availability"
+  );
+  const socialOauthConfigured = await resolveSocialOauthConfigured({
+    socialPublishingEnabled,
+  });
+
   const payload = enabled
-    ? { status: "operational" as const, releasedCmsPlatforms }
+    ? { status: "operational" as const, releasedCmsPlatforms, socialOauthConfigured }
     : {
         status: "maintenance" as const,
         message:
           maintenanceMessage ??
           "We're performing scheduled maintenance. Please check back shortly.",
         releasedCmsPlatforms,
+        socialOauthConfigured,
       };
   await kvPutJson(env.AI_CACHE, cacheKey, payload, 30);
   return payload;
@@ -91,6 +108,13 @@ export async function handleCatalogRoutes(
     const body = await platformStatus(env).catch(() => ({
       status: "operational" as const,
       releasedCmsPlatforms: ["wordpress"],
+      socialOauthConfigured: {
+        linkedin: false,
+        twitter: false,
+        meta: false,
+        bluesky: false,
+        mastodon: false,
+      },
     }));
     return withCors(request, Response.json(body, { headers: { "Cache-Control": "no-store" } }));
   }

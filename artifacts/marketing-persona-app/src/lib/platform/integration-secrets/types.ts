@@ -51,3 +51,9 @@ export type SaveBingWebmasterCredentialsInput = {
   clientSecret?: string;
   updatedBy: number;
 };
+
+export type SaveGoogleOAuthCredentialsInput = {
+  clientId?: string | null;
+  clientSecret?: string;
+  updatedBy: number;
+};

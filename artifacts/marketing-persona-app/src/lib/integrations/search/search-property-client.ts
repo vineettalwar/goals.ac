@@ -1,6 +1,7 @@
 import type { SearchPropertyProvider } from "@workspace/db/schema";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 import { resolveBingWebmasterOAuthCredentials } from "../../platform/bing-webmaster-credentials";
+import { resolveGoogleOAuthCredentials } from "../../platform/google-oauth-credentials";
 
 export {
   formatPropertyLabel,
@@ -41,16 +42,15 @@ export function encryptStoredTokens(tokens: StoredTokens): string {
 async function refreshGoogleTokens(tokens: StoredTokens): Promise<StoredTokens> {
   if (!tokens.refreshToken) return tokens;
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return tokens;
+  const google = await resolveGoogleOAuthCredentials();
+  if (!google) return tokens;
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: google.clientId,
+      client_secret: google.clientSecret,
       refresh_token: tokens.refreshToken,
       grant_type: "refresh_token",
     }),
@@ -122,15 +122,17 @@ export async function resolveAccessToken(
   };
 }
 export async function exchangeGoogleCode(code: string): Promise<StoredTokens & { email?: string }> {
-  const clientId = process.env.GOOGLE_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+  const google = await resolveGoogleOAuthCredentials();
+  if (!google) {
+    throw new Error("Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)");
+  }
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: google.clientId,
+      client_secret: google.clientSecret,
       redirect_uri: redirectUri("google_search_console"),
       grant_type: "authorization_code",
     }),

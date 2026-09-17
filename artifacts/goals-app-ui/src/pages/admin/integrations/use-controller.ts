@@ -78,7 +78,7 @@ export function useAdminIntegrationsController() {
       form.setMetaAppId(statusData.meta.appId.value ?? "");
       form.setBlueskyClientName(statusData.bluesky.clientName.value ?? "");
       form.setBingClientId(statusData.bing.clientId.value ?? "");
-      form.setBedrockRegion(statusData.bedrock.region.value ?? "");
+      form.setGoogleClientId(statusData.google.clientId.value ?? "");
       form.setBedrockModel(statusData.bedrock.model.value ?? "");
       form.setBedrockGrantedOrgIds(
         new Set(statusData.bedrock.grantedOrganizations.map((org) => org.id)),
@@ -197,6 +197,7 @@ export function useAdminIntegrationsController() {
     saveMeta: oauth.saveMeta,
     saveBluesky: oauth.saveBluesky,
     saveBing: oauth.saveBing,
+    saveGoogle: oauth.saveGoogle,
     saveBedrock: oauth.saveBedrock,
     testBedrock: oauth.testBedrock,
     toggleBedrockGrantedOrg: oauth.toggleBedrockGrantedOrg,
@@ -212,6 +213,7 @@ export function useAdminIntegrationsController() {
     savingMeta: oauth.savingMeta,
     savingBluesky: oauth.savingBluesky,
     savingBing: oauth.savingBing,
+    savingGoogle: oauth.savingGoogle,
     savingBedrock: oauth.savingBedrock,
     testingBedrock: oauth.testingBedrock,
     stripeSecretKey: form.stripeSecretKey,
@@ -254,14 +256,12 @@ export function useAdminIntegrationsController() {
     setBingClientId: form.setBingClientId,
     bingClientSecret: form.bingClientSecret,
     setBingClientSecret: form.setBingClientSecret,
-    bedrockAccessKeyId: form.bedrockAccessKeyId,
-    setBedrockAccessKeyId: form.setBedrockAccessKeyId,
-    bedrockSecretAccessKey: form.bedrockSecretAccessKey,
-    setBedrockSecretAccessKey: form.setBedrockSecretAccessKey,
-    bedrockSessionToken: form.bedrockSessionToken,
-    setBedrockSessionToken: form.setBedrockSessionToken,
-    bedrockRegion: form.bedrockRegion,
-    setBedrockRegion: form.setBedrockRegion,
+    googleClientId: form.googleClientId,
+    setGoogleClientId: form.setGoogleClientId,
+    googleClientSecret: form.googleClientSecret,
+    setGoogleClientSecret: form.setGoogleClientSecret,
+    bedrockApiKey: form.bedrockApiKey,
+    setBedrockApiKey: form.setBedrockApiKey,
     bedrockModel: form.bedrockModel,
     setBedrockModel: form.setBedrockModel,
     bedrockOrgSearch: form.bedrockOrgSearch,

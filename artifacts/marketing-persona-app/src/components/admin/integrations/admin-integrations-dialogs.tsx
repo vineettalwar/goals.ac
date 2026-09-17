@@ -14,6 +14,7 @@ import { AdminTwitterDialog } from "./admin-twitter-dialog";
 import { AdminMetaDialog } from "./admin-meta-dialog";
 import { AdminBlueskyDialog } from "./admin-bluesky-dialog";
 import { AdminBingDialog } from "./admin-bing-dialog";
+import { AdminGoogleDialog } from "./admin-google-dialog";
 import { AdminDataForSeoDialog } from "./admin-dataforseo-dialog";
 import { AdminBedrockDialog } from "./admin-bedrock-dialog";
 import { AdminEnvIntegrationDialog } from "./admin-env-integration-dialog";
@@ -37,6 +38,7 @@ export function AdminIntegrationsDialogs({
         {activeDialog === "meta" ? <AdminMetaDialog controller={controller} /> : null}
         {activeDialog === "bluesky" ? <AdminBlueskyDialog controller={controller} /> : null}
         {activeDialog === "bing" ? <AdminBingDialog controller={controller} /> : null}
+        {activeDialog === "google" ? <AdminGoogleDialog controller={controller} /> : null}
         {activeDialog === "dataforseo" ? <AdminDataForSeoDialog controller={controller} /> : null}
         {activeDialog === "mastodon" ? (
           <div className="space-y-3 p-1">

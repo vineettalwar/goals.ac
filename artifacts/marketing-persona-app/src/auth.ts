@@ -11,6 +11,7 @@ import { authConfig } from "@/auth.config";
 import { getCompanyIdForUser } from "@/lib/org/user-company";
 import { getOrgMembership, type OrgMemberRole } from "@/lib/org/org-access";
 import { resolveSessionImage } from "@/lib/auth/avatar-display";
+import { resolveGoogleOAuthCredentials } from "@/lib/platform/google-oauth-credentials";
 
 type AuthToken = {
   id?: string;
@@ -90,7 +91,9 @@ async function applyUserContextToToken(authToken: AuthToken, userId: number) {
   authToken.mfaVerified = !user.mfaEnabled;
 }
 
-const nextAuth = NextAuth({
+const nextAuth = NextAuth(async () => {
+  const google = await resolveGoogleOAuthCredentials();
+  return {
   ...authConfig,
   providers: [
     Credentials({
@@ -122,11 +125,11 @@ const nextAuth = NextAuth({
         };
       },
     }),
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ...(google
       ? [
           Google({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            clientId: google.clientId,
+            clientSecret: google.clientSecret,
           }),
         ]
       : []),
@@ -356,6 +359,7 @@ const nextAuth = NextAuth({
       return session;
     },
   },
+};
 });
 
 export const { handlers, auth, signIn, signOut } = nextAuth;

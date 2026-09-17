@@ -30,6 +30,8 @@ import {
   type NotionConnectPayload,
   type SearchPropertyProvider,
   type ShopifyConnectPayload,
+  type SocialOauthConfigured,
+  SOCIAL_OAUTH_DISABLED,
   type WebflowConnectPayload,
   type WordPressConnectPayload,
 } from "@workspace/app-shell";
@@ -82,10 +84,27 @@ export function ProjectIntegrationsPage() {
   const [disconnectingSearchProvider, setDisconnectingSearchProvider] =
     useState<SearchPropertyProvider | null>(null);
   const [syncingGsc, setSyncingGsc] = useState(false);
+  const [socialOauthConfigured, setSocialOauthConfigured] =
+    useState<SocialOauthConfigured>(SOCIAL_OAUTH_DISABLED);
 
   useEffect(() => {
     if (routeProjectId) setProjectId(routeProjectId);
   }, [routeProjectId, setProjectId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void apiFetch<{ socialOauthConfigured?: SocialOauthConfigured }>("/api/platform/status")
+      .then((data) => {
+        if (cancelled) return;
+        if (data.socialOauthConfigured) setSocialOauthConfigured(data.socialOauthConfigured);
+      })
+      .catch(() => {
+        // Keep disabled defaults — tiles show coming soon until status loads.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const socialOauthNotice = useMemo(() => {
     const linkedin = searchParams.get("linkedin");
@@ -93,6 +112,8 @@ export function ProjectIntegrationsPage() {
     const meta = searchParams.get("meta");
     const bluesky = searchParams.get("bluesky");
     const mastodon = searchParams.get("mastodon");
+    const gsc = searchParams.get("gsc");
+    const bing = searchParams.get("bing");
 
     if (linkedin === "connected") return "LinkedIn connected.";
     if (linkedin === "error") return "LinkedIn connection failed.";
@@ -107,6 +128,28 @@ export function ProjectIntegrationsPage() {
     if (meta === "select_page" || metaPageToken) {
       return "Choose a Facebook Page to finish Meta setup.";
     }
+    if (gsc === "connected") return "Google Search Console connected.";
+    if (gsc === "pick_property") {
+      return "Google account connected — choose a Search Console property.";
+    }
+    if (gsc === "no_properties") {
+      return "Google account connected, but no verified Search Console properties were found.";
+    }
+    if (gsc === "property_not_found") {
+      return "Google account connected, but no matching Search Console property was found.";
+    }
+    if (gsc === "error") return "Google Search Console connection failed.";
+    if (bing === "connected") return "Bing Webmaster Tools connected.";
+    if (bing === "pick_property") {
+      return "Bing account connected — choose a verified site.";
+    }
+    if (bing === "no_properties") {
+      return "Bing account connected, but no verified sites were found.";
+    }
+    if (bing === "property_not_found") {
+      return "Bing account connected, but no matching verified site was found.";
+    }
+    if (bing === "error") return "Bing Webmaster connection failed.";
     return null;
   }, [searchParams, metaPageToken]);
 
@@ -124,14 +167,41 @@ export function ProjectIntegrationsPage() {
     const bluesky = searchParams.get("bluesky");
     const mastodon = searchParams.get("mastodon");
     const token = searchParams.get("token");
+    const gsc = searchParams.get("gsc");
+    const bing = searchParams.get("bing");
 
-    if (!linkedin && !twitter && !meta && !bluesky && !mastodon) return;
+    if (!linkedin && !twitter && !meta && !bluesky && !mastodon && !gsc && !bing) return;
 
     if (meta === "select_page" && token) {
       setMetaPageToken(token);
     }
 
-    if (projectId) {
+    if (gsc || bing) {
+      const searchNotice =
+        gsc === "connected"
+          ? "Google Search Console connected."
+          : gsc === "pick_property"
+            ? "Google account connected — choose a Search Console property."
+            : gsc === "no_properties"
+              ? "Google account connected, but no verified Search Console properties were found."
+              : gsc === "property_not_found"
+                ? "Google account connected, but no matching Search Console property was found."
+                : gsc === "error"
+                  ? "Google Search Console connection failed."
+                  : bing === "connected"
+                    ? "Bing Webmaster Tools connected."
+                    : bing === "pick_property"
+                      ? "Bing account connected — choose a verified site."
+                      : bing === "no_properties"
+                        ? "Bing account connected, but no verified sites were found."
+                        : bing === "property_not_found"
+                          ? "Bing account connected, but no matching verified site was found."
+                          : bing === "error"
+                            ? "Bing Webmaster connection failed."
+                            : null;
+      if (searchNotice) setSaveMessage(searchNotice);
+      void reload();
+    } else if (projectId) {
       navigate(projectIntegrationsPath(projectId, "social"), { replace: true });
     }
 
@@ -142,8 +212,11 @@ export function ProjectIntegrationsPage() {
     next.delete("bluesky");
     next.delete("mastodon");
     next.delete("token");
+    next.delete("gsc");
+    next.delete("bing");
+    next.delete("tab");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams, projectId, navigate]);
+  }, [searchParams, setSearchParams, projectId, navigate, reload]);
 
   const connectPlatformLabel = useMemo(() => {
     if (!connectPlatform) return "";
@@ -492,6 +565,7 @@ export function ProjectIntegrationsPage() {
           void reload();
         }}
         socialOauthNotice={socialOauthNotice}
+        socialOauthConfigured={socialOauthConfigured}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

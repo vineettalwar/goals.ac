@@ -45,6 +45,13 @@ export async function POST(req: Request) {
   }
   const access = await requireProjectAccess(projectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
-  const thread = await createSeoChatThread({ projectId, userId: userId!, title: body?.title });
-  return NextResponse.json({ thread }, { status: 201 });
+  try {
+    const thread = await createSeoChatThread({ projectId, userId: userId!, title: body?.title });
+    return NextResponse.json({ thread }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Could not start a thread" },
+      { status: 500 },
+    );
+  }
 }

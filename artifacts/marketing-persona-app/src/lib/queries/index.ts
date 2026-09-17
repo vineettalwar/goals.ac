@@ -198,6 +198,23 @@ export function useReleasedCmsPlatforms() {
     : ["wordpress"];
 }
 
+export function useSocialOauthConfigured() {
+  const { data } = useQuery({
+    queryKey: queryKeys.platformStatus,
+    queryFn: fetchPlatformPublicStatus,
+    staleTime: 15_000,
+  });
+  return (
+    data?.socialOauthConfigured ?? {
+      linkedin: false,
+      twitter: false,
+      meta: false,
+      bluesky: false,
+      mastodon: false,
+    }
+  );
+}
+
 export function useBrandProfile(projectId: string) {
   return useQuery({
     queryKey: queryKeys.brandProfile(projectId),

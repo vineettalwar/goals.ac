@@ -19,6 +19,7 @@ export function useAdminIntegrationsOauthActions(deps: {
   const [savingMeta, setSavingMeta] = useState(false);
   const [savingBluesky, setSavingBluesky] = useState(false);
   const [savingBing, setSavingBing] = useState(false);
+  const [savingGoogle, setSavingGoogle] = useState(false);
   const [savingBedrock, setSavingBedrock] = useState(false);
   const [testingBedrock, setTestingBedrock] = useState(false);
 
@@ -237,6 +238,50 @@ export function useAdminIntegrationsOauthActions(deps: {
     }
   }
 
+  async function saveGoogle() {
+    const payload: Record<string, string> = {};
+    if (form.googleClientId.trim()) payload.clientId = form.googleClientId.trim();
+    if (form.googleClientSecret.trim()) payload.clientSecret = form.googleClientSecret.trim();
+
+    if (Object.keys(payload).length === 0) {
+      setNotice({ type: "error", message: "Enter a Client ID or Client Secret to save" });
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.google.clientId.configured && status.google.clientSecret.configured;
+    if (!alreadyConfigured && (!payload.clientId || !payload.clientSecret)) {
+      setNotice({
+        type: "error",
+        message: "Enter both Client ID and Client Secret for the first save",
+      });
+      return;
+    }
+
+    setSavingGoogle(true);
+    try {
+      const data = await apiFetch<{ status: PlatformIntegrationStatus }>(
+        "/api/admin/platform-integrations",
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ integration: "google", ...payload }),
+        },
+      );
+      setStatus(data.status);
+      form.setGoogleClientId(data.status.google.clientId.value ?? "");
+      form.setGoogleClientSecret("");
+      setNotice({ type: "success", message: "Google credentials saved" });
+    } catch (err) {
+      setNotice({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to save Google credentials",
+      });
+    } finally {
+      setSavingGoogle(false);
+    }
+  }
+
   function toggleBedrockGrantedOrg(organizationId: number) {
     form.setBedrockGrantedOrgIds((prev) => {
       const next = new Set(prev);
@@ -251,27 +296,18 @@ export function useAdminIntegrationsOauthActions(deps: {
       integration: "bedrock",
       organizationIds: [...form.bedrockGrantedOrgIds],
     };
-    if (form.bedrockAccessKeyId.trim()) payload.accessKeyId = form.bedrockAccessKeyId.trim();
-    if (form.bedrockSecretAccessKey.trim()) payload.secretAccessKey = form.bedrockSecretAccessKey.trim();
-    if (form.bedrockSessionToken.trim()) payload.sessionToken = form.bedrockSessionToken.trim();
-    if (form.bedrockRegion.trim()) payload.region = form.bedrockRegion.trim();
+    if (form.bedrockApiKey.trim()) payload.apiKey = form.bedrockApiKey.trim();
     if (form.bedrockModel.trim()) payload.model = form.bedrockModel.trim();
 
     const alreadyConfigured = Boolean(status?.bedrock.configured);
-    const addingCreds = Boolean(payload.accessKeyId || payload.secretAccessKey);
-    if (!alreadyConfigured && addingCreds) {
-      if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) {
-        setNotice({
-          type: "error",
-          message: "Access key, secret, region, and model are required for the first save",
-        });
-        return;
-      }
-    }
-    if (!alreadyConfigured && !addingCreds && form.bedrockGrantedOrgIds.size > 0) {
+    const addingCreds = Boolean(payload.apiKey);
+    if (!alreadyConfigured && !addingCreds) {
       setNotice({
         type: "error",
-        message: "Save Bedrock credentials before granting organizations",
+        message:
+          form.bedrockGrantedOrgIds.size > 0
+            ? "Save a Bedrock API key before granting organizations"
+            : "Paste a Bedrock API key to save",
       });
       return;
     }
@@ -287,10 +323,7 @@ export function useAdminIntegrationsOauthActions(deps: {
         },
       );
       setStatus(data.status);
-      form.setBedrockAccessKeyId("");
-      form.setBedrockSecretAccessKey("");
-      form.setBedrockSessionToken("");
-      form.setBedrockRegion(data.status.bedrock.region.value ?? "");
+      form.setBedrockApiKey("");
       form.setBedrockModel(data.status.bedrock.model.value ?? "");
       form.setBedrockGrantedOrgIds(
         new Set(data.status.bedrock.grantedOrganizations.map((org) => org.id)),
@@ -307,6 +340,7 @@ export function useAdminIntegrationsOauthActions(deps: {
   }
 
   async function testBedrock() {
+    const model = form.bedrockModel.trim() || status?.bedrock.model.value?.trim() || undefined;
     setTestingBedrock(true);
     try {
       const body = await apiFetch<{ ok?: boolean; error?: string }>(
@@ -315,11 +349,8 @@ export function useAdminIntegrationsOauthActions(deps: {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            accessKeyId: form.bedrockAccessKeyId.trim() || undefined,
-            secretAccessKey: form.bedrockSecretAccessKey.trim() || undefined,
-            sessionToken: form.bedrockSessionToken.trim() || undefined,
-            region: form.bedrockRegion.trim() || undefined,
-            model: form.bedrockModel.trim() || undefined,
+            apiKey: form.bedrockApiKey.trim() || undefined,
+            model,
           }),
         },
       );
@@ -341,6 +372,7 @@ export function useAdminIntegrationsOauthActions(deps: {
     saveMeta,
     saveBluesky,
     saveBing,
+    saveGoogle,
     saveBedrock,
     testBedrock,
     toggleBedrockGrantedOrg,
@@ -349,6 +381,7 @@ export function useAdminIntegrationsOauthActions(deps: {
     savingMeta,
     savingBluesky,
     savingBing,
+    savingGoogle,
     savingBedrock,
     testingBedrock,
   };

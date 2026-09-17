@@ -543,6 +543,7 @@ export function SocialConnectionCard({
   onConnect,
   onDisconnect,
   embedded = false,
+  comingSoon = false,
 }: {
   destination: PublishDestinationDefinition;
   integration?: Record<string, unknown>;
@@ -553,6 +554,7 @@ export function SocialConnectionCard({
   onConnect: () => void;
   onDisconnect: () => void;
   embedded?: boolean;
+  comingSoon?: boolean;
 }) {
   const accountLabel =
     destination.id === "linkedin"
@@ -560,6 +562,42 @@ export function SocialConnectionCard({
       : destination.id === "twitter"
         ? `@${String(integration?.screenName ?? "connected")}`
         : "Connected";
+
+  if (comingSoon && !integration) {
+    const comingSoonCopy = (
+      <p className="text-sm text-muted-foreground">
+        {destination.label} connect is coming soon. Platform OAuth is not configured yet.
+      </p>
+    );
+    if (embedded) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-base font-semibold">
+            <SocialIcon id={destination.id} />
+            {destination.label}
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </div>
+          {comingSoonCopy}
+        </div>
+      );
+    }
+    return (
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-base font-semibold">
+            <SocialIcon id={destination.id} />
+            {destination.label}
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>{comingSoonCopy}</CardContent>
+      </Card>
+    );
+  }
 
   const header = (
     <div className="flex items-start justify-between gap-4">

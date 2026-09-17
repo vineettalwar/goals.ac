@@ -20,12 +20,14 @@ import {
   isBlueskyManagedByEnv,
 } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 import { isBingManagedByEnv } from "@/lib/platform/bing-webmaster-credentials";
+import { isGoogleManagedByEnv } from "@/lib/platform/google-oauth-credentials";
 import type {
   SaveBlueskyCredentialsInput,
   SaveLinkedInCredentialsInput,
   SaveMetaCredentialsInput,
   SaveTwitterCredentialsInput,
   SaveBingWebmasterCredentialsInput,
+  SaveGoogleOAuthCredentialsInput,
 } from "./types";
 
 export type {
@@ -229,4 +231,39 @@ export async function clearStoredBingWebmasterCredentials(updatedBy: number): Pr
     throw new Error("Bing Webmaster credentials are managed via server environment variables");
   }
   await saveBingWebmasterCredentials({ clientId: null, clientSecret: "", updatedBy });
+}
+
+export async function saveGoogleOAuthCredentials(
+  input: SaveGoogleOAuthCredentialsInput,
+): Promise<void> {
+  if (isGoogleManagedByEnv()) {
+    throw new Error("Google credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientId !== undefined) {
+    patch.googleClientId = input.clientId?.trim() || null;
+  }
+  if (input.clientSecret !== undefined) {
+    patch.encryptedGoogleClientSecret = input.clientSecret
+      ? encryptSecret(input.clientSecret.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+}
+
+export async function clearStoredGoogleOAuthCredentials(updatedBy: number): Promise<void> {
+  if (isGoogleManagedByEnv()) {
+    throw new Error("Google credentials are managed via server environment variables");
+  }
+  await saveGoogleOAuthCredentials({ clientId: null, clientSecret: "", updatedBy });
 }

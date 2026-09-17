@@ -25,6 +25,8 @@ export function useAdminIntegrationsFormState() {
   const [blueskyPrivateKeyJwk, setBlueskyPrivateKeyJwk] = useState("");
   const [bingClientId, setBingClientId] = useState("");
   const [bingClientSecret, setBingClientSecret] = useState("");
+  const [googleClientId, setGoogleClientId] = useState("");
+  const [googleClientSecret, setGoogleClientSecret] = useState("");
   const [dataforseoLogin, setDataforseoLogin] = useState("");
   const [dataforseoPassword, setDataforseoPassword] = useState("");
   const [bedrockApiKey, setBedrockApiKey] = useState("");
@@ -55,6 +57,8 @@ export function useAdminIntegrationsFormState() {
       setBlueskyPrivateKeyJwk("");
     } else if (dialog === "bing") {
       setBingClientSecret("");
+    } else if (dialog === "google") {
+      setGoogleClientSecret("");
     } else if (dialog === "dataforseo") {
       setDataforseoPassword("");
     } else if (dialog === "bedrock") {
@@ -102,6 +106,10 @@ export function useAdminIntegrationsFormState() {
     setBingClientId,
     bingClientSecret,
     setBingClientSecret,
+    googleClientId,
+    setGoogleClientId,
+    googleClientSecret,
+    setGoogleClientSecret,
     dataforseoLogin,
     setDataforseoLogin,
     dataforseoPassword,

@@ -20,6 +20,7 @@ type MetaPageOption = {
 
 type SharedSocialProps = {
   embedded?: boolean;
+  comingSoon?: boolean;
   healthStatus: Record<string, { ok: boolean; error?: string }> | null;
   pendingAction: PublishingPendingAction;
   onConnectOAuth: (path: string, params?: { handle?: string; instance?: string }) => void;
@@ -28,6 +29,7 @@ type SharedSocialProps = {
 
 export function PublishingSettingsMetaCard({
   embedded = false,
+  comingSoon = false,
   metaIntegration,
   metaPageToken,
   metaPages,
@@ -42,6 +44,28 @@ export function PublishingSettingsMetaCard({
   metaPages: MetaPageOption[];
   onSelectMetaPage: (pageId: string) => void;
 }) {
+  if (comingSoon && !metaIntegration) {
+    const body = (
+      <p className="text-sm text-muted-foreground">
+        Facebook & Instagram connect is coming soon. Platform OAuth is not configured yet.
+      </p>
+    );
+    return (
+      <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
+        <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Facebook className="h-4 w-4" aria-hidden />
+            Facebook & Instagram
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={embedded ? "px-0" : undefined}>{body}</CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
       <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
@@ -144,6 +168,7 @@ export function PublishingSettingsMetaCard({
 
 export function PublishingSettingsBlueskyCard({
   embedded = false,
+  comingSoon = false,
   blueskyIntegration,
   blueskyHandle,
   healthStatus,
@@ -156,6 +181,27 @@ export function PublishingSettingsBlueskyCard({
   blueskyHandle: string;
   onBlueskyHandleChange: (v: string) => void;
 }) {
+  if (comingSoon && !blueskyIntegration) {
+    return (
+      <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
+        <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Globe className="w-4 h-4 text-sky-500" />
+            Bluesky
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={embedded ? "px-0" : undefined}>
+          <p className="text-sm text-muted-foreground">
+            Bluesky connect is coming soon. Platform OAuth is not configured yet.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
       <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
@@ -239,6 +285,7 @@ export function PublishingSettingsBlueskyCard({
 
 export function PublishingSettingsMastodonCard({
   embedded = false,
+  comingSoon = false,
   mastodonIntegration,
   mastodonInstance,
   healthStatus,
@@ -250,6 +297,26 @@ export function PublishingSettingsMastodonCard({
   mastodonInstance: string;
   onMastodonInstanceChange: (v: string) => void;
 }) {
+  if (comingSoon && !mastodonIntegration) {
+    return (
+      <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
+        <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
+          <CardTitle className="flex items-center gap-2 text-base">
+            Mastodon
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              Coming soon
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={embedded ? "px-0" : undefined}>
+          <p className="text-sm text-muted-foreground">
+            Mastodon connect is coming soon. Social publishing is not enabled yet.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
       <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
@@ -334,6 +401,11 @@ export function PublishingSettingsExtraSocialCards(props: {
   metaPages: MetaPageOption[];
   blueskyHandle: string;
   mastodonInstance: string;
+  comingSoonByPlatform?: {
+    meta?: boolean;
+    bluesky?: boolean;
+    mastodon?: boolean;
+  };
   onBlueskyHandleChange: (v: string) => void;
   onMastodonInstanceChange: (v: string) => void;
   onConnectOAuth: (path: string, params?: { handle?: string; instance?: string }) => void;
@@ -351,6 +423,7 @@ export function PublishingSettingsExtraSocialCards(props: {
     <>
       <PublishingSettingsMetaCard
         {...shared}
+        comingSoon={props.comingSoonByPlatform?.meta}
         metaIntegration={props.metaIntegration}
         metaPageToken={props.metaPageToken}
         metaPages={props.metaPages}
@@ -358,12 +431,14 @@ export function PublishingSettingsExtraSocialCards(props: {
       />
       <PublishingSettingsBlueskyCard
         {...shared}
+        comingSoon={props.comingSoonByPlatform?.bluesky}
         blueskyIntegration={props.blueskyIntegration}
         blueskyHandle={props.blueskyHandle}
         onBlueskyHandleChange={props.onBlueskyHandleChange}
       />
       <PublishingSettingsMastodonCard
         {...shared}
+        comingSoon={props.comingSoonByPlatform?.mastodon}
         mastodonIntegration={props.mastodonIntegration}
         mastodonInstance={props.mastodonInstance}
         onMastodonInstanceChange={props.onMastodonInstanceChange}

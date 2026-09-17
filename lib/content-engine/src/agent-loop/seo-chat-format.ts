@@ -401,6 +401,6 @@ export function composeGroundedReply(input: {
   return { content: lines.join("\n\n"), citations: uniqueCitations, missing: uniqueMissing, verified };
 }
 
-export function suggestionPrompts(keyword = "[keyword]", url = "[url]") {
+export function suggestionPrompts(keyword?: string, url?: string) {
   return chatCapabilityPromptList("full", keyword, url);
 }

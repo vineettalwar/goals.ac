@@ -3,7 +3,10 @@ import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 
 export const BING_OAUTH_AUTHORIZE_URL = "https://www.bing.com/webmasters/oauth/authorize";
 export const BING_OAUTH_TOKEN_URL = "https://www.bing.com/webmasters/oauth/token";
-export const BING_GET_USER_SITES_URL = "https://ssl.bing.com/webmaster/api.svc/json/GetUserSites";
+/** OAuth Bearer calls use www (Microsoft OAuth docs). ssl is the API-key host — keep as fallback. */
+export const BING_GET_USER_SITES_URL = "https://www.bing.com/webmaster/api.svc/json/GetUserSites";
+const BING_GET_USER_SITES_FALLBACK_URL =
+  "https://ssl.bing.com/webmaster/api.svc/json/GetUserSites";
 
 export type SearchPropertyTokenEnv = {
   GOOGLE_CLIENT_ID?: string;
@@ -206,15 +209,26 @@ async function listGscProperties(accessToken: string): Promise<string[]> {
   return (data.siteEntry ?? []).map((site) => site.siteUrl).filter((url): url is string => Boolean(url));
 }
 
-async function listBingSites(accessToken: string): Promise<string[]> {
-  const headers = { Authorization: `Bearer ${accessToken}` };
-  let res = await fetch(BING_GET_USER_SITES_URL, { headers });
+async function fetchBingUserSites(
+  url: string,
+  headers: Record<string, string>,
+): Promise<Response> {
+  let res = await fetch(url, { headers });
   if (!res.ok) {
-    res = await fetch(BING_GET_USER_SITES_URL, {
+    res = await fetch(url, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
+  }
+  return res;
+}
+
+async function listBingSites(accessToken: string): Promise<string[]> {
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  let res = await fetchBingUserSites(BING_GET_USER_SITES_URL, headers);
+  if (!res.ok) {
+    res = await fetchBingUserSites(BING_GET_USER_SITES_FALLBACK_URL, headers);
   }
   if (!res.ok) {
     throw new Error(`Bing Webmaster GetUserSites failed (${res.status})`);

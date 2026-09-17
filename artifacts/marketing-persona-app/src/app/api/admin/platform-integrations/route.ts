@@ -13,6 +13,7 @@ import {
   clearStoredUnsplashCredentials,
   clearStoredBingWebmasterCredentials,
   clearStoredDataForSeoCredentials,
+  clearStoredGoogleOAuthCredentials,
   disconnectStripeConnect,
   getPlatformIntegrationStatus,
   saveBlueskyCredentials,
@@ -26,6 +27,7 @@ import {
   saveUnsplashCredentials,
   saveBingWebmasterCredentials,
   saveDataForSeoCredentials,
+  saveGoogleOAuthCredentials,
   setPlatformBedrockOrgGrants,
 } from "@/lib/platform/platform-integration-secrets";
 
@@ -77,6 +79,12 @@ const blueskyBodySchema = z.object({
   privateKeyJwk: z.string().min(8).optional(),
 });
 
+const googleBodySchema = z.object({
+  integration: z.literal("google"),
+  clientId: z.string().trim().min(4).optional().nullable(),
+  clientSecret: z.string().min(8).optional(),
+});
+
 const bingBodySchema = z.object({
   integration: z.literal("bing"),
   clientId: z.string().trim().min(4).optional().nullable(),
@@ -110,6 +118,7 @@ const patchSchema = z.discriminatedUnion("integration", [
   metaBodySchema,
   blueskyBodySchema,
   bingBodySchema,
+  googleBodySchema,
   dataforseoBodySchema,
   bedrockBodySchema,
 ]);
@@ -126,6 +135,7 @@ const deleteSchema = z.object({
     "meta",
     "bluesky",
     "bing",
+    "google",
     "dataforseo",
     "bedrock",
   ]),
@@ -247,6 +257,16 @@ export async function PATCH(req: Request) {
         clientSecret: data.clientSecret,
         updatedBy: admin.userId!,
       });
+    } else if (data.integration === "google") {
+      if (data.clientId === undefined && data.clientSecret === undefined) {
+        return NextResponse.json({ error: "No Google fields to update" }, { status: 400 });
+      }
+
+      await saveGoogleOAuthCredentials({
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
+        updatedBy: admin.userId!,
+      });
     } else if (data.integration === "dataforseo") {
       if (data.login === undefined && data.password === undefined) {
         return NextResponse.json({ error: "No DataForSEO fields to update" }, { status: 400 });
@@ -336,6 +356,9 @@ export async function DELETE(req: Request) {
         break;
       case "bing":
         await clearStoredBingWebmasterCredentials(admin.userId!);
+        break;
+      case "google":
+        await clearStoredGoogleOAuthCredentials(admin.userId!);
         break;
       case "dataforseo":
         await clearStoredDataForSeoCredentials(admin.userId!);

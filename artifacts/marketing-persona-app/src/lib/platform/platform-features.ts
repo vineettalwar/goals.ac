@@ -29,6 +29,12 @@ export type PlatformIntegrationId =
   | "mastodon"
   | "bedrock"
   | "gemini"
+  | "openai"
+  | "anthropic"
+  | "openrouter"
+  | "groq"
+  | "nvidia"
+  | "ollama"
   | "bing"
   | "dataforseo"
   | "google";
@@ -87,7 +93,8 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
   {
     id: "ai",
     label: "AI providers",
-    description: "Platform Gemini key and Bedrock credentials for organizations without BYOK.",
+    description:
+      "Platform AI keys (Gemini, OpenAI, Anthropic, OpenRouter, Groq, NVIDIA, Ollama) and Bedrock credentials for organizations without BYOK.",
   },
   {
     id: "search",
@@ -317,9 +324,9 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     {
       id: "google",
       category: "search",
-      kind: "env",
+      kind: "credentials",
       label: "Google",
-      description: "Env OAuth client for Google login and Search Console.",
+      description: "OAuth client for Google login, Search Console, Analytics, and Sheets.",
       settingsKey: "googleIntegrationsEnabled",
       docsUrl: "https://console.cloud.google.com/apis/credentials",
       envVars: [
@@ -392,6 +399,98 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
           configured: envConfigured("AI_INTEGRATIONS_GEMINI_API_KEY"),
           required: false,
         },
+      ],
+    },
+    {
+      id: "openai",
+      category: "ai",
+      kind: "env",
+      label: "OpenAI",
+      description:
+        "Platform OpenAI key used when organizations do not bring their own. Set OPENAI_API_KEY as a Worker secret.",
+      docsUrl: "https://platform.openai.com/api-keys",
+      envVars: [
+        { name: "OPENAI_API_KEY", configured: envConfigured("OPENAI_API_KEY"), required: true },
+      ],
+    },
+    {
+      id: "anthropic",
+      category: "ai",
+      kind: "env",
+      label: "Anthropic",
+      description:
+        "Platform Anthropic key used when organizations do not bring their own. Set ANTHROPIC_API_KEY as a Worker secret.",
+      docsUrl: "https://console.anthropic.com/settings/keys",
+      envVars: [
+        {
+          name: "ANTHROPIC_API_KEY",
+          configured: envConfigured("ANTHROPIC_API_KEY"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "openrouter",
+      category: "ai",
+      kind: "env",
+      label: "OpenRouter",
+      description:
+        "Platform OpenRouter key used when organizations do not bring their own. Set OPENROUTER_API_KEY as a Worker secret.",
+      docsUrl: "https://openrouter.ai/keys",
+      envVars: [
+        {
+          name: "OPENROUTER_API_KEY",
+          configured: envConfigured("OPENROUTER_API_KEY"),
+          required: true,
+        },
+        {
+          name: "OPENROUTER_MODEL",
+          configured: envConfigured("OPENROUTER_MODEL"),
+          required: false,
+        },
+      ],
+    },
+    {
+      id: "groq",
+      category: "ai",
+      kind: "env",
+      label: "Groq",
+      description:
+        "Platform Groq key used when organizations do not bring their own. Set GROQ_API_KEY as a Worker secret.",
+      docsUrl: "https://console.groq.com/keys",
+      envVars: [
+        { name: "GROQ_API_KEY", configured: envConfigured("GROQ_API_KEY"), required: true },
+        { name: "GROQ_MODEL", configured: envConfigured("GROQ_MODEL"), required: false },
+      ],
+    },
+    {
+      id: "nvidia",
+      category: "ai",
+      kind: "env",
+      label: "NVIDIA NIM",
+      description:
+        "Platform NVIDIA NIM key used when organizations do not bring their own. Set NVIDIA_API_KEY as a Worker secret.",
+      docsUrl: "https://build.nvidia.com/settings",
+      envVars: [
+        { name: "NVIDIA_API_KEY", configured: envConfigured("NVIDIA_API_KEY"), required: true },
+        { name: "NVIDIA_MODEL", configured: envConfigured("NVIDIA_MODEL"), required: false },
+      ],
+    },
+    {
+      id: "ollama",
+      category: "ai",
+      kind: "env",
+      label: "Ollama",
+      description:
+        "Local or self-hosted Ollama for platform fallback. Point OLLAMA_BASE_URL at a reachable host (not loopback in production Workers).",
+      docsUrl: "https://ollama.com/",
+      envVars: [
+        {
+          name: "OLLAMA_BASE_URL",
+          configured: envConfigured("OLLAMA_BASE_URL"),
+          required: false,
+        },
+        { name: "OLLAMA_MODEL", configured: envConfigured("OLLAMA_MODEL"), required: false },
       ],
     },
     {
