@@ -36,6 +36,23 @@
   --chart-grid: #c9c2b4;
   --studio-chrome: #0a0a0b;
   --studio-chrome-fg: #f3efe6;
+  
+  /* Enhanced paper qualities */
+  --newsprint-base: #f3efe6;
+  --newsprint-warm: #f5f1e9;
+  --newsprint-cool: #f1ede6;
+  --newsprint-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23f3efe6'/><path d='M0,100 Q50,120 100,100 T200,100' stroke='%23e8e2d6' stroke-width='0.25' fill='none' opacity='0.15'/></svg>");
+  
+  --ink-warm: #0a0a0b;
+  --ink-cool: #080809;
+  
+  --signal-base: #d97706;
+  --signal-warm: #db8a2a;
+  --signal-cool: #c66500;
+  
+  --paper-shadow-light: rgba(0, 0, 0, 0.04);
+  --paper-shadow-medium: rgba(0, 0, 0, 0.08);
+  --paper-shadow-dark: rgba(0, 0, 0, 0.12);
 }
 
 .dark {
@@ -71,6 +88,23 @@
   --chart-grid: #2e2c28;
   --studio-chrome: #0a0a0b;
   --studio-chrome-fg: #f3efe6;
+  
+  /* Enhanced paper qualities for dark mode */
+  --newsprint-base: #0a0a0b;
+  --newsprint-warm: #0d0c0d;
+  --newsprint-cool: #0a0a0b;
+  --newsprint-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><rect width='200' height='200' fill='%230a0a0b'/><path d='M0,100 Q50,120 100,100 T200,100' stroke='%232e2c28' stroke-width='0.25' fill='none' opacity='0.2'/></svg>");
+  
+  --ink-warm: #f3efe6;
+  --ink-cool: #ece9e3;
+  
+  --signal-base: #d97706;
+  --signal-warm: #fbbf24;
+  --signal-cool: #b45309;
+  
+  --paper-shadow-light: rgba(255, 255, 255, 0.03);
+  --paper-shadow-medium: rgba(255, 255, 255, 0.06);
+  --paper-shadow-dark: rgba(255, 255, 255, 0.1);
 }
 
 .marketing-register {
@@ -91,6 +125,19 @@
   background: var(--background);
   color: var(--foreground);
   color-scheme: light;
+  
+  /* Enhanced paper qualities for marketing */
+  --newsprint-base: #f3efe6;
+  --newsprint-warm: #f5f1e9;
+  --newsprint-cool: #f1ede6;
+  --newsprint-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23f3efe6'/><path d='M0,100 Q50,120 100,100 T200,100' stroke='%23e8e2d6' stroke-width='0.25' fill='none' opacity='0.15'/></svg>");
+  
+  --ink-warm: #0a0a0b;
+  --ink-cool: #080809;
+  
+  --signal-base: #d97706;
+  --signal-warm: #db8a2a;
+  --signal-cool: #c66500;
 }
 
 /* Product rail is always ink. Light mode only flips the main column to newsprint. */
@@ -115,6 +162,19 @@
   background-image:
     linear-gradient(180deg, rgba(217, 119, 6, 0.07) 0%, transparent 32%),
     linear-gradient(180deg, #121110 0%, var(--studio-chrome) 42%, #070708 100%);
+  
+  /* Enhanced paper qualities for sidebar */
+  --newsprint-base: #141416;
+  --newsprint-warm: #171619;
+  --newsprint-cool: #111013;
+  --newsprint-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23141416'/><path d='M0,100 Q50,120 100,100 T200,100' stroke='%233a3834' stroke-width='0.25' fill='none' opacity='0.15'/></svg>");
+  
+  --ink-warm: #f3efe6;
+  --ink-cool: #ece9e3;
+  
+  --signal-base: #d97706;
+  --signal-warm: #fbbf24;
+  --signal-cool: #b45309;
 }
 
 .app-sidebar .app-nav-active {
@@ -140,6 +200,48 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: none;
+}
+
+/* Enhanced paper card with elevation */
+.paper-card-enhanced {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 
+    0 1px 3px var(--paper-shadow-light),
+    0 1px 2px var(--paper-shadow-light);
+  /* Simulate paper texture */
+  background-image: var(--newsprint-texture);
+  background-size: 200px 200px;
+  /* Subtle paper thickness simulation */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(0, 0, 0, 0.02),
+      transparent
+    );
+    pointer-events: none;
+  }
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 
+      0 2px 6px var(--paper-shadow-medium),
+      0 1px 3px var(--paper-shadow-light);
+  }
+  &:active {
+    transform: translateY(0px);
+    box-shadow: 
+      0 1px 2px var(--paper-shadow-light),
+      inset 0 1px 2px var(--paper-shadow-light);
+  }
 }
 
 .article-canvas {

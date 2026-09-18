@@ -34,7 +34,7 @@ export function DashboardCommandCenterSection({
   if (commandCenter.topOpportunities.length === 0) return null;
 
   return (
-    <section aria-labelledby="ideas-heading">
+    <section className="paper-card-enhanced" aria-labelledby="ideas-heading">
       <div className="mb-3 flex items-baseline justify-between gap-4">
         <h2 id="ideas-heading" className="text-sm font-semibold tracking-tight">
           Ideas

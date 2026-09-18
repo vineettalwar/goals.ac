@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, ListPlus, PenLine, Plus } from "lucide-react";
 import { cn } from "../cn";
-import { chatCapabilityPromptList, type ChatProductSurface } from "@workspace/content-engine/agent-loop/chat-catalog";
-import type { SeoChatCard, SeoChatChip } from "@workspace/content-engine/agent-loop/seo-chat-format";
+import type { SeoChatCard } from "@workspace/content-engine/agent-loop/seo-chat-format";
 import { AgentRunInspector, type AgentRunView } from "../agent-loop/agent-run-inspector";
 import { StudioAiReadinessBanner } from "../studio/brand-ai-profile-card";
 import {
@@ -23,7 +22,6 @@ type ChatMessage = {
   id: number | string;
   role: "user" | "assistant";
   content: string;
-  chips?: SeoChatChip[];
   cards?: SeoChatCard[];
   agentRunId?: number | null;
 };
@@ -35,7 +33,6 @@ type SeoChatWorkspaceProps = {
   request: (path: string, init?: RequestInit) => Promise<Response>;
   studioHref: (pieceId?: number) => string;
   actionsHref: string;
-  surface?: ChatProductSurface;
   aiSettingsHref?: string;
 };
 
@@ -63,7 +60,6 @@ export function SeoChatWorkspace({
   request,
   studioHref,
   actionsHref,
-  surface = "full",
   aiSettingsHref = "/integrations/ai",
 }: SeoChatWorkspaceProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -74,7 +70,7 @@ export function SeoChatWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [aiStatus, setAiStatus] = useState<ChatAiStatus | null>(null);
   const [aiSaving, setAiSaving] = useState(false);
-  const [liveChips, setLiveChips] = useState<SeoChatChip[]>([]);
+
   const [liveRunId, setLiveRunId] = useState<number | null>(null);
   const [openRun, setOpenRun] = useState<AgentRunView | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -113,16 +109,15 @@ export function SeoChatWorkspace({
         }>;
       };
       setThreadId(id);
-      setMessages(
-        (data.messages ?? []).map((row) => ({
-          id: row.id,
-          role: row.role,
-          content: row.content,
-          chips: Array.isArray(row.payload?.chips) ? (row.payload!.chips as SeoChatChip[]) : [],
-          cards: Array.isArray(row.payload?.cards) ? (row.payload!.cards as SeoChatCard[]) : [],
-          agentRunId: runIdFromMessageRow(row),
-        })),
-      );
+       setMessages(
+         (data.messages ?? []).map((row) => ({
+           id: row.id,
+           role: row.role,
+           content: row.content,
+           cards: Array.isArray(row.payload?.cards) ? (row.payload!.cards as SeoChatCard[]) : [],
+           agentRunId: runIdFromMessageRow(row),
+         })),
+       );
     },
     [request],
   );
@@ -142,7 +137,7 @@ export function SeoChatWorkspace({
     const el = scroller.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: busy ? "auto" : "smooth" });
-  }, [messages, liveChips, busy, openRun]);
+  }, [messages, busy, openRun]);
 
   function requireAiReady(): boolean {
     if (aiStatus?.ready === false) {
@@ -268,10 +263,9 @@ export function SeoChatWorkspace({
       if (!res.ok) throw new Error(await readApiError(res, "Chat request failed"));
       if (!res.body) throw new Error("Chat request failed");
 
-      let assistant = "";
-      let agentRunId: number | null = null;
-      const cards: SeoChatCard[] = [];
-      const chips: SeoChatChip[] = [];
+       let assistant = "";
+       let agentRunId: number | null = null;
+       const cards: SeoChatCard[] = [];
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -303,68 +297,62 @@ export function SeoChatWorkspace({
               setLiveRunId(id);
             }
           }
-          if (pendingEvent === "loop_step" && data && typeof data === "object") {
-            const step = data as { tool?: string; label: string; ok?: boolean; agentRunId?: number };
-            const chip = { tool: step.tool ?? "stop", label: step.label, ok: step.ok };
-            chips.push(chip);
-            setLiveChips([...chips]);
-            if (typeof step.agentRunId === "number") {
-              agentRunId = step.agentRunId;
-              setLiveRunId(step.agentRunId);
-            }
-          }
-          if (pendingEvent === "delta" && data && typeof data === "object" && "text" in data) {
-            assistant += String((data as { text: string }).text);
-            setMessages((prev) => {
-              const next = [...prev];
-              const last = next.at(-1);
-              if (last?.role === "assistant" && String(last.id).startsWith("a-live")) {
-                next[next.length - 1] = { ...last, content: assistant, chips: [...chips], cards: [...cards], agentRunId };
-              } else {
-                next.push({
-                  id: "a-live",
-                  role: "assistant",
-                  content: assistant,
-                  chips: [...chips],
-                  cards: [...cards],
-                  agentRunId,
-                });
-              }
-              return next;
-            });
-          }
+           if (pendingEvent === "loop_step" && data && typeof data === "object") {
+             const step = data as { tool?: string; label: string; ok?: boolean; agentRunId?: number };
+             if (typeof step.agentRunId === "number") {
+               agentRunId = step.agentRunId;
+               setLiveRunId(step.agentRunId);
+             }
+           }
+           if (pendingEvent === "delta" && data && typeof data === "object" && "text" in data) {
+             assistant += String((data as { text: string }).text);
+             setMessages((prev) => {
+               const next = [...prev];
+               const last = next.at(-1);
+               if (last?.role === "assistant" && String(last.id).startsWith("a-live")) {
+                 next[next.length - 1] = { ...last, content: assistant, cards: [...cards], agentRunId };
+               } else {
+                 next.push({
+                   id: "a-live",
+                   role: "assistant",
+                   content: assistant,
+                   cards: [...cards],
+                   agentRunId,
+                 });
+               }
+               return next;
+             });
+           }
           if (pendingEvent === "card" && data && typeof data === "object" && "kind" in data) {
             cards.push(data as SeoChatCard);
           }
           if (pendingEvent === "error" && data && typeof data === "object" && "error" in data) {
             throw new Error(String((data as { error: string }).error));
           }
-          if (pendingEvent === "done" && data && typeof data === "object") {
-            const doneData = data as {
-              assistantId?: number;
-              content?: string;
-              chips?: SeoChatChip[];
-              cards?: SeoChatCard[];
-              agentRunId?: number | null;
-              projectId?: number;
-            };
-            const doneRunId = typeof doneData.agentRunId === "number" ? doneData.agentRunId : agentRunId;
-            if (typeof doneData.projectId === "number" && String(doneData.projectId) !== projectId) {
-              onProjectChange(String(doneData.projectId));
-            }
-            setMessages((prev) => {
-              const next = prev.filter((row) => row.id !== "a-live" && !String(row.id).startsWith("a-live"));
-              next.push({
-                id: doneData.assistantId ?? `a-${Date.now()}`,
-                role: "assistant",
-                content: doneData.content ?? assistant,
-                chips: doneData.chips ?? chips,
-                cards: doneData.cards ?? cards,
-                agentRunId: doneRunId,
-              });
-              return next;
-            });
-          }
+           if (pendingEvent === "done" && data && typeof data === "object") {
+             const doneData = data as {
+               assistantId?: number;
+               content?: string;
+               cards?: SeoChatCard[];
+               agentRunId?: number | null;
+               projectId?: number;
+             };
+             const doneRunId = typeof doneData.agentRunId === "number" ? doneData.agentRunId : agentRunId;
+             if (typeof doneData.projectId === "number" && String(doneData.projectId) !== projectId) {
+               onProjectChange(String(doneData.projectId));
+             }
+             setMessages((prev) => {
+               const next = prev.filter((row) => row.id !== "a-live" && !String(row.id).startsWith("a-live"));
+               next.push({
+                 id: doneData.assistantId ?? `a-${Date.now()}`,
+                 role: "assistant",
+                 content: doneData.content ?? assistant,
+                 cards: doneData.cards ?? [],
+                 agentRunId: doneRunId,
+               });
+               return next;
+             });
+           }
           pendingEvent = null;
         }
       }
@@ -372,18 +360,17 @@ export function SeoChatWorkspace({
     } catch (err) {
       if (gen !== sendGen.current) return;
       setError(err instanceof Error ? err.message : "Chat failed");
-    } finally {
-      if (gen !== sendGen.current) return;
-      setBusy(false);
-      setLiveChips([]);
-      setLiveRunId(null);
-    }
+     } finally {
+       if (gen !== sendGen.current) return;
+       setBusy(false);
+       setLiveRunId(null);
+     }
   }
 
   const empty = messages.length === 0 && !busy;
 
   const aiGate = (
-    <div className="mb-3 w-full max-w-3xl space-y-2">
+    <div className="mt-3 w-full max-w-3xl space-y-2">
       <StudioAiReadinessBanner
         ready={aiStatus ? aiStatus.ready : null}
         activeProvider={aiStatus?.activeProvider ?? "gemini"}
@@ -430,21 +417,8 @@ export function SeoChatWorkspace({
             <h1 className="mb-7 text-center text-4xl font-normal tracking-tight text-foreground">
               Where should we start?
             </h1>
-            <div className="mb-9 flex max-w-3xl flex-wrap justify-center gap-x-5 gap-y-3">
-              {chatCapabilityPromptList(surface).map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-40"
-                  disabled={aiStatus?.ready === false}
-                  onClick={() => void send(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-            {aiGate}
             <div className="w-full max-w-3xl">{composer}</div>
+            {aiGate}
             {!projectId ? (
               <p className="mt-4 text-sm text-muted-foreground">Pick a site, or paste a URL to onboard.</p>
             ) : null}
@@ -460,21 +434,9 @@ export function SeoChatWorkspace({
                       <p className="seo-chat-user ml-auto max-w-[85%] rounded-sm border border-border px-4 py-2.5 text-[15px] leading-relaxed">
                         {message.content}
                       </p>
-                    ) : (
-                      <>
-                        {message.chips && message.chips.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {message.chips.map((chip) => (
-                              <span
-                                key={`${chip.tool}-${chip.label}`}
-                                className="rounded-sm border border-border bg-secondary px-2.5 py-0.5 text-[11px] text-muted-foreground"
-                              >
-                                {chip.label}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        <div className="whitespace-pre-wrap font-serif text-[17px] leading-7 text-foreground/95">{message.content}</div>
+         ) : (
+                       <>
+                         <div className="whitespace-pre-wrap font-serif text-[17px] leading-7 text-foreground/95">{message.content}</div>
                         {message.cards?.map((card, index) => (
                           <ChatCard
                             key={`${card.kind}-${index}`}
@@ -545,35 +507,27 @@ export function SeoChatWorkspace({
                   </article>
                 ))}
 
-                {busy && (liveChips.length > 0 || liveRunId) ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {liveChips.map((chip) => (
-                      <span
-                        key={`${chip.tool}-${chip.label}`}
-                        className="rounded-sm border border-border bg-secondary px-2.5 py-0.5 text-[11px] text-foreground"
-                      >
-                        {chip.label}
-                      </span>
-                    ))}
-                    {liveRunId ? (
-                      <button
-                        type="button"
-                        className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        onClick={() => void inspectRun(liveRunId)}
-                      >
-                        Inspect run {liveRunId}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
+                 {busy && liveRunId ? (
+                   <div className="flex flex-wrap items-center gap-2">
+                     {liveRunId ? (
+                       <button
+                         type="button"
+                         className="rounded-sm px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                         onClick={() => void inspectRun(liveRunId)}
+                       >
+                         Inspect run {liveRunId}
+                       </button>
+                     ) : null}
+                   </div>
+                 ) : null}
                 {openRun ? <AgentRunInspector run={openRun} onClose={() => setOpenRun(null)} /> : null}
               </div>
             </div>
             {error ? <p className="px-4 pb-2 text-center text-sm text-destructive">{error}</p> : null}
             <div className="seo-chat-composer-dock shrink-0 px-4 pb-6 pt-4">
               <div className="mx-auto w-full max-w-3xl">
-                {aiGate}
                 {composer}
+                {aiGate}
               </div>
             </div>
           </>

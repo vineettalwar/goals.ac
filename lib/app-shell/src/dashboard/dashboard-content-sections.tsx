@@ -34,7 +34,12 @@ export function DashboardStatsSection({
 }) {
   if (projectCount === 0) {
     return (
-      <div className="flex flex-col gap-4 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
+      <div 
+        className={cn(
+          "flex flex-col gap-4 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between",
+          "paper-card-enhanced"
+        )}
+      >
         <div>
           <p className="font-medium">Create your first project</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -64,7 +69,10 @@ export function DashboardDraftsSection({
   if (drafts.length === 0) return null;
 
   return (
-    <section aria-labelledby="drafts-review-heading">
+    <section 
+      className="paper-card-enhanced"
+      aria-labelledby="drafts-review-heading"
+    >
       <h2 id="drafts-review-heading" className="mb-3 text-sm font-semibold">
         {drafts.length} draft{drafts.length !== 1 ? "s" : ""} to review
       </h2>
@@ -102,7 +110,7 @@ export function DashboardRecentSection({
   if (recent.length === 0) return null;
 
   return (
-    <section>
+    <section className="paper-card-enhanced">
       <div className="mb-3 flex items-baseline justify-between gap-4">
         <h2 className="text-sm font-semibold">Recent</h2>
         <DashLink
@@ -164,7 +172,7 @@ export function DashboardProjectsSection({
   renderLink: (props: DashboardLinkProps) => ReactNode;
 }) {
   return (
-    <section>
+    <section className="paper-card-enhanced">
       <div className="mb-3 flex items-baseline justify-between gap-4">
         <h2 className="text-sm font-semibold">Project</h2>
         <DashLink
