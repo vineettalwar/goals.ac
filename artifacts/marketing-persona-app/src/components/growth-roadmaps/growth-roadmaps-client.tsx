@@ -1,11 +1,11 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Map, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
@@ -119,7 +119,7 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
   const pinnedIds = new Set((projectRoadmaps as RoadmapSummary[]).map((r) => r.id));
   const unpinnedCatalog = (catalogRoadmaps as RoadmapSummary[]).filter((r) => !pinnedIds.has(r.id));
 
-  const containerClass = embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`;
+  const containerClass = embedded ? "space-y-6" : `${APP_SHELL_PAGE} space-y-6`;
 
   if (projectLoading && !activeProjectId) {
     return (
@@ -130,7 +130,13 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
             <p className="mt-1 text-sm text-muted-foreground">Loading your project context…</p>
           </div>
         ) : null}
-        <div className="p-8 animate-pulse h-64 rounded-xl bg-secondary/40" />
+        <div className="space-y-4">
+          <div className="paper-card rounded-xl p-8 animate-pulse h-48 bg-secondary/40" />
+          <div className="space-y-3">
+            <div className="paper-card rounded-xl p-6 animate-pulse h-12 bg-secondary/40" />
+            <div className="paper-card rounded-xl p-6 animate-pulse h-12 bg-secondary/40" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -149,12 +155,15 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
       ) : null}
 
       {!activeProjectId ? (
-        <div className="py-12">
-          <p className="font-medium">No project selected</p>
-          <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            Create a website project to generate and save roadmaps.
+        <div className="paper-card rounded-xl p-12 text-center">
+          <div className="mx-auto w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+            <Map className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold">Select a project to get started</h3>
+          <p className="mt-2 max-w-md mx-auto text-sm text-muted-foreground">
+            Choose a website project to generate and save 12-month growth roadmaps, or create a new project.
           </p>
-          <div className="mt-5">
+          <div className="mt-6">
             <Link href="/projects">
               <Button>Create project</Button>
             </Link>
@@ -170,41 +179,67 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
         />
       )}
 
-      <div>
-        <h2 className="text-sm font-semibold mb-3">Your project roadmaps</h2>
-        {loadingProject && projectRoadmaps.length === 0 ? (
-          <div className="flex justify-center p-8">
-            <Spinner />
-          </div>
-        ) : !activeProjectId ? null : projectRoadmaps.length === 0 ? (
-          <div className="py-8">
-            <p className="font-medium">No roadmaps yet</p>
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Generate your first roadmap above, or pin one from the catalog below.
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Your roadmaps</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage and view pinned 12-month growth strategies
             </p>
           </div>
+          {projectRoadmaps.length > 0 && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
+              {projectRoadmaps.length} pinned
+            </span>
+          )}
+        </div>
+        {loadingProject && projectRoadmaps.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="paper-card rounded-xl p-5 animate-pulse h-48 bg-secondary/40" />
+            ))}
+          </div>
+        ) : !activeProjectId ? null : projectRoadmaps.length === 0 ? (
+          <div className="paper-card rounded-xl p-12 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+              <Map className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold">No roadmaps yet</h3>
+            <p className="mt-2 max-w-md mx-auto text-sm text-muted-foreground">
+              Generate your first 12-month growth roadmap above, or browse the catalog to pin one to this project.
+            </p>
+            <div className="mt-6">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
+                Browse catalog below to get started
+              </span>
+            </div>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(projectRoadmaps as RoadmapSummary[]).map((r) => (
-              <div key={r.id} className="p-5 rounded-xl">
-                <h3 className="font-semibold text-sm">{r.industry}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                  {r.location} · {r.stage} stage
-                </p>
-                <div className="flex items-center justify-between mt-3 gap-2">
+              <div key={r.id} className="paper-card rounded-xl p-5 transition-all hover:shadow-md">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-base">{r.industry}</h3>
+                    <p className="text-xs text-muted-foreground mt-1 capitalize">
+                      {r.location} · {r.stage} stage
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-2">
                   <Link href={`/growth-roadmaps/${r.slug}`}>
-                    <Button variant="ghost" size="sm" className="h-8 px-2">
-                      View <ArrowRight className="h-3 w-3 ml-1" />
+                    <Button variant="default" size="sm" className="h-8 px-3 text-sm">
+                      View Roadmap <ArrowRight className="h-3 w-3 ml-1.5" />
                     </Button>
                   </Link>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8"
+                    className="h-8 text-xs"
                     disabled={pinningId === r.id || fetchingProject}
                     onClick={() => unpinRoadmap(r.id)}
                   >
-                    <PinOff className="h-3 w-3 mr-1" />
+                    <PinOff className="h-3 w-3 mr-1.5" />
                     Unpin
                   </Button>
                 </div>
@@ -214,54 +249,77 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
         )}
       </div>
 
-      <div>
+      <div className="space-y-4">
         <button
           type="button"
           onClick={() => setCatalogOpen((o) => !o)}
-          className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center justify-between w-full p-4 paper-card rounded-xl hover:shadow-md transition-all text-left"
         >
-          Browse catalog
-          {catalogOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Map className="h-4 w-4" />
+              Browse roadmap catalog
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {catalogOpen ? "Hide catalog" : `View ${unpinnedCatalog.length} available roadmaps`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ChevronDown className={`h-4 w-4 transition-transform ${catalogOpen ? 'rotate-180' : ''}`} />
+          </div>
         </button>
         {catalogOpen && (
-          <div className="mt-3">
+          <div className="space-y-4">
             {loadingCatalog ? (
-              <div className="flex justify-center p-8">
-                <Spinner />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="paper-card rounded-xl p-5 animate-pulse h-56 bg-secondary/40" />
+                ))}
               </div>
             ) : unpinnedCatalog.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">
-                No additional roadmaps in the catalog.
-              </p>
+              <div className="paper-card rounded-xl p-8 text-center">
+                <p className="text-sm text-muted-foreground">No additional roadmaps available in the catalog.</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {unpinnedCatalog.map((r) => (
-                  <div key={r.id} className="p-5 rounded-xl">
-                    <h3 className="font-semibold text-sm">{r.industry}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      {r.location} · {r.stage} stage
-                    </p>
-                    <div className="flex items-center justify-between mt-3 gap-2">
-                      <Link href={`/growth-roadmaps/${r.slug}`}>
-                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                          Preview <ArrowRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      </Link>
-                      {activeProjectId && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                          disabled={pinningId === r.id}
-                          onClick={() => pinRoadmap(r.id)}
-                        >
-                          <Pin className="h-3 w-3 mr-1" />
-                          Pin
-                        </Button>
-                      )}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Available {unpinnedCatalog.length} roadmaps
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {unpinnedCatalog.map((r) => (
+                    <div key={r.id} className="paper-card rounded-xl p-5 transition-all hover:shadow-md">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-semibold text-base">{r.industry}</h3>
+                          <p className="text-xs text-muted-foreground mt-1 capitalize">
+                            {r.location} · {r.stage} stage
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between gap-2">
+                        <Link href={`/growth-roadmaps/${r.slug}`}>
+                          <Button variant="ghost" size="sm" className="h-8 text-sm px-3">
+                            Preview <ArrowRight className="h-3 w-3 ml-1.5" />
+                          </Button>
+                        </Link>
+                        {activeProjectId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            disabled={pinningId === r.id}
+                            onClick={() => pinRoadmap(r.id)}
+                          >
+                            <Pin className="h-3 w-3 mr-1.5" />
+                            Pin
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
