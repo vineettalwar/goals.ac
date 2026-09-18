@@ -73,6 +73,7 @@ export function VideoDemoSection() {
                   alt={tile.alt}
                   fill
                   sizes={tile.sizes}
+                  loading="lazy"
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/25 to-transparent" />

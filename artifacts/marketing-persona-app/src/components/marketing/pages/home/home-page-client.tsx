@@ -8,7 +8,7 @@ import type { ShowcaseArticle } from "@/components/marketing/sections/home-marke
 const WorkflowSection = dynamic(
   () =>
     import("@/components/marketing/sections/workflow-section").then((module) => module.WorkflowSection),
-  { loading: () => null },
+  { loading: () => null, ssr: false },
 );
 
 const VideoDemoSection = dynamic(
@@ -16,7 +16,7 @@ const VideoDemoSection = dynamic(
     import("@/components/marketing/sections/video-demo-section").then(
       (module) => module.VideoDemoSection,
     ),
-  { loading: () => null },
+  { loading: () => null, ssr: false },
 );
 
 const HomeMarketingSections = dynamic(
@@ -24,7 +24,7 @@ const HomeMarketingSections = dynamic(
     import("@/components/marketing/sections/home-marketing-sections").then(
       (module) => module.HomeMarketingSections,
     ),
-  { loading: () => null },
+  { loading: () => null, ssr: false },
 );
 
 type HomePageClientProps = {

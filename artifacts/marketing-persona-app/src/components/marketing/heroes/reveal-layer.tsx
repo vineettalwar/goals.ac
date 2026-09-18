@@ -121,6 +121,7 @@ export function RevealLayer({
         WebkitMaskImage: maskImage(-999, -999, radius),
       }}
       aria-hidden
+      loading="eager"
     />
   );
 }

@@ -14,6 +14,7 @@ export function HeroPhotoBg({ image, overlayClass = "bg-black/55", animate = fal
         className={`absolute inset-0 bg-center bg-cover bg-no-repeat z-0 ${animate ? "hero-zoom" : ""}`}
         style={{ backgroundImage: `url(${image})` }}
         aria-hidden
+        loading="eager"
       />
       <div className={`absolute inset-0 z-0 ${overlayClass}`} aria-hidden />
     </>

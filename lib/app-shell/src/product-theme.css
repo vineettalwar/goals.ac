@@ -247,7 +247,7 @@
 .article-canvas {
   background: var(--newsprint);
   color: var(--ink);
-  font-family: var(--font-serif), "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", Times, serif;
   max-width: 65ch;
 }
 
@@ -258,7 +258,7 @@
   gap: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
   padding: 0.625rem 0;
-  font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-family: var(--font-mono), "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 0.75rem;
   letter-spacing: 0.02em;
 }
@@ -293,7 +293,7 @@
 
 .score-signal {
   color: var(--signal);
-  font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-family: var(--font-mono), "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }

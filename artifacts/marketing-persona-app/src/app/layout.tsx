@@ -1,33 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
 import { RootProviders } from "@/app/root-providers";
 import { getSession } from "@/auth";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
 import { MARKETING_CRITICAL_CSS } from "@/lib/marketing/site/marketing-critical-css";
 import { sanitizeJsonLd } from "@/lib/security/json-ld";
 import { productThemeBootScript } from "@/lib/theme-path";
-
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-sans-face",
-  display: "swap",
-});
-
-const sourceSerif = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-serif-face",
-  display: "swap",
-});
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono-face",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: { default: "goals.ac", template: "%s | goals.ac" },
@@ -62,15 +40,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
-      className={`${plexSans.variable} ${sourceSerif.variable} ${plexMono.variable}`}
+      className="--font-sans-face --font-serif-face --font-mono-face"
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script defer dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.higgs.ai" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.higgs.ai" />
+        <link rel="stylesheet" href="/fonts/fonts.css" />
+        <link rel="preload" as="font" href="/fonts/ibm-plex-sans/IBMPlexSans[wdth,wght].ttf" type="font/ttf" crossorigin />
+        <link rel="preload" as="font" href="/fonts/source-serif-4/SourceSerif4[opsz,wght].ttf" type="font/ttf" crossorigin />
+        <link rel="preload" as="font" href="/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf" type="font/ttf" crossorigin />
         {process.env.MARKETING_STATIC === "1" && (
           <style dangerouslySetInnerHTML={{ __html: MARKETING_CRITICAL_CSS }} />
         )}
