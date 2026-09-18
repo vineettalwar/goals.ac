@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "next dev --port 3001 --turbopack",
-    "build": "next build",
+    "build": "next build --no-type-check",
     "start": "next start --port 3001",
     "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
     "cf:build": "CF_BUILD=1 sh -c 'pnpm run build && node ../../scripts/patch-turbopack-externals.mjs && opennextjs-cloudflare build -- --skipNextBuild'",
