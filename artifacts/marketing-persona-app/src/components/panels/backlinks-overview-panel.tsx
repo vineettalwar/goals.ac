@@ -47,7 +47,7 @@ export function BacklinksOverviewPanel() {
         configured?: boolean;
       };
 
-      if (res.status === 503 && data.configured === false as const) {
+      if (res.status === 503 && data.configured === false) {
         setNotConfigured(true);
         setOverview(null);
         return;
@@ -55,7 +55,7 @@ export function BacklinksOverviewPanel() {
       if (!res.ok) throw new Error(data.error ?? "Failed to fetch backlinks");
 
       setNotConfigured(false);
-      setOverview(data);
+      setOverview(data as BacklinksOverview);
       toast.success("Backlinks refreshed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to fetch backlinks");

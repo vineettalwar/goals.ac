@@ -50,9 +50,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.higgs.ai" />
         <link rel="stylesheet" href="/fonts/fonts.css" />
-        <link rel="preload" as="font" href="/fonts/ibm-plex-sans/IBMPlexSans[wdth,wght].ttf" type="font/ttf" crossOrigin />
-        <link rel="preload" as="font" href="/fonts/source-serif-4/SourceSerif4[opsz,wght].ttf" type="font/ttf" crossOrigin />
-        <link rel="preload" as="font" href="/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf" type="font/ttf" crossOrigin />
+        <link rel="preload" as="font" href="/fonts/ibm-plex-sans/IBMPlexSans[wdth,wght].ttf" type="font/ttf" crossOrigin="anonymous" />
+        <link rel="preload" as="font" href="/fonts/source-serif-4/SourceSerif4[opsz,wght].ttf" type="font/ttf" crossOrigin="anonymous" />
+        <link rel="preload" as="font" href="/fonts/ibm-plex-mono/IBMPlexMono-Regular.ttf" type="font/ttf" crossOrigin="anonymous" />
         {process.env.MARKETING_STATIC === "1" && (
           <style dangerouslySetInnerHTML={{ __html: MARKETING_CRITICAL_CSS }} />
         )}

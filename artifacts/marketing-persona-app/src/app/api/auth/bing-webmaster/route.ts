@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    return await startBingWebmasterOAuth(projectId, userId!, url.searchParams.get("returnUrl"));
+    return await startBingWebmasterOAuth(projectId, userId ?? 0, url.searchParams.get("returnUrl") ?? undefined);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Bing Webmaster OAuth failed" },
