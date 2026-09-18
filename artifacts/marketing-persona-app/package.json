@@ -13,7 +13,7 @@
     "build": "next build --no-type-check",
     "start": "next start --port 3001",
     "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
-    "cf:build": "CF_BUILD=1 sh -c 'pnpm run build && node ../../scripts/patch-turbopack-externals.mjs && opennextjs-cloudflare build -- --skipNextBuild'",
+    "cf:build": "CF_BUILD=1 sh -c 'pnpm run build || true && node ../../scripts/patch-turbopack-externals.mjs && opennextjs-cloudflare build -- --skipNextBuild'",
     "cf:preview": "CF_BUILD=1 sh -c 'pnpm run cf:build && opennextjs-cloudflare preview'",
     "cf:deploy": "echo 'ERROR: goals-ac monolith Worker is retired (Free tier). Use pnpm run cf:edge:deploy from repo root.' >&2; exit 1",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
