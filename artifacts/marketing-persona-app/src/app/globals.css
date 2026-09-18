@@ -57,46 +57,68 @@
   
   /* Enhanced input fields with paper qualities */
   .paper-input {
-    @apply glass-card;
+    border: 1px solid var(--border);
+    background: var(--card);
     background-image: var(--newsprint-texture);
     background-size: 200px 200px;
-    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 0.75rem 1rem;
     font-family: var(--font-sans);
     transition: all 0.2s ease;
     position: relative;
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        to right,
-        transparent,
-        rgba(0, 0, 0, 0.02),
-        transparent
-      );
-      pointer-events: none;
-    }
-    &:focus {
-      outline: none;
-      border-color: var(--signal);
-      box-shadow: 
-        0 0 0 2px rgba(var(--signal-rgb), 0.1),
-        0 1px 3px var(--paper-shadow-light);
-    }
-    &:active {
-      transform: translateY(1px);
-    }
+    box-shadow: none;
+  }
+  .paper-input::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.02), transparent);
+    pointer-events: none;
+  }
+  .paper-input:focus {
+    outline: none;
+    border-color: var(--signal);
+    box-shadow: 0 0 0 2px rgba(var(--signal-rgb), 0.1), 0 1px 3px var(--paper-shadow-light);
+  }
+  .paper-input:active {
+    transform: translateY(1px);
   }
   
   /* Textarea variant */
   .paper-textarea {
-    @apply paper-input;
+    border: 1px solid var(--border);
+    background: var(--card);
+    background-image: var(--newsprint-texture);
+    background-size: 200px 200px;
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-sans);
+    transition: all 0.2s ease;
+    position: relative;
+    box-shadow: none;
     resize: vertical;
     min-height: 6rem;
+  }
+  .paper-textarea::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.02), transparent);
+    pointer-events: none;
+  }
+  .paper-textarea:focus {
+    outline: none;
+    border-color: var(--signal);
+    box-shadow: 0 0 0 2px rgba(var(--signal-rgb), 0.1), 0 1px 3px var(--paper-shadow-light);
+  }
+  .paper-textarea:active {
+    transform: translateY(1px);
   }
   .dark *::-webkit-scrollbar {
     width: 8px;
@@ -154,8 +176,7 @@
   }
   /* Baseline grid for content alignment */
   .baseline-grid {
-    background-image: 
-      linear-gradient(to bottom, var(--border) 1px, transparent 1px),
+    background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px),
       linear-gradient(to right, var(--border) 1px, transparent 1px);
     background-size: 1.5rem 1.5rem;
     background-position: 0.75rem 0.75rem;
@@ -164,7 +185,10 @@
   .prose-enhanced,
   .article-canvas,
   .content-piece-body {
-    @apply baseline-grid;
+    background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px),
+      linear-gradient(to right, var(--border) 1px, transparent 1px);
+    background-size: 1.5rem 1.5rem;
+    background-position: 0.75rem 0.75rem;
   }
   
   /* Enhanced prose for better readability */
@@ -321,6 +345,7 @@
     border-color: var(--foreground);
   }
 
+/* Glass card utility for dark mode transparency */
 .glass-card {
   border: 1px solid var(--border);
   background: var(--card);
@@ -329,55 +354,51 @@
   box-shadow: none;
 }
 
-/* Enhanced paper card variant */
+/* Paper card with newsprint texture */
 .paper-card {
-  @apply glass-card;
+  border: 1px solid var(--border);
+  background: var(--card);
   background-image: var(--newsprint-texture);
   background-size: 200px 200px;
+  border-radius: var(--radius);
   position: relative;
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      transparent,
-      rgba(0, 0, 0, 0.02),
-      transparent
-    );
-    pointer-events: none;
-  }
+  box-shadow: none;
+}
+.paper-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.02), transparent);
+  pointer-events: none;
 }
 
-/* Hover state for paper cards */
+/* Glass card hover state */
+.glass-card-hover {
+  transition: border-color 0.2s ease;
+}
+.glass-card-hover:hover {
+  border-color: var(--foreground);
+}
+
+/* Paper card hover variant */
 .paper-card-hover {
-  @apply glass-card-hover;
+  border: 1px solid var(--border);
+  background: var(--card);
   transition: all 0.2s ease;
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 
-      0 2px 6px var(--paper-shadow-medium),
-      0 1px 3px var(--paper-shadow-light);
-    border-color: var(--foreground);
-  }
-  &:active {
-    transform: translateY(0px);
-    box-shadow: 
-      0 1px 2px var(--paper-shadow-light),
-      inset 0 1px 2px var(--paper-shadow-light);
-  }
+  border-radius: var(--radius);
 }
-
-  .glass-card-hover {
-    transition: border-color 0.2s ease;
-  }
-
-  .glass-card-hover:hover {
-    border-color: var(--foreground);
-  }
+.paper-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px var(--paper-shadow-medium), 0 1px 3px var(--paper-shadow-light);
+  border-color: var(--foreground);
+}
+.paper-card-hover:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px var(--paper-shadow-light), inset 0 1px 2px var(--paper-shadow-light);
+}
 
   .editorial-badge-light {
     border: 1px solid var(--border);
