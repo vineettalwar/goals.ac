@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 import { runMigrations } from "@workspace/db/migrate";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { pool } from "@workspace/db";
+import { getPostgresPool } from "@workspace/db";
 import { validateProductionEnvironment } from "./lib/config";
 
 validateProductionEnvironment();
@@ -53,7 +53,8 @@ runMigrations(migrationsFolder)
 
       server.close(async (closeError) => {
         try {
-          await pool.end();
+          const pool = getPostgresPool();
+await pool.end();
         } catch (poolError) {
           logger.error({ err: poolError }, "Failed to close database pool");
         }

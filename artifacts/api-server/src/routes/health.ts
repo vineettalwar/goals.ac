@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
-import { pool } from "@workspace/db";
+import { getPostgresPool } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -11,6 +11,7 @@ router.get("/healthz", (_req, res) => {
 
 router.get("/readyz", async (_req, res) => {
   try {
+    const pool = getPostgresPool();
     await pool.query("select 1");
     res.json({ status: "ready" });
   } catch {

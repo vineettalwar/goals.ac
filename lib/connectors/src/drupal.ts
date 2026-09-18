@@ -1,5 +1,6 @@
 import { marked } from "marked";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import type { GoalsAcLayoutSection } from "./goals-ac-plugin";
 
 export interface DrupalCredentials {
   siteUrl: string;
@@ -46,34 +47,45 @@ function resolveDrupalStatus(status: "draft" | "published"): string {
 }
 
 export async function publishToDrupal(
-  credentials: DrupalCredentials,
-  title: string,
-  bodyMarkdown: string,
-  status: "draft" | "published" = "draft",
-  contentType: string = "article",
-  metaDescription?: string,
-  tags?: string[],
-): Promise<DrupalPostResult> {
+   credentials: DrupalCredentials,
+   title: string,
+   bodyMarkdown: string,
+   status: "draft" | "published" = "draft",
+   contentType: string = "article",
+   metaDescription?: string,
+   tags?: string[],
+   layout?: { sections: GoalsAcLayoutSection[] },
+   layoutData?: string,
+   layoutStorageField?: string,
+ ): Promise<DrupalPostResult> {
   const base = jsonApiBase(credentials.siteUrl);
   const nodeUrl = `${base}/node/${contentType}`;
   await assertPublicUrl(nodeUrl);
 
   const htmlContent = await marked(bodyMarkdown);
 
-  const attributes: Record<string, unknown> = {
-    title,
-    body: {
-      value: htmlContent,
-      format: "full_html",
-      processed: htmlContent,
-    },
-    status: resolveDrupalStatus(status),
-  };
-  if (metaDescription) {
-    attributes.field_meta_description = {
-      value: metaDescription.slice(0, 160),
-    };
-  }
+   const attributes: Record<string, unknown> = {
+     title,
+     body: {
+       value: htmlContent,
+       format: "full_html",
+       processed: htmlContent,
+     },
+     status: resolveDrupalStatus(status),
+   };
+   if (metaDescription) {
+     attributes.field_meta_description = {
+       value: metaDescription.slice(0, 160),
+     };
+   }
+   
+   // Handle Layout Builder fields if provided
+   if (layout && layout.sections) {
+     attributes[layoutStorageField || 'field_layout'] = {
+       layout: { sections: layout.sections },
+       ...(layoutData ? { layout_data: layoutData } : {}),
+     };
+   }
 
   const relationships: Record<string, unknown> | undefined = tags?.length
     ? {
