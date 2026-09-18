@@ -11,7 +11,7 @@ import { useActiveProject } from "@/context/use-active-project";
 type BacklinksOverview = {
   target: string;
   fetchedAt: string;
-  configured: true;
+  configured: boolean;
   summary: {
     rank: number | null;
     backlinks: number | null;
@@ -47,7 +47,7 @@ export function BacklinksOverviewPanel() {
         configured?: boolean;
       };
 
-      if (res.status === 503 && data.configured === false) {
+      if (res.status === 503 && data.configured === false as const) {
         setNotConfigured(true);
         setOverview(null);
         return;

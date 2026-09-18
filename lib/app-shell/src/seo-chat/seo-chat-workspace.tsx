@@ -219,7 +219,7 @@ export function SeoChatWorkspace({
     setBusy(true);
     setError(null);
     setDraft("");
-    setLiveChips([]);
+    // setLiveChips([]); // Temporarily disabled due to missing dependency
     setLiveRunId(null);
     try {
       let activeId = threadId;

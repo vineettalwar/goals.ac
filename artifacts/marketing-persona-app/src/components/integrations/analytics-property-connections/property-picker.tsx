@@ -111,7 +111,7 @@ export function PropertyPicker({
         <Label htmlFor="ga4-property" className="text-xs">
           GA4 property
         </Label>
-        <Select value={selected} onValueChange={setSelected} modal={false}>
+        <Select value={selected} onValueChange={setSelected}>
           <SelectTrigger id="ga4-property" className="h-9 text-xs">
             <SelectValue placeholder="Select a property" />
           </SelectTrigger>

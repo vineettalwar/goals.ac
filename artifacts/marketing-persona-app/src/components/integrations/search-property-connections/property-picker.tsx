@@ -145,7 +145,7 @@ export function PropertyPicker({
         <Label htmlFor={`property-${provider}`} className="text-xs">
           Verified property
         </Label>
-        <Select value={selected} onValueChange={setSelected} modal={false}>
+        <Select value={selected} onValueChange={setSelected}>
           <SelectTrigger id={`property-${provider}`} className="h-9 text-xs">
             <SelectValue placeholder="Select a property" />
           </SelectTrigger>
